@@ -2,3 +2,4 @@
 .idea/*
 datasets/.DS_Store
 .DS_Store
+datasets/yelp2018/kg_final.txt
