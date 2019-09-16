@@ -13,10 +13,10 @@ class DataLoader(object):
         kg_file = os.path.join(data_dir, "kg_final.txt")
         self.kg = self.load_kg2graph(kg_file)
         train_file = os.path.join(data_dir, "train.txt")
-        test_file = os.path.join(data_dir, "test.txt")
         self.rating_g = self.load_rating2graph(train_file)
+        #test_file = os.path.join(data_dir, "test.txt")
         #self.test_data,  = self._load_rating2graph(test_file)
-        self.all_g = dgl.hetero_from_relations([self.kg, self.rating_g])
+        self.all_g = dgl.hetero_from_relations(self.kg + self.rating_g)
         print("Data Statistic:\n\t#user:{}, #items:{}, #entities:{}, #relations:{}".format(
             self.num_users, self.num_items, self.num_entities, self.num_relations))
 
@@ -57,7 +57,7 @@ class DataLoader(object):
         g = dgl.graph(coo, ntype='entity', etype='relation')
         g.ndata['id'] = th.arange(g.number_of_nodes())
         g.edata['id'] = th.LongTensor(etype_id)
-        return g
+        return [g]
 
     def create_KG_sampler(self, batch_size, neg_sample_size=1, mode=None, num_workers=5,
                           shuffle=True, exclude_positive=False):
@@ -90,8 +90,9 @@ class DataLoader(object):
         self._n_items = np.unique(item_l).size
         assert self.num_items == max(item_l) + 1
         self._n_train = len(src)
-        g = dgl.bipartite((src, dst), 'user', 'interact', 'items')
-        return g
+        g = dgl.bipartite((src, dst), 'user', 'interact', 'entity')
+        rev_g = dgl.bipartite((dst, src), 'entity', 'interacted_by', 'user')
+        return [g, rev_g]
 
     @property
     def num_train(self):
