@@ -24,7 +24,8 @@ class DataLoader(object):
         print("#entities:", self.all_g.number_of_nodes('entity'))
         print("#interactions:", self.all_g.number_of_edges(('user', 'interact', 'entity')))
         print("self.all_g['relation'].number_of_edges()", self.all_g['relation'].number_of_edges())
-        print("self.all_g['relation'].edata['id']", self.all_g['relation'].edata['id'])
+        print("g.etypes", self.all_g.etypes)
+        print("self.all_g['relation'].edata", self.all_g['relation'].edata)
 
     @property
     def num_entities(self):
