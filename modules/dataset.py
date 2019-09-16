@@ -18,8 +18,8 @@ class DataLoader(object):
         #self.test_data,  = self._load_rating2graph(test_file)
         print(len(self.kg), len(self.rating_g), len(self.kg + self.rating_g))
         self.all_g = dgl.hetero_from_relations(self.kg + self.rating_g)
-        print("Data Statistic:\n\t#user:{}, #items:{}, #entities:{}, #relations:{}".format(
-            self.num_users, self.num_items, self.num_entities, self.num_relations))
+        print("Data Statistic:\n\t#user:{}, #items:{}, #interactions:{}, #entities:{}, #relations:{}, #triplets:{}".format(
+            self.num_users, self.num_items, self.num_train, self.num_entities, self.num_relations, self.num_triples))
         print("#users:", self.all_g.number_of_nodes('user'))
         print("#entities:", self.all_g.number_of_nodes('entity'))
         print("#interactions:", self.all_g.number_of_edges(('user', 'interact', 'entity')))
