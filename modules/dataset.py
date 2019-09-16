@@ -46,7 +46,7 @@ class DataLoader(object):
         self._n_relations = np.unique(kg_triples_np[:, 1]).size
         assert self._n_relations == kg_triples_np[:, 1].max() + 1
         self._n_entities = np.unique(np.concatenate((kg_triples_np[:, 0], kg_triples_np[:, 2]))).size
-        assert self._n_entities == max(kg_triples_np[:, 0].max, kg_triples_np[:, 2].max) + 1
+        assert self._n_entities == max(max(kg_triples_np[:, 0]), max(kg_triples_np[:, 2])) + 1
         self._n_triples = kg_triples_np.shape[0]
 
         src = kg_triples_np[:, 0]
@@ -90,8 +90,8 @@ class DataLoader(object):
         self._n_items = np.unique(item_l).size
         assert self.num_items == max(item_l) + 1
         self._n_train = len(src)
-        g = dgl.bipartite((src, dst), 'user', 'inter', 'entity',
-                               card=(self.num_users, self.num_entities))
+        g = dgl.bipartite((src, dst), 'user', 'interact', 'entity',
+                          card=(self.num_users, self.num_entities))
         return g
 
     @property
