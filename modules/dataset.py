@@ -11,13 +11,14 @@ class DataLoader(object):
 
         # ----------get number of entities and relations & then load kg data from kg_file into the DGLGraph------------.
         kg_file = os.path.join(data_dir, "kg_final.txt")
-        self.kg = self.load_kg2graph(kg_file)
+        self.kg, relation_ids = self.load_kg2graph(kg_file)
         train_file = os.path.join(data_dir, "train.txt")
         self.rating_g = self.load_rating2graph(train_file)
         #test_file = os.path.join(data_dir, "test.txt")
         #self.test_data,  = self._load_rating2graph(test_file)
         print(len(self.kg), len(self.rating_g), len(self.kg + self.rating_g))
         self.all_g = dgl.hetero_from_relations(self.kg + self.rating_g)
+        self.all_g.edges["relation"].data['id'] = relation_ids
         print("Data Statistic:\n\t#user:{}, #items:{}, #interactions:{}, #entities:{}, #relations:{}, #triplets:{}".format(
             self.num_users, self.num_items, self.num_train, self.num_entities, self.num_relations, self.num_triples))
         print("#users:", self.all_g.number_of_nodes('user'))
@@ -64,8 +65,7 @@ class DataLoader(object):
                                    shape=[self.num_entities, self.num_entities])
         g = dgl.graph(coo, ntype='entity', etype='relation')
         g.ndata['id'] = th.arange(g.number_of_nodes())
-        g.edata['id'] = th.LongTensor(etype_id)
-        return [g]
+        return [g], th.LongTensor(etype_id)
 
     def create_KG_sampler(self, batch_size, neg_sample_size=1, mode=None, num_workers=5,
                           shuffle=True, exclude_positive=False):
