@@ -16,6 +16,7 @@ class DataLoader(object):
         self.rating_g = self.load_rating2graph(train_file)
         #test_file = os.path.join(data_dir, "test.txt")
         #self.test_data,  = self._load_rating2graph(test_file)
+        print(len(self.kg), len(self.rating_g), len(self.kg + self.rating_g))
         self.all_g = dgl.hetero_from_relations(self.kg + self.rating_g)
         print("Data Statistic:\n\t#user:{}, #items:{}, #entities:{}, #relations:{}".format(
             self.num_users, self.num_items, self.num_entities, self.num_relations))
