@@ -28,6 +28,7 @@ class DataLoader(object):
         print("g.ntypes", self.all_g.ntypes)
         print("g.etypes", self.all_g.etypes)
         print("self.all_g['relation'].edata", self.all_g['relation'].edata)
+        print("meta_data", self.all_g.metagraph)
 
     @property
     def num_entities(self):
@@ -64,7 +65,6 @@ class DataLoader(object):
         coo = sp.sparse.coo_matrix((np.ones(self.num_triples), (dst, src)),
                                    shape=[self.num_entities, self.num_entities])
         g = dgl.graph(coo, ntype='entity', etype='relation')
-        g.ndata['id'] = th.arange(g.number_of_nodes())
         return [g], th.LongTensor(etype_id)
 
     def create_KG_sampler(self, batch_size, neg_sample_size=1, mode=None, num_workers=5,
