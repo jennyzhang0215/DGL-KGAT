@@ -94,8 +94,10 @@ class DataLoader(object):
         self._n_items = np.unique(item_l).size
         assert self.num_items == max(item_l) + 1
         self._n_train = len(src)
-        g = dgl.bipartite((src, dst), 'user', 'interact', 'entity')
-        rev_g = dgl.bipartite((dst, src), 'entity', 'interacted_by', 'user')
+        g = dgl.bipartite((src, dst), 'user', 'interact', 'entity',
+                          card=(self.num_users, self.num_entities))
+        rev_g = dgl.bipartite((dst, src), 'entity', 'interacted_by', 'user',
+                              card=(self.num_entities, self.num_users))
         return [g, rev_g]
 
     @property
