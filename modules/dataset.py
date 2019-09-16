@@ -20,8 +20,9 @@ class DataLoader(object):
         self.all_g = dgl.hetero_from_relations(self.kg + self.rating_g)
         print("Data Statistic:\n\t#user:{}, #items:{}, #entities:{}, #relations:{}".format(
             self.num_users, self.num_items, self.num_entities, self.num_relations))
-        print("#users:", self.all_g["user"].number_of_nodes())
-        print("#entities:", self.all_g["entity"].number_of_nodes())
+        print("#users:", self.all_g.number_of_nodes('user'))
+        print(self.all_g['user'].number_of_nodes())
+        print("#entities:", self.all_g.number_of_nodes('entity'))
         print("#interactions:", self.all_g.number_of_edges('user', 'interact', 'entity'))
         print("self.all_g['relation'].number_of_edges()", self.all_g['relation'].number_of_edges())
         print("self.all_g['relation'].edata['id']", self.all_g['relation'].edata['id'])
