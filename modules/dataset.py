@@ -19,6 +19,9 @@ class DataLoader(object):
         self.all_g = dgl.hetero_from_relations(self.kg + self.rating_g)
         print("Data Statistic:\n\t#user:{}, #items:{}, #entities:{}, #relations:{}".format(
             self.num_users, self.num_items, self.num_entities, self.num_relations))
+        print("#users:", self.all_g["user"].number_of_nodes())
+        print("#entities:", self.all_g["entity"].number_of_nodes())
+        print("#interactions:", self.all_g.nuber_of_edges('user', 'interact', 'entity'))
 
     @property
     def num_entities(self):
@@ -42,7 +45,7 @@ class DataLoader(object):
         np.array Shape:(num_triples, 3)
         """
         kg_triples_np = np.loadtxt(file_name, dtype=np.int32)
-
+        self.kg_triples_np = kg_triples_np
         self._n_relations = np.unique(kg_triples_np[:, 1]).size
         assert self._n_relations == kg_triples_np[:, 1].max() + 1
         self._n_entities = np.unique(np.concatenate((kg_triples_np[:, 0], kg_triples_np[:, 2]))).size
@@ -52,7 +55,7 @@ class DataLoader(object):
         src = kg_triples_np[:, 0]
         etype_id = kg_triples_np[:, 1]
         dst = kg_triples_np[:, 2]
-        coo = sp.sparse.coo_matrix((np.ones(self.num_triples), (src, dst)),
+        coo = sp.sparse.coo_matrix((np.ones(self.num_triples), (dst, src)),
                                    shape=[self.num_entities, self.num_entities])
         g = dgl.graph(coo, ntype='entity', etype='relation')
         g.ndata['id'] = th.arange(g.number_of_nodes())
