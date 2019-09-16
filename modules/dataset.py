@@ -90,8 +90,8 @@ class DataLoader(object):
         self._n_items = np.unique(item_l).size
         assert self.num_items == max(item_l) + 1
         self._n_train = len(src)
-        g = dgl.bipartite((src, dst), 'user', 'interact', 'entity',
-                          card=(self.num_users, self.num_entities))
+        g = dgl.bipartite((np.array(src, dtype=np.int32), np.array(dst, dtype=np.int32)),
+                          'user', 'interact', 'items')
         return g
 
     @property
