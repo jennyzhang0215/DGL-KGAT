@@ -48,7 +48,7 @@ def train(args):
     ### load data
     dataset = DataLoader(args.data_name)
     graph = dataset.g
-    th_e_type = th.from_numpy(graph.etype)
+    th_e_type = th.from_numpy(dataset.etype)
     if use_cuda:
         th_e_type = th_e_type.cuda()
     graph.edata['type'] = th_e_type
