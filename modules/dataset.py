@@ -24,11 +24,11 @@ class DataLoader(object):
             ### add the user2item interact relation
             recsys_triplet[i, 1] = self.num_KG_relations
             recsys_triplet[i, 2] = train_item_id_np[i]
-        for i in range(self.num_train, self.num_train*2):
-            recsys_triplet[i, 0] = train_item_id_np[i]
+        for i in range(0, self.num_train):
+            recsys_triplet[i+self.num_train, 0] = train_item_id_np[i]
             ### add the item2user interacted relation
-            recsys_triplet[i, 1] = self.num_KG_relations + 1
-            recsys_triplet[i, 2] = self._user_mapping[train_user_id_np[i]]
+            recsys_triplet[i+self.num_train, 1] = self.num_KG_relations + 1
+            recsys_triplet[i+self.num_train, 2] = self._user_mapping[train_user_id_np[i]]
         ### reverse the (head, relation, tail) direction, because we need tail --> head
         all_triplet = np.vstack((self.kg_triples_np[:, [2,1,0]],  recsys_triplet))
         g = dgl.DGLGraph()
@@ -37,7 +37,12 @@ class DataLoader(object):
         self.g = g
         self.rel_np = all_triplet[:, 1]
 
-
+    @property
+    def num_all_entities(self):
+        return self._n_KG_entities + self._n_users
+    @property
+    def num_all_relations(self):
+        return self._n_KG_relations + 2
     @property
     def num_KG_entities(self):
         return self._n_KG_entities
@@ -47,9 +52,7 @@ class DataLoader(object):
     @property
     def num_KG_triples(self):
         return self._n_KG_triples
-    @property
-    def num_all_entity(self):
-        return self._n_KG_entities + self._n_users
+
 
     def load_kg2triplet(self, file_name):
         """ Load the KG txt file into the 2-d numpy array
