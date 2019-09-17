@@ -7,6 +7,7 @@ import torch as th
 
 class DataLoader(object):
     def __init__(self, data_name):
+        self._data_name = data_name
         data_dir =  os.path.realpath(os.path.join(os.path.abspath(__file__), '..', "..", "datasets", data_name))
 
         # ----------get number of entities and relations & then load kg data from kg_file into the DGLGraph------------.
@@ -69,7 +70,8 @@ class DataLoader(object):
         self._n_KG_relations = np.unique(kg_triples_np[:, 1]).size
         self._n_KG_entities = np.unique(np.concatenate((kg_triples_np[:, 0], kg_triples_np[:, 2]))).size
         self._n_KG_triples = kg_triples_np.shape[0]
-
+        print("{}: #KG entities:{}, #KG relations:{}, #KG triplet:{}".format(
+            self._data_name, self.num_KG_entities, self.num_KG_relations, self.num_KG_triples))
         return kg_triples_np
 
     def create_KG_sampler(self, batch_size, neg_sample_size=1, mode=None, num_workers=5,
@@ -98,7 +100,9 @@ class DataLoader(object):
         assert np.unique(dst).size == max(dst) + 1
         self._n_users = np.unique(src).size
         self._n_items = np.unique(dst).size
-        self._n_train = len(src)
+        self._n_train = src.size
+        print("{}: #user:{}, #items:{}, #train:{}".format(
+            self._data_name, self.num_users, self.num_items, self.num_train))
         return src, dst
 
     @property
@@ -116,5 +120,7 @@ class DataLoader(object):
 
 
 if __name__ == '__main__':
-    dataset = DataLoader("yelp2018")
+    DataLoader("yelp2018")
+    DataLoader("last-fm")
+    DataLoader("amazon-book")
 
