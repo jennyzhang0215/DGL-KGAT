@@ -1,7 +1,7 @@
 import argparse
 
-from .modules.datasets import DataLoader
-from .modules.models import KGEModel, CFModel
+from dataset import DataLoader
+from models import KGEModel, CFModel
 
 import torch as th
 import torch.optim as optim
