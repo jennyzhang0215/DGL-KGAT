@@ -18,7 +18,7 @@ class DataLoader(object):
         #self.test_data,  = self._load_rating2graph(test_file)
         print(len(self.kg), len(self.rating_g), len(self.kg + self.rating_g))
         self.all_g = dgl.hetero_from_relations(self.kg + self.rating_g)
-        self.all_g.edges["relation"].data['id'] = relation_ids
+        self.all_g.edges["relation"].data['type'] = relation_ids
         print("Data Statistic:\n\t#user:{}, #items:{}, #interactions:{}, #entities:{}, #relations:{}, #triplets:{}".format(
             self.num_users, self.num_items, self.num_train, self.num_entities, self.num_relations, self.num_triples))
         print("#users:", self.all_g.number_of_nodes('user'))
@@ -28,7 +28,7 @@ class DataLoader(object):
         print("g.ntypes", self.all_g.ntypes)
         print("g.etypes", self.all_g.etypes)
         print("self.all_g['relation'].edata", self.all_g['relation'].edata)
-        print("meta_data", self.all_g.metagraph)
+        print("metagraph", self.all_g.metagraph.edges())
 
     @property
     def num_entities(self):
