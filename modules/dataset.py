@@ -32,7 +32,7 @@ class DataLoader(object):
         ### reverse the (head, relation, tail) direction, because we need tail --> head
         all_triplet = np.vstack((self.kg_triples_np[:, [2,1,0]],  recsys_triplet))
         g = dgl.DGLGraph()
-        g.add_nodes(self.num_all_entity)
+        g.add_nodes(self.num_all_entities)
         g.add_edges(all_triplet[:, 0], all_triplet[:, 2])
         self.g = g
         self.rel_np = all_triplet[:, 1]
