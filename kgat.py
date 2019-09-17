@@ -48,7 +48,7 @@ def train(args):
     ### load data
     dataset = DataLoader(args.data_name)
     graph = dataset.g
-    th_e_type = th.from_numpy(dataset.etype)
+    th_e_type = th.LongTensor(dataset.etype)
     if use_cuda:
         th_e_type = th_e_type.cuda()
     graph.edata['type'] = th_e_type
@@ -66,9 +66,9 @@ def train(args):
     for iter in range(1, args.max_iter+1):
         cf_model.train()
         user_ids, item_pos_ids, item_neg_ids = next(cf_sampler)
-        user_ids_th = th.from_numpy(user_ids)
-        item_pos_ids_th = th.from_numpy(item_pos_ids)
-        item_neg_ids_th = th.from_numpy(item_neg_ids)
+        user_ids_th = th.LongTensor(user_ids)
+        item_pos_ids_th = th.LongTensor(item_pos_ids)
+        item_neg_ids_th = th.LongTensor(item_neg_ids)
         if use_cuda:
             user_ids_th, item_pos_ids_th, item_neg_ids_th = \
                 user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda()
