@@ -7,7 +7,7 @@ class DataLoader(object):
         self._data_name = data_name
         self._full_batch = full_batch
         self._rng = np.random.RandomState(seed=seed)
-        data_dir =  os.path.realpath(os.path.join(os.path.abspath(__file__), '..', "..", "datasets", data_name))
+        data_dir =  os.path.realpath(os.path.join(os.path.abspath(__file__), '..', "datasets", data_name))
 
         kg_file = os.path.join(data_dir, "kg_final.txt")
         self.kg_triples_np = self.load_kg2triplet(kg_file)
