@@ -3,9 +3,10 @@ import os
 import dgl
 
 class DataLoader(object):
-    def __init__(self, data_name, full_batch=True):
+    def __init__(self, data_name, full_batch=True, seed=1234):
         self._data_name = data_name
         self._full_batch = full_batch
+        self._rng = np.random.RandomState(seed=seed)
         data_dir =  os.path.realpath(os.path.join(os.path.abspath(__file__), '..', "..", "datasets", data_name))
 
         kg_file = os.path.join(data_dir, "kg_final.txt")
@@ -120,8 +121,10 @@ class DataLoader(object):
             node_pairs = self.test_pairs
         else:
             raise NotImplementedError
-
-
+        while True:
+            ### full batch sampling
+            neg_item_ids = self._rng.choice(self.num_items, self.num_train, replace=True).astype(np.int32)
+            yield node_pairs[0], node_pairs[1], neg_item_ids
 
     @property
     def num_train(self):
