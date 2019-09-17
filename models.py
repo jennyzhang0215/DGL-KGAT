@@ -43,7 +43,6 @@ class KGATConv(nn.Module):
     def __init__(self, in_feats, out_feats, n_relations, feat_drop, res_type="Bi"):
         super(KGATConv, self).__init__()
         self._in_feats = in_feats
-        self.relation_embed = nn.Embedding(n_relations, out_feats)  ### e_r
         self.relation_weight = nn.Parameter(th.Tensor(n_relations, in_feats, out_feats))  ### W_r
         nn.init.xavier_uniform_(self.relation_weight, gain=nn.init.calculate_gain('relu'))
         self.feat_drop = nn.Dropout(feat_drop)
@@ -54,16 +53,16 @@ class KGATConv(nn.Module):
         else:
             raise NotImplementedError
 
-    def forward(self, graph, feat):
+    def forward(self, graph, nfeat, efeat):
         graph = graph.local_var()
-        graph.ndata.update({'h': self.feat_drop(feat)})
-        graph.edata.update({'R_W': self.relation_weight.index_select(0, graph.edata["type"])})
-        graph.apply_edges(fn.e_mul_u('R_W', 'h', 't_r'))
-        graph.apply_edges(fn.e_mul_v('R_W', 'h', 'h_r'))
+        graph.ndata.update({'h': self.feat_drop(nfeat)})
+        graph.edata.update({'R_W': self.relation_weight.index_select(0, graph.edata["type"]),
+                            'e': self.feat_drop(efeat)})
+        graph.apply_edges(fn.u_mul_e('h', 'R_W', 't_r'))
+        graph.apply_edges(fn.v_mul_e('h', 'R_W', 'h_r'))
         graph.edata.update({'att_w': th.dot(graph.edata["t_r"],
-                                            F.tanh(graph.edata["h_r"] + self.relation_embed(graph.edata['type'])))})
-        e = graph.edata.pop('att_w')
-        graph.edata['a'] = edge_softmax(graph, e)
+                                            F.tanh(graph.edata["h_r"] + self.relation_embed(graph.edata['e'])))})
+        graph.edata['a'] = edge_softmax(graph, graph.edata.pop('att_w'))
         graph.update_all(fn.u_mul_e('h', 'a', 'm'),
                          fn.sum('m', 'h_neighbor'))
         if self._res_type == "Bi":
@@ -76,6 +75,7 @@ class CFModel(nn.Module):
     def __init__(self, n_entities, n_relations, entity_dim, num_gnn_layers, n_hidden, dropout, reg_lambda):
         super(CFModel, self).__init__()
         self._reg_lambda = reg_lambda
+        self.relation_embed = nn.Embedding(n_relations, n_hidden)  ### e_r
         self.entity_embed = nn.Embedding(n_entities, entity_dim)
         self.layers = nn.ModuleList()
         for i in range(num_gnn_layers):
@@ -88,9 +88,10 @@ class CFModel(nn.Module):
 
     def forward(self, g, src_ids, pos_dst_ids, neg_dst_ids):
         h = self.entity_embed(th.arange(g.number_of_nodes()))
+        efeat = self.relation_embed(g.edata['type'])
         node_embed_cache = [h]
         for i, layer in enumerate(self.layers):
-            h = layer(g, h)
+            h = layer(g, h, efeat)
             node_embed_cache.append(h)
         final_h = th.cat(node_embed_cache, 1)
         src_vec = final_h[src_ids]

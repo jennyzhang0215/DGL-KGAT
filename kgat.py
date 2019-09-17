@@ -40,14 +40,19 @@ def parse_args():
 
 
 def train(args):
-    ### load data
-    dataset = DataLoader(args.data_name)
-    graph = dataset.g
-    cf_sampler = dataset.CF_sampler(segment='train')
     ### check context
     use_cuda = args.gpu >= 0 and th.cuda.is_available()
     if use_cuda:
         th.cuda.set_device(args.gpu)
+
+    ### load data
+    dataset = DataLoader(args.data_name)
+    graph = dataset.g
+    th_e_type = th.from_numpy(graph.etype)
+    if use_cuda:
+        th_e_type = th_e_type.cuda()
+    graph.edata['type'] = th_e_type
+    cf_sampler = dataset.CF_sampler(segment='train')
 
     ### model
     cf_model =CFModel(n_entities=dataset.num_all_entities, n_relations=dataset.num_all_relations,

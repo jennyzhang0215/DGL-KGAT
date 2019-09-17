@@ -28,8 +28,9 @@ class DataLoader(object):
         g = dgl.DGLGraph()
         g.add_nodes(self.num_all_entities)
         g.add_edges(all_triplet[:, 0], all_triplet[:, 2])
+
         self.g = g
-        self.rel_np = all_triplet[:, 1]
+        self.etype = all_triplet[:, 1]
 
         ### generate testing pairs
         test_file = os.path.join(data_dir, "test.txt")
