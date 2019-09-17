@@ -80,9 +80,10 @@ class CFModel(nn.Module):
         for i in range(num_gnn_layers):
             if i == 0:
                 # in_feats, out_feats, n_relations, feat_drop,
-                self.layers.append(KGATConv(entity_dim, n_hidden, n_relations, dropout))
+                kgatConv = KGATConv(entity_dim, n_hidden, n_relations, dropout)
             else:
-                self.layers.append(KGATConv(n_hidden, n_hidden, n_relations, dropout))
+                kgatConv = KGATConv(n_hidden, n_hidden, n_relations, dropout)
+            self.layers.append(kgatConv)
 
     def forward(self, g, src_ids, pos_dst_ids, neg_dst_ids):
         h = self.entity_embed(th.arange(g.number_of_nodes()))
