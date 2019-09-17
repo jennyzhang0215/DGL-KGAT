@@ -15,28 +15,28 @@ def _L2_norm_mean(x):
     ### ### mean( sum(t ** 2) / 2)
     return th.mean(th.sum(th.pow(x, 2), dim=1, keepdims=False)/2.)
 
-class KGEModel(nn.Module):
-    def __init__(self, n_entities, n_relations, entity_dim, relation_dim, reg_lambda):
-        super(KGEModel, self).__init__()
-        self._reg_lambda = reg_lambda
-        self.entity_embed = nn.Embedding(n_entities, entity_dim)
-        self.relation_embed = nn.Embedding(n_relations, relation_dim)
-        self.W_entity = nn.Linear(entity_dim, relation_dim, bias=False)
-
-    def forward(self, h, r, pos_t, neg_t):
-        h_embed = th.norm(self.W_entity(self.entity_embed(h)), p="fro", dim=1) ### Shape(batch_size, dim)
-        r_embed = th.norm(self.relation_embed(r), p="fro", dim=1)
-        pos_t_embed = th.norm(self.W_entity(self.entity_embed(pos_t)), p="fro", dim=1)
-        neg_t_embed = th.norm(self.W_entity(self.entity_embed(neg_t)), p="fro", dim=1)
-
-        pos_kg_score = _L2_norm(h_embed + r_embed - pos_t_embed) ### Shape(batch_size,)
-        neg_kg_score = _L2_norm(h_embed + r_embed - neg_t_embed)
-        kg_loss = _cal_score(pos_kg_score, neg_kg_score)
-        kg_reg_loss = _L2_norm_mean(h_embed) + _L2_norm_mean(r_embed) + \
-                      _L2_norm_mean(pos_t_embed) + _L2_norm_mean(neg_t_embed)
-
-        loss = kg_loss + self._reg_lambda * kg_reg_loss
-        return loss
+# class KGEModel(nn.Module):
+#     def __init__(self, n_entities, n_relations, entity_dim, relation_dim, reg_lambda):
+#         super(KGEModel, self).__init__()
+#         self._reg_lambda = reg_lambda
+#         self.entity_embed = nn.Embedding(n_entities, entity_dim)
+#         self.relation_embed = nn.Embedding(n_relations, relation_dim)
+#         self.W_entity = nn.Linear(entity_dim, relation_dim, bias=False)
+#
+#     def forward(self, h, r, pos_t, neg_t):
+#         h_embed = th.norm(self.W_entity(self.entity_embed(h)), p="fro", dim=1) ### Shape(batch_size, dim)
+#         r_embed = th.norm(self.relation_embed(r), p="fro", dim=1)
+#         pos_t_embed = th.norm(self.W_entity(self.entity_embed(pos_t)), p="fro", dim=1)
+#         neg_t_embed = th.norm(self.W_entity(self.entity_embed(neg_t)), p="fro", dim=1)
+#
+#         pos_kg_score = _L2_norm(h_embed + r_embed - pos_t_embed) ### Shape(batch_size,)
+#         neg_kg_score = _L2_norm(h_embed + r_embed - neg_t_embed)
+#         kg_loss = _cal_score(pos_kg_score, neg_kg_score)
+#         kg_reg_loss = _L2_norm_mean(h_embed) + _L2_norm_mean(r_embed) + \
+#                       _L2_norm_mean(pos_t_embed) + _L2_norm_mean(neg_t_embed)
+#
+#         loss = kg_loss + self._reg_lambda * kg_reg_loss
+#         return loss
 
 
 class KGATConv(nn.Module):
