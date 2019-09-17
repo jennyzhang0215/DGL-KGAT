@@ -68,7 +68,7 @@ def train(args):
             user_ids_th, item_pos_ids_th, item_neg_ids_th = \
                 user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda()
 
-        loss = cf_model(user_ids_th, item_pos_ids_th, item_neg_ids_th)
+        loss = cf_model(graph, user_ids_th, item_pos_ids_th, item_neg_ids_th)
         loss.backward()
         optimizer.step()
         print("Iter {:04d} | Loss {:.4f} ".format(iter, loss.item()))
