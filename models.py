@@ -41,6 +41,7 @@ def _L2_norm_mean(x):
 
 class KGATConv(nn.Module):
     def __init__(self, in_feats, out_feats, n_relations, feat_drop, res_type="Bi"):
+        super(KGATConv, self).__init__()
         self._in_feats = in_feats
         self.relation_embed = nn.Embedding(n_relations, out_feats)  ### e_r
         self.relation_weight = nn.Parameter(th.Tensor(n_relations, in_feats, out_feats))  ### W_r
