@@ -53,28 +53,28 @@ def bmm_maybe_select(A, B, index):
         BB = B.index_select(0, index)
         return th.bmm(A.unsqueeze(1), BB).squeeze()
 
-# class KGEModel(nn.Module):
-#     def __init__(self, n_entities, n_relations, entity_dim, relation_dim, reg_lambda):
-#         super(KGEModel, self).__init__()
-#         self._reg_lambda = reg_lambda
-#         self.entity_embed = nn.Embedding(n_entities, entity_dim)
-#         self.relation_embed = nn.Embedding(n_relations, relation_dim)
-#         self.W_entity = nn.Linear(entity_dim, relation_dim, bias=False)
-#
-#     def forward(self, h, r, pos_t, neg_t):
-#         h_embed = th.norm(self.W_entity(self.entity_embed(h)), p="fro", dim=1) ### Shape(batch_size, dim)
-#         r_embed = th.norm(self.relation_embed(r), p="fro", dim=1)
-#         pos_t_embed = th.norm(self.W_entity(self.entity_embed(pos_t)), p="fro", dim=1)
-#         neg_t_embed = th.norm(self.W_entity(self.entity_embed(neg_t)), p="fro", dim=1)
-#
-#         pos_kg_score = _L2_norm(h_embed + r_embed - pos_t_embed) ### Shape(batch_size,)
-#         neg_kg_score = _L2_norm(h_embed + r_embed - neg_t_embed)
-#         kg_loss = _cal_score(pos_kg_score, neg_kg_score)
-#         kg_reg_loss = _L2_norm_mean(h_embed) + _L2_norm_mean(r_embed) + \
-#                       _L2_norm_mean(pos_t_embed) + _L2_norm_mean(neg_t_embed)
-#
-#         loss = kg_loss + self._reg_lambda * kg_reg_loss
-#         return loss
+class KGEModel(nn.Module):
+    def __init__(self, n_entities, n_relations, entity_dim, relation_dim, reg_lambda):
+        super(KGEModel, self).__init__()
+        self._reg_lambda = reg_lambda
+        self.entity_embed = nn.Embedding(n_entities, entity_dim)
+        self.relation_embed = nn.Embedding(n_relations, relation_dim)
+        self.W_entity = nn.Linear(entity_dim, relation_dim, bias=False)
+
+    def forward(self, h, r, pos_t, neg_t):
+        h_embed = th.norm(self.W_entity(self.entity_embed(h)), p="fro", dim=1) ### Shape(batch_size, dim)
+        r_embed = th.norm(self.relation_embed(r), p="fro", dim=1)
+        pos_t_embed = th.norm(self.W_entity(self.entity_embed(pos_t)), p="fro", dim=1)
+        neg_t_embed = th.norm(self.W_entity(self.entity_embed(neg_t)), p="fro", dim=1)
+
+        pos_kg_score = _L2_norm(h_embed + r_embed - pos_t_embed) ### Shape(batch_size,)
+        neg_kg_score = _L2_norm(h_embed + r_embed - neg_t_embed)
+        kg_loss = _cal_score(pos_kg_score, neg_kg_score)
+        kg_reg_loss = _L2_norm_mean(h_embed) + _L2_norm_mean(r_embed) + \
+                      _L2_norm_mean(pos_t_embed) + _L2_norm_mean(neg_t_embed)
+
+        loss = kg_loss + self._reg_lambda * kg_reg_loss
+        return loss
 
 
 class KGATConv(nn.Module):
@@ -117,8 +117,7 @@ class KGATConv(nn.Module):
         graph.apply_edges(self.att_score)
         att_w = edge_softmax(graph, graph.edata.pop('att_w'))
         graph.edata['a'] = att_w
-        graph.update_all(fn.u_mul_e('h', 'a', 'm'),
-                         fn.sum('m', 'h_neighbor'))
+        graph.update_all(fn.u_mul_e('h', 'a', 'm'), fn.sum('m', 'h_neighbor'))
         if self._res_type == "Bi":
             h = F.leaky_relu(self.res_fc(graph.ndata['h']+graph.ndata['h_neighbor']))+\
                 F.leaky_relu(self.res_fc_2(th.mul(graph.ndata['h'], graph.ndata['h_neighbor'])))

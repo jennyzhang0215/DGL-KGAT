@@ -70,9 +70,28 @@ class DataLoader(object):
             np.unique(kg_triples_np[:, 0]).size, np.unique(kg_triples_np[:, 2]).size))
         return kg_triples_np
 
-    def create_KG_sampler(self, batch_size, neg_sample_size=1, mode=None, num_workers=5,
-                          shuffle=True, exclude_positive=False):
-        raise NotImplementedError
+    def KG_sampler(self, batch_size, sequential=True, segment='train'):
+        if batch_size > 0:
+            batch_size = self.num_KG_triples
+        else:
+            batch_size = min(self.num_KG_triples, batch_size)
+        if sequential:
+            for start in range(0, self.num_KG_triples, batch_size):
+                end = min(start+batch_size, self.num_KG_triples)
+                h = self.kg_triples_np[start: end][:, 0]
+                r = self.kg_triples_np[start: end][:, 1]
+                pos_t = self.kg_triples_np[start: end][:, 2]
+                neg_t = self._rng.choice(self.num_KG_entities, batch_size, replace=True).astype(np.int32)
+                yield h, r, pos_t, neg_t
+
+        else:
+            while True:
+                sel = self._rng.choice(self.num_KG_triples, batch_size, replace=False)
+                h = self.kg_triples_np[sel][:, 0]
+                r = self.kg_triples_np[sel][:, 1]
+                pos_t = self.kg_triples_np[sel][:, 2]
+                neg_t = self._rng.choice(self.num_KG_entities, batch_size, replace=True).astype(np.int32)
+                yield h, r, pos_t, neg_t
 
     @property
     def num_KG_entities(self):
