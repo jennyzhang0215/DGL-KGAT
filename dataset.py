@@ -71,7 +71,7 @@ class DataLoader(object):
         return kg_triples_np
 
     def KG_sampler(self, batch_size, sequential=True, segment='train'):
-        if batch_size > 0:
+        if batch_size < 0:
             batch_size = self.num_KG_triples
         else:
             batch_size = min(self.num_KG_triples, batch_size)
