@@ -50,7 +50,7 @@ def train(args):
     dataset = DataLoader(args.data_name)
     graph = dataset.g
     th_e_type = th.LongTensor(dataset.etype)
-    th_n_id = th.arange(g.number_of_nodes()).long()
+    th_n_id = th.arange(graph.number_of_nodes()).long()
     if use_cuda:
         th_e_type = th_e_type.cuda()
         th_n_id = th_n_id.cuda()
