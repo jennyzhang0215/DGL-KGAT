@@ -18,9 +18,10 @@ def parse_args():
     ### Model parameters
     parser.add_argument('--model_type', nargs='?', default='kgat', help='Specify a loss type from {kgat, bprmf, fm, nfm, cke, cfkg}.')
     parser.add_argument('--use_kge', type=bool, default=True, help='whether using knowledge graph embedding')
-    parser.add_argument('--kge_size', type=int, default=64, help='KG Embedding size.')
-    parser.add_argument('--embed_size', type=int, default=64, help='CF Embedding size.')
-    parser.add_argument('--layer_size', nargs='?', default='[64]', help='Output sizes of every layer')
+    parser.add_argument('--kge_size', type=int, default=4, help='KG Embedding size.')
+    parser.add_argument('--embed_size', type=int, default=4, help='CF Embedding size.')
+    parser.add_argument('--gnn_num_layer', type=int, default=2, help='the number of layers')
+    parser.add_argument('--gnn_hidden_size', type=int, default=8, help='Output sizes of every layer')
     parser.add_argument('--Ks', nargs='?', default='[20, 40, 60, 80, 100]', help='Output sizes of every layer')
     parser.add_argument('--node_dropout', nargs='?', default='[0.1]', help='Keep probability w.r.t. node dropout (i.e., 1-dropout_ratio) for each deep layer. 1: no dropout.')
     parser.add_argument('--mess_dropout', nargs='?', default='[0.1]', help='Keep probability w.r.t. message dropout (i.e., 1-dropout_ratio) for each deep layer. 1: no dropout.')
@@ -56,7 +57,8 @@ def train(args):
     print("Dataset prepared ...")
     ### model
     cf_model =CFModel(n_entities=dataset.num_all_entities, n_relations=dataset.num_all_relations,
-                      entity_dim=args.embed_size, num_gnn_layers=2, n_hidden=64, dropout=0.1, reg_lambda=0.01)
+                      entity_dim=args.embed_size, num_gnn_layers=args.gnn_num_layer,
+                      n_hidden=args.gnn_hidden_size, dropout=0.1, reg_lambda=0.01)
     if use_cuda:
         cf_model = cf_model.cuda()
     ### optimizer
