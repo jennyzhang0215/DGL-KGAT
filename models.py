@@ -107,7 +107,7 @@ class KGATConv(nn.Module):
         att_w = th.bmm(t_r.unsqueeze(1), F.tanh(h_r + edges.data['e']).unsqueeze(2)).squeeze(-1)
         return {'att_w': att_w}
 
-def forward(self, graph, nfeat, efeat):
+    def forward(self, graph, nfeat, efeat):
         print(graph)
         graph = graph.local_var()
         node_embed = self.feat_drop(nfeat)
