@@ -105,6 +105,7 @@ class KGATConv(nn.Module):
         h_r = bmm_maybe_select(edges.dst['h'], self.relation_weight, edges.data['type']) ### (edge_num, hidden_dim)
         print("head_e W_r", h_r.shape, h_r)
         att_w = th.bmm(t_r.unsqueeze(1), th.tanh(h_r + edges.data['e']).unsqueeze(2)).squeeze(-1)
+        print("att_w", att_w.shape, att_w)
         return {'att_w': att_w}
 
     def forward(self, graph, nfeat, efeat):
@@ -118,7 +119,9 @@ class KGATConv(nn.Module):
         ### compute attention weight using edge_softmax
         graph.apply_edges(self.att_score)
         print("attention score computed ...")
-        graph.edata['a'] = edge_softmax(graph, graph.edata.pop('att_w'))
+        att_w = edge_softmax(graph, graph.edata.pop('att_w'))
+        graph.edata['a'] = att_w
+        print("softmax_att_w", att_w.shape, att_w)
         graph.update_all(fn.u_mul_e('h', 'a', 'm'),
                          fn.sum('m', 'h_neighbor'))
         if self._res_type == "Bi":
