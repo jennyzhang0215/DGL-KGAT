@@ -78,7 +78,7 @@ class KGEModel(nn.Module):
         # print("pos_t_vec", pos_t_vec.shape)
         # print("neg_t_vec", neg_t_vec.shape)
         pos_score = _L2_norm(h_vec + r_embed - pos_t_vec)
-        neg_score = _L2_norm(h_vec + r_embed - neg_t_embed)
+        neg_score = _L2_norm(h_vec + r_embed - neg_t_vec)
         kg_loss = _cal_score(pos_score, neg_score)
         #print(kg_loss)
         kg_reg_loss = _L2_norm_mean(h_embed) + _L2_norm_mean(r_embed) + \
