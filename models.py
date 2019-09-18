@@ -142,7 +142,7 @@ class CFModel(nn.Module):
             self.layers.append(kgatConv)
 
     def forward(self, g, src_ids, pos_dst_ids, neg_dst_ids):
-        h = self.entity_embed(th.arange(g.number_of_nodes()))
+        h = self.entity_embed(g.ndata['id'])
         efeat = self.relation_embed(g.edata['type'])
         node_embed_cache = [h]
         for i, layer in enumerate(self.layers):

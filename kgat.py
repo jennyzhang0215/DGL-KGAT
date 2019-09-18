@@ -50,9 +50,12 @@ def train(args):
     dataset = DataLoader(args.data_name)
     graph = dataset.g
     th_e_type = th.LongTensor(dataset.etype)
+    th_n_id = th.arange(g.number_of_nodes()).long()
     if use_cuda:
         th_e_type = th_e_type.cuda()
+        th_n_id = th_n_id.cuda()
     graph.edata['type'] = th_e_type
+    graph.ndata['id'] = th_n_id
     cf_sampler = dataset.CF_sampler(segment='train')
     print("Dataset prepared ...")
     ### model
