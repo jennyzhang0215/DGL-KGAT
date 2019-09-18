@@ -54,7 +54,7 @@ class KGATConv(nn.Module):
             raise NotImplementedError
 
     def forward(self, graph, nfeat, efeat):
-        print(g)
+        print(graph)
         graph = graph.local_var()
         node_embed = self.feat_drop(nfeat)
         graph.ndata.update({'h': node_embed})
