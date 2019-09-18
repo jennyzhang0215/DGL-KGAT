@@ -125,10 +125,12 @@ class KGATConv(nn.Module):
         graph.update_all(fn.u_mul_e('h', 'a', 'm'),
                          fn.sum('m', 'h_neighbor'))
         if self._res_type == "Bi":
-            graph.ndata.update({'h': F.leaky_relu(self.res_fc(graph.ndata['h']+graph.ndata['h_neighbor']))+
-                                     F.leaky_relu(self.res_fc_2(th.mul(graph.ndata['h'],graph.ndata['h_neighbor'])))})
-        return graph.ndata['h']
-
+            h = F.leaky_relu(self.res_fc(graph.ndata['h']+graph.ndata['h_neighbor']))+\
+                F.leaky_relu(self.res_fc_2(th.mul(graph.ndata['h'], graph.ndata['h_neighbor'])))
+        else:
+            raise NotImplementedError
+        print("final h", h)
+        return h
 
 class CFModel(nn.Module):
     def __init__(self, n_entities, n_relations, entity_dim, num_gnn_layers, n_hidden, dropout, reg_lambda):
@@ -157,11 +159,12 @@ class CFModel(nn.Module):
             h = layer(g, h, efeat)
             node_embed_cache.append(h)
         final_h = th.cat(node_embed_cache, 1)
+        print("final_h", final_h.shape, final_h)
         src_vec = final_h[src_ids]
         pos_dst_vec = final_h[pos_dst_ids]
         neg_dst_vec = final_h[neg_dst_ids]
-        pos_score = th.sum(th.mul(src_vec, pos_dst_vec), dim=1, keepdims=False)
-        neg_score = th.sum(th.mul(src_vec, neg_dst_vec), dim=1, keepdims=False)
+        pos_score = th.bmm(src_vec.unsqueeze(1), pos_dst_vec.unsqueeze(2)).squeeze() ### (batch_size, )
+        neg_score = th.bmm(src_vec.unsqueeze(1), neg_dst_vec.unsqueeze(2)).squeeze() ### (batch_size, )
         cf_reg_loss = _L2_norm_mean(src_vec) + _L2_norm_mean(pos_dst_vec) + _L2_norm_mean(neg_dst_vec)
         cf_loss = _cal_score(pos_score, neg_score)
         loss = cf_loss + self._reg_lambda * cf_reg_loss
