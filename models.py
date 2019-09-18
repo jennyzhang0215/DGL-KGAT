@@ -54,10 +54,16 @@ class KGATConv(nn.Module):
             raise NotImplementedError
 
     def forward(self, graph, nfeat, efeat):
+        print(g)
         graph = graph.local_var()
-        graph.ndata.update({'h': self.feat_drop(nfeat)})
-        graph.edata.update({'R_W': self.relation_weight.index_select(0, graph.edata["type"]),
-                            'e': self.feat_drop(efeat)})
+        node_embed = self.feat_drop(nfeat)
+        graph.ndata.update({'h': node_embed})
+        print("start compute edge weight ...")
+        edge_W = self.relation_weight.index_select(0, graph.edata["type"])
+        print(edge_W)
+        edge_embed = self.feat_drop(efeat)
+        print(edge_embed)
+        graph.edata.update({'R_W':edge_W, 'e': edge_embed})
         print("update node features")
         graph.apply_edges(fn.u_mul_e('h', 'R_W', 't_r'))
         graph.apply_edges(fn.v_mul_e('h', 'R_W', 'h_r'))
@@ -92,8 +98,8 @@ class CFModel(nn.Module):
         h = self.entity_embed(th.arange(g.number_of_nodes()))
         efeat = self.relation_embed(g.edata['type'])
         print("embedding finished")
-        print("h", h)
-        print("efeat", efeat)
+        print("h:", h.shape, "\n", h)
+        print("efeat:",efeat.shape, "\n", efeat)
         node_embed_cache = [h]
         for i, layer in enumerate(self.layers):
             print(i)
