@@ -18,10 +18,10 @@ def parse_args():
     ### Model parameters
     parser.add_argument('--model_type', nargs='?', default='kgat', help='Specify a loss type from {kgat, bprmf, fm, nfm, cke, cfkg}.')
     parser.add_argument('--use_kge', type=bool, default=True, help='whether using knowledge graph embedding')
-    parser.add_argument('--kge_size', type=int, default=4, help='KG Embedding size.')
-    parser.add_argument('--embed_size', type=int, default=4, help='CF Embedding size.')
+    parser.add_argument('--kge_size', type=int, default=32, help='KG Embedding size.')
+    parser.add_argument('--embed_size', type=int, default=32, help='CF Embedding size.')
     parser.add_argument('--gnn_num_layer', type=int, default=2, help='the number of layers')
-    parser.add_argument('--gnn_hidden_size', type=int, default=8, help='Output sizes of every layer')
+    parser.add_argument('--gnn_hidden_size', type=int, default=32, help='Output sizes of every layer')
     parser.add_argument('--Ks', nargs='?', default='[20, 40, 60, 80, 100]', help='Output sizes of every layer')
     parser.add_argument('--dropout_rate', type=float, default=0.1, help='Keep probability w.r.t. node dropout (i.e., 1-dropout_ratio) for each deep layer. 1: no dropout.')
     parser.add_argument('--use_att', type=bool, default=True, help='whether using attention mechanism')
@@ -70,23 +70,26 @@ def train(args):
     cf_optimizer = optim.Adam(cf_model.parameters(), lr=args.lr)
     kg_optimizer = optim.Adam(kge_model.parameters(), lr=args.lr)
     print("Start training ...")
-    for iter in range(1, args.max_iter+1):
+    for epoch in range(1, args.max_iter+1):
         if args.train_kge:
-            kge_model.train()
-            h, r, pos_t, neg_t = next(kg_sampler)
-            h_th = th.LongTensor(h)
-            r_th = th.LongTensor(r)
-            pos_t_th = th.LongTensor(pos_t)
-            neg_t_th = th.LongTensor(neg_t)
-            if use_cuda:
-                h_th, r_th, pos_t_th, neg_t_th = h_th.cuda(), r_th.cuda(), pos_t_th.cuda(), neg_t_th.cuda()
-            loss = kge_model(h_th, r_th, pos_t_th, neg_t_th)
-            # print("loss", loss)
-            loss.backward()
-            # print("start computing gradient ...")
-            kg_optimizer.step()
-            print("Iter {:04d} | Loss {:.4f} ".format(iter, loss.item()))
-            kg_optimizer.zero_grad()
+            iter = 0
+            for h, r, pos_t, neg_t in kg_sampler:
+                iter +=1
+                kge_model.train()
+                h_th = th.LongTensor(h)
+                r_th = th.LongTensor(r)
+                pos_t_th = th.LongTensor(pos_t)
+                neg_t_th = th.LongTensor(neg_t)
+                if use_cuda:
+                    h_th, r_th, pos_t_th, neg_t_th = h_th.cuda(), r_th.cuda(), pos_t_th.cuda(), neg_t_th.cuda()
+                loss = kge_model(h_th, r_th, pos_t_th, neg_t_th)
+                # print("loss", loss)
+                loss.backward()
+                # print("start computing gradient ...")
+                kg_optimizer.step()
+                print("Epoch {:04d}, Iter {:04d} | Loss {:.4f} ".format(epoch, iter, loss.item()))
+                kg_optimizer.zero_grad()
+
         else:
             cf_model.train()
             user_ids, item_pos_ids, item_neg_ids = next(cf_sampler)
