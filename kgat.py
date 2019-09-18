@@ -59,7 +59,6 @@ def train(args):
                       entity_dim=args.embed_size, num_gnn_layers=2, n_hidden=64, dropout=0.1, reg_lambda=0.01)
     if use_cuda:
         cf_model = cf_model.cuda()
-
     ### optimizer
     optimizer = optim.Adam(cf_model.parameters(), lr=args.lr)
     print("Start training ...")
