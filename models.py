@@ -149,13 +149,13 @@ class CFModel(nn.Module):
             h = layer(g, h, efeat)
             node_embed_cache.append(h)
         final_h = th.cat(node_embed_cache, 1)
-        print("final_h", final_h.shape, final_h)
+        #print("final_h", final_h.shape, final_h)
         src_vec = final_h[src_ids]
         pos_dst_vec = final_h[pos_dst_ids]
         neg_dst_vec = final_h[neg_dst_ids]
-        print("src_vec", src_vec.shape)
-        print("pos_dst_vec", pos_dst_vec.shape)
-        print("neg_dst_vec", neg_dst_vec.shape)
+        #print("src_vec", src_vec.shape)
+        #print("pos_dst_vec", pos_dst_vec.shape)
+        #print("neg_dst_vec", neg_dst_vec.shape)
         pos_score = th.bmm(src_vec.unsqueeze(1), pos_dst_vec.unsqueeze(2)).squeeze() ### (batch_size, )
         neg_score = th.bmm(src_vec.unsqueeze(1), neg_dst_vec.unsqueeze(2)).squeeze() ### (batch_size, )
         cf_reg_loss = _L2_norm_mean(src_vec) + _L2_norm_mean(pos_dst_vec) + _L2_norm_mean(neg_dst_vec)
