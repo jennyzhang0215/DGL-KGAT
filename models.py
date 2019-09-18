@@ -117,6 +117,7 @@ def forward(self, graph, nfeat, efeat):
 
         ### compute attention weight using edge_softmax
         graph.apply_edges(self.att_score)
+        print("attention score computed ...")
         graph.edata['a'] = edge_softmax(graph, graph.edata.pop('att_w'))
         graph.update_all(fn.u_mul_e('h', 'a', 'm'),
                          fn.sum('m', 'h_neighbor'))
