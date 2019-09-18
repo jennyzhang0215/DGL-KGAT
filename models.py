@@ -73,17 +73,16 @@ class KGEModel(nn.Module):
         h_vec = bmm_maybe_select(h_embed, self.relation_weight, r)
         pos_t_vec = bmm_maybe_select(pos_t_embed, self.relation_weight, r)
         neg_t_vec = bmm_maybe_select(neg_t_embed, self.relation_weight, r)
-        print("h_vec:", h_vec.shape)
-        print("r_vec", r_embed.shape)
-        print("pos_t_vec", pos_t_vec.shape)
-        print("neg_t_vec", neg_t_vec.shape)
+        # print("h_vec:", h_vec.shape)
+        # print("r_vec", r_embed.shape)
+        # print("pos_t_vec", pos_t_vec.shape)
+        # print("neg_t_vec", neg_t_vec.shape)
         pos_score = _L2_norm(h_vec + r_embed - pos_t_vec)
         neg_score = _L2_norm(h_vec + r_embed - neg_t_embed)
         kg_loss = _cal_score(pos_score, neg_score)
-        print(kg_loss)
+        #print(kg_loss)
         kg_reg_loss = _L2_norm_mean(h_embed) + _L2_norm_mean(r_embed) + \
                       _L2_norm_mean(pos_t_embed) + _L2_norm_mean(neg_t_embed)
-
         loss = kg_loss + self._reg_lambda * kg_reg_loss
         return loss
 
