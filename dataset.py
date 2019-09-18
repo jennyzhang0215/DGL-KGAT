@@ -83,7 +83,6 @@ class DataLoader(object):
                 pos_t = self.kg_triples_np[start: end][:, 2]
                 neg_t = self._rng.choice(self.num_KG_entities, end-start, replace=True).astype(np.int32)
                 yield h, r, pos_t, neg_t
-
         else:
             while True:
                 sel = self._rng.choice(self.num_KG_triples, batch_size, replace=False)

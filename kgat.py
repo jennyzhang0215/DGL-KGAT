@@ -30,6 +30,7 @@ def parse_args():
 
     ### Training parameters
     parser.add_argument('--max_iter', type=int, default=80000, help='train xx iterations')
+    parser.add_argument('--evaluate_every', type=int, default=4096, help='the evaluation duration')
     parser.add_argument('--batch_size', type=int, default=1024, help='CF batch size.')
     parser.add_argument('--batch_size_kg', type=int, default=4096, help='KG batch size.')
     parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate.')
@@ -90,6 +91,7 @@ def train(args):
                 print("Epoch {:04d}, Iter {:04d} | Loss {:.4f} ".format(epoch, iter, loss.item()))
                 kg_optimizer.zero_grad()
 
+
         else:
             cf_model.train()
             user_ids, item_pos_ids, item_neg_ids = next(cf_sampler)
@@ -107,6 +109,13 @@ def train(args):
             cf_optimizer.step()
             print("Iter {:04d} | Loss {:.4f} ".format(iter, loss.item()))
             cf_optimizer.zero_grad()
+
+        if epoch % args.evaluate_every == 0:
+            if use_cuda:
+                model.cpu()
+
+            model.eval()
+
 
 if __name__ == '__main__':
     args = parse_args()
