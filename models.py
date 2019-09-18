@@ -11,6 +11,7 @@ def _cal_score(pos_score, neg_score):
     return (-1.) * th.mean(s.double())
 def _L2_norm(x):
     ### sum(t ** 2) / 2
+    ### th.pow(th.norm(x, dim=1), 2) / 2.
     return th.sum(th.pow(x, 2), dim=1, keepdim=False) / 2.
 def _L2_norm_mean(x):
     ### ### mean( sum(t ** 2) / 2)
@@ -78,7 +79,6 @@ class KGEModel(nn.Module):
         print("neg_t_vec", neg_t_vec.shape)
         pos_score = _L2_norm(h_vec + r_embed - pos_t_vec)
         neg_score = _L2_norm(h_vec + r_embed - neg_t_embed)
-
         kg_loss = _cal_score(pos_score, neg_score)
         print(kg_loss)
         kg_reg_loss = _L2_norm_mean(h_embed) + _L2_norm_mean(r_embed) + \
