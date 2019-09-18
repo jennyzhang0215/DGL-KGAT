@@ -104,7 +104,7 @@ class KGATConv(nn.Module):
         print("tail_e W_r", t_r.shape, t_r)
         h_r = bmm_maybe_select(edges.dst['h'], self.relation_weight, edges.data['type']) ### (edge_num, hidden_dim)
         print("head_e W_r", h_r.shape, h_r)
-        att_w = th.bmm(t_r.unsqueeze(1), F.tanh(h_r + edges.data['e']).unsqueeze(2)).squeeze(-1)
+        att_w = th.bmm(t_r.unsqueeze(1), th.tanh(h_r + edges.data['e']).unsqueeze(2)).squeeze(-1)
         return {'att_w': att_w}
 
     def forward(self, graph, nfeat, efeat):
@@ -132,12 +132,12 @@ class CFModel(nn.Module):
         super(CFModel, self).__init__()
         self._reg_lambda = reg_lambda
         self.relation_embed = nn.Embedding(n_relations, n_hidden)  ### e_r
-        self.entity_embed = nn.Embedding(n_entities, entity_dim)
+        self.entity_embed = nn.Embedding(n_entities, n_hidden)
         self.layers = nn.ModuleList()
         for i in range(num_gnn_layers):
             if i == 0:
                 # in_feats, out_feats, n_relations, feat_drop,
-                kgatConv = KGATConv(entity_dim, n_hidden, n_relations, dropout)
+                kgatConv = KGATConv(n_hidden, n_hidden, n_relations, dropout)
             else:
                 kgatConv = KGATConv(n_hidden, n_hidden, n_relations, dropout)
             self.layers.append(kgatConv)
