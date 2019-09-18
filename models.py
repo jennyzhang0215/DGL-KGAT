@@ -59,13 +59,28 @@ class KGEModel(nn.Module):
         self._reg_lambda = reg_lambda
         self.entity_embed = nn.Embedding(n_entities, entity_dim)
         self.relation_embed = nn.Embedding(n_relations, relation_dim)
-        self.W_entity = nn.Linear(entity_dim, relation_dim, bias=False)
+        self.relation_weight = nn.Parameter(th.Tensor(n_relations, entity_dim, relation_dim))  ### W_r
+        nn.init.xavier_uniform_(self.relation_weight, gain=nn.init.calculate_gain('relu'))
+
 
     def forward(self, h, r, pos_t, neg_t):
-        h_embed = th.norm(self.W_entity(self.entity_embed(h)), p="fro", dim=1) ### Shape(batch_size, dim)
-        r_embed = th.norm(self.relation_embed(r), p="fro", dim=1)
-        pos_t_embed = th.norm(self.W_entity(self.entity_embed(pos_t)), p="fro", dim=1)
-        neg_t_embed = th.norm(self.W_entity(self.entity_embed(neg_t)), p="fro", dim=1)
+        h_embed = self.entity_embed(h)  ### Shape(batch_size, dim)
+        r_embed = self.relation_embed(r)
+        pos_t_embed = self.entity_embed(pos_t)
+        neg_t_embed = self.entity_embed(neg_t)
+
+        h_vec = bmm_maybe_select(h_embed, self.relation_weight, r)
+        pos_t_vec = bmm_maybe_select(pos_t_embed, self.relation_weight, r)
+        neg_t_vec = bmm_maybe_select(neg_t_embed, self.relation_weight, r)
+        print("h_vec:", h_vec.shape)
+        print("r_vec", r_embed.shape)
+        print("pos_t_vec", pos_t_vec.shape)
+        print("neg_t_vec", neg_t_vec.shape)
+        h_embed = th.norm(h_vec, p="fro", dim=1) ### Shape(batch_size, dim)
+        r_embed = th.norm(r_embed, p="fro", dim=1)
+        pos_t_embed = th.norm(pos_t_vec, p="fro", dim=1)
+        neg_t_embed = th.norm(neg_t_vec, p="fro", dim=1)
+        print("h_embed", h_embed.shape, "r_vec", r_embed.shape, "pos_t", pos_t_embed.shape, "neg_t", neg_t_embed.shape)
 
         pos_kg_score = _L2_norm(h_embed + r_embed - pos_t_embed) ### Shape(batch_size,)
         neg_kg_score = _L2_norm(h_embed + r_embed - neg_t_embed)
@@ -82,7 +97,6 @@ class KGATConv(nn.Module):
         super(KGATConv, self).__init__()
         self._in_feats = in_feats
         self.relation_weight = nn.Parameter(th.Tensor(n_relations, in_feats, out_feats))  ### W_r
-        nn.init.xavier_uniform_(self.relation_weight, gain=nn.init.calculate_gain('relu'))
         self.feat_drop = nn.Dropout(feat_drop)
         self._res_type = res_type
         if res_type == "Bi":
