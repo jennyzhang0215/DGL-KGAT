@@ -8,7 +8,7 @@ import torch.optim as optim
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Reproduce KGAT using DGL")
-    parser.add_argument('--gpu', type=int, default=-1, help='use GPU')
+    parser.add_argument('--gpu', type=int, default=0, help='use GPU')
     ### Data parameters
     parser.add_argument('--data_name', nargs='?', default='yelp2018',  help='Choose a dataset from {yelp2018, last-fm, amazon-book}')
     parser.add_argument('--pretrain', type=int, default=0, help='0: No pretrain, -1: Pretrain with the learned embeddings, 1:Pretrain with stored models.')
