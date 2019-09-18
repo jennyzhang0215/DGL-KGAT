@@ -31,7 +31,7 @@ def parse_args():
     ### Training parameters
     parser.add_argument('--max_iter', type=int, default=80000, help='train xx iterations')
     parser.add_argument('--batch_size', type=int, default=1024, help='CF batch size.')
-    parser.add_argument('--batch_size_kg', type=int, default=2048, help='KG batch size.')
+    parser.add_argument('--batch_size_kg', type=int, default=4096, help='KG batch size.')
     parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate.')
     args = parser.parse_args()
 
