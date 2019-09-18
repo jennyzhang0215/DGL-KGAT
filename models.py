@@ -101,17 +101,12 @@ class KGATConv(nn.Module):
         -------
 
         """
-        print("start compute attention weight ...")
         t_r = bmm_maybe_select(edges.src['h'], self.relation_weight, edges.data['type']) ### (edge_num, hidden_dim)
-        print("tail_e W_r", t_r.shape, t_r)
         h_r = bmm_maybe_select(edges.dst['h'], self.relation_weight, edges.data['type']) ### (edge_num, hidden_dim)
-        print("head_e W_r", h_r.shape, h_r)
         att_w = th.bmm(t_r.unsqueeze(1), th.tanh(h_r + edges.data['e']).unsqueeze(2)).squeeze(-1)
-        print("att_w", att_w.shape, att_w)
         return {'att_w': att_w}
 
     def forward(self, graph, nfeat, efeat):
-        print(graph)
         graph = graph.local_var()
         node_embed = self.feat_drop(nfeat)
         graph.ndata.update({'h': node_embed})
@@ -120,10 +115,8 @@ class KGATConv(nn.Module):
 
         ### compute attention weight using edge_softmax
         graph.apply_edges(self.att_score)
-        print("attention score computed ...")
         att_w = edge_softmax(graph, graph.edata.pop('att_w'))
         graph.edata['a'] = att_w
-        print("softmax_att_w", att_w.shape, att_w)
         graph.update_all(fn.u_mul_e('h', 'a', 'm'),
                          fn.sum('m', 'h_neighbor'))
         if self._res_type == "Bi":
@@ -131,7 +124,6 @@ class KGATConv(nn.Module):
                 F.leaky_relu(self.res_fc_2(th.mul(graph.ndata['h'], graph.ndata['h_neighbor'])))
         else:
             raise NotImplementedError
-        print("final h", h)
         return h
 
 class CFModel(nn.Module):
@@ -152,12 +144,8 @@ class CFModel(nn.Module):
     def forward(self, g, src_ids, pos_dst_ids, neg_dst_ids):
         h = self.entity_embed(th.arange(g.number_of_nodes()))
         efeat = self.relation_embed(g.edata['type'])
-        print("embedding finished")
-        print("h:", h.shape, "\n", h)
-        print("efeat:",efeat.shape, "\n", efeat)
         node_embed_cache = [h]
         for i, layer in enumerate(self.layers):
-            print(i)
             h = layer(g, h, efeat)
             node_embed_cache.append(h)
         final_h = th.cat(node_embed_cache, 1)
