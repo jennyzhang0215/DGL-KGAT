@@ -7,13 +7,15 @@ from dgl.nn.pytorch.softmax import edge_softmax
 
 def _cal_score(pos_score, neg_score):
     ### L = -1. * ln(sigmpid(neg_score, pos_score))
-    return (-1.) * th.mean(th.log(F.sigmoid(neg_score - pos_score)))
+    s = th.tensor(th.log(F.sigmoid(neg_score - pos_score)), dtype=th.float64)
+    return (-1.) * th.mean(s)
 def _L2_norm(x):
     ### sum(t ** 2) / 2
-    return th.sum(th.pow(x, 2), dim=1, keepdims=False) / 2.
+    return th.sum(th.pow(x, 2), dim=1, keepdim=False) / 2.
 def _L2_norm_mean(x):
     ### ### mean( sum(t ** 2) / 2)
-    return th.mean(th.sum(th.pow(x, 2), dim=1, keepdims=False)/2.)
+    s = th.tensor(_L2_norm(x), dtype=th.float64)
+    return th.mean(s)
 
 def bmm_maybe_select(A, B, index):
     """Slice submatrices of B by the given index and perform bmm.
@@ -163,6 +165,9 @@ class CFModel(nn.Module):
         src_vec = final_h[src_ids]
         pos_dst_vec = final_h[pos_dst_ids]
         neg_dst_vec = final_h[neg_dst_ids]
+        print("src_vec", src_vec.shape)
+        print("pos_dst_vec", pos_dst_vec.shape)
+        print("neg_dst_vec", neg_dst_vec.shape)
         pos_score = th.bmm(src_vec.unsqueeze(1), pos_dst_vec.unsqueeze(2)).squeeze() ### (batch_size, )
         neg_score = th.bmm(src_vec.unsqueeze(1), neg_dst_vec.unsqueeze(2)).squeeze() ### (batch_size, )
         cf_reg_loss = _L2_norm_mean(src_vec) + _L2_norm_mean(pos_dst_vec) + _L2_norm_mean(neg_dst_vec)
