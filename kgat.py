@@ -53,7 +53,7 @@ def train(args):
         th_e_type = th_e_type.cuda()
     graph.edata['type'] = th_e_type
     cf_sampler = dataset.CF_sampler(segment='train')
-
+    print("Dataset prepared ...")
     ### model
     cf_model =CFModel(n_entities=dataset.num_all_entities, n_relations=dataset.num_all_relations,
                       entity_dim=args.embed_size, num_gnn_layers=2, n_hidden=64, dropout=0.1, reg_lambda=0.01)
@@ -78,7 +78,6 @@ def train(args):
         optimizer.step()
         print("Iter {:04d} | Loss {:.4f} ".format(iter, loss.item()))
         optimizer.zero_grad()
-
 
 if __name__ == '__main__':
     args = parse_args()
