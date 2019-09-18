@@ -15,6 +15,42 @@ def _L2_norm_mean(x):
     ### ### mean( sum(t ** 2) / 2)
     return th.mean(th.sum(th.pow(x, 2), dim=1, keepdims=False)/2.)
 
+def bmm_maybe_select(A, B, index):
+    """Slice submatrices of B by the given index and perform bmm.
+    B is a 3D tensor of shape (N, D1, D2), which can be viewed as a stack of
+    N matrices of shape (D1, D2). The input index is an integer vector of length M.
+    A could be either:
+    (1) a dense tensor of shape (M, D1),
+    (2) an integer vector of length M.
+    The result C is a 2D matrix of shape (M, D2)
+    For case (1), C is computed by bmm:
+    ::
+        C[i, :] = matmul(A[i, :], B[index[i], :, :])
+    For case (2), C is computed by index select:
+    ::
+        C[i, :] = B[index[i], A[i], :]
+    Parameters
+    ----------
+    A : torch.Tensor
+        lhs tensor
+    B : torch.Tensor
+        rhs tensor
+    index : torch.Tensor
+        index tensor
+    Returns
+    -------
+    C : torch.Tensor
+        return tensor
+    """
+    if A.dtype == th.int64 and len(A.shape) == 1:
+        # following is a faster version of B[index, A, :]
+        B = B.view(-1, B.shape[2])
+        flatidx = index * B.shape[1] + A
+        return B.index_select(0, flatidx)
+    else:
+        BB = B.index_select(0, index)
+        return th.bmm(A.unsqueeze(1), BB).squeeze()
+
 # class KGEModel(nn.Module):
 #     def __init__(self, n_entities, n_relations, entity_dim, relation_dim, reg_lambda):
 #         super(KGEModel, self).__init__()
@@ -52,24 +88,25 @@ class KGATConv(nn.Module):
             self.res_fc_2 = nn.Linear(out_feats, out_feats, bias=False)
         else:
             raise NotImplementedError
+    def compute_attention_weight(self, edges):
+        print("start compute attention weight ...")
+        t_r = bmm_maybe_select(edges.src['h'], self.relation_weight, edges.data['type'])
+        print("tail_e W_r", t_r.shape, t_r)
+        h_r = bmm_maybe_select(edges.dst['h'], self.relation_weight, edges.data['type'])
+        print("head_e W_r", h_r.shape, h_r)
+        att_w = th.dot(t_r, F.tanh(h_r+ edges.data['e']))
+        return {"att_w": att_w}
 
     def forward(self, graph, nfeat, efeat):
         print(graph)
         graph = graph.local_var()
         node_embed = self.feat_drop(nfeat)
         graph.ndata.update({'h': node_embed})
-        print("start compute edge weight ...")
-        edge_W = self.relation_weight.index_select(0, graph.edata["type"])
-        print(edge_W)
         edge_embed = self.feat_drop(efeat)
-        print(edge_embed)
-        graph.edata.update({'R_W':edge_W, 'e': edge_embed})
+        graph.edata.update({'e': edge_embed})
         print("update node features")
-        graph.apply_edges(fn.u_mul_e('h', 'R_W', 't_r'))
-        graph.apply_edges(fn.v_mul_e('h', 'R_W', 'h_r'))
         print("apply edges h R_W")
-        graph.edata.update({'att_w': th.dot(graph.edata["t_r"],
-                                            F.tanh(graph.edata["h_r"] + self.relation_embed(graph.edata['e'])))})
+        graph.edata.update(self.compute_attention_weight)
         graph.edata['a'] = edge_softmax(graph, graph.edata.pop('att_w'))
         graph.update_all(fn.u_mul_e('h', 'a', 'm'),
                          fn.sum('m', 'h_neighbor'))
