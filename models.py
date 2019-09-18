@@ -88,25 +88,35 @@ class KGATConv(nn.Module):
             self.res_fc_2 = nn.Linear(out_feats, out_feats, bias=False)
         else:
             raise NotImplementedError
-    def compute_attention_weight(self, edges):
-        print("start compute attention weight ...")
-        t_r = bmm_maybe_select(edges.src['h'], self.relation_weight, edges.data['type'])
-        print("tail_e W_r", t_r.shape, t_r)
-        h_r = bmm_maybe_select(edges.dst['h'], self.relation_weight, edges.data['type'])
-        print("head_e W_r", h_r.shape, h_r)
-        att_w = th.dot(t_r, F.tanh(h_r+ edges.data['e']))
-        return {"att_w": att_w}
+    def att_score(self, edges):
+        """
+        att_score = (W_r h_t)^T tanh(W_r h_r + e_r)
+        Parameters
+        ----------
+        edges
 
-    def forward(self, graph, nfeat, efeat):
+        Returns
+        -------
+
+        """
+        print("start compute attention weight ...")
+        t_r = bmm_maybe_select(edges.src['h'], self.relation_weight, edges.data['type']) ### (edge_num, hidden_dim)
+        print("tail_e W_r", t_r.shape, t_r)
+        h_r = bmm_maybe_select(edges.dst['h'], self.relation_weight, edges.data['type']) ### (edge_num, hidden_dim)
+        print("head_e W_r", h_r.shape, h_r)
+        att_w = th.bmm(t_r.unsqueeze(1), F.tanh(h_r + edges.data['e']).unsqueeze(2)).squeeze(-1)
+        return {'att_w': att_w}
+
+def forward(self, graph, nfeat, efeat):
         print(graph)
         graph = graph.local_var()
         node_embed = self.feat_drop(nfeat)
         graph.ndata.update({'h': node_embed})
         edge_embed = self.feat_drop(efeat)
         graph.edata.update({'e': edge_embed})
-        print("update node features")
-        print("apply edges h R_W")
-        graph.edata.update(self.compute_attention_weight)
+
+        ### compute attention weight using edge_softmax
+        graph.apply_edges(self.att_score)
         graph.edata['a'] = edge_softmax(graph, graph.edata.pop('att_w'))
         graph.update_all(fn.u_mul_e('h', 'a', 'm'),
                          fn.sum('m', 'h_neighbor'))
