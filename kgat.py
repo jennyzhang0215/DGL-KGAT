@@ -62,7 +62,7 @@ def train(args):
 
     ### optimizer
     optimizer = optim.Adam(cf_model.parameters(), lr=args.lr)
-
+    print("Start training ...")
     for iter in range(1, args.max_iter+1):
         cf_model.train()
         user_ids, item_pos_ids, item_neg_ids = next(cf_sampler)
