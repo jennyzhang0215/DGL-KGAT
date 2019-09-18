@@ -7,15 +7,15 @@ from dgl.nn.pytorch.softmax import edge_softmax
 
 def _cal_score(pos_score, neg_score):
     ### L = -1. * ln(sigmpid(neg_score, pos_score))
-    s = th.tensor(th.log(F.sigmoid(neg_score - pos_score)), dtype=th.float64)
-    return (-1.) * th.mean(s)
+    s = th.log(th.sigmoid(neg_score - pos_score))
+    return (-1.) * th.mean(s.DoubleTensor)
 def _L2_norm(x):
     ### sum(t ** 2) / 2
     return th.sum(th.pow(x, 2), dim=1, keepdim=False) / 2.
 def _L2_norm_mean(x):
     ### ### mean( sum(t ** 2) / 2)
-    s = th.tensor(_L2_norm(x), dtype=th.float64)
-    return th.mean(s)
+    s = _L2_norm(x)
+    return th.mean(s.DoubleTensor)
 
 def bmm_maybe_select(A, B, index):
     """Slice submatrices of B by the given index and perform bmm.
