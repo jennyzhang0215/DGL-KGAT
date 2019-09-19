@@ -2,7 +2,7 @@ import pandas as pd
 import os
 import numpy as np
 
-data_name = "yelp2018"
+data_name = "last-fm"
 
 
 data_dir = os.path.realpath(os.path.join(os.path.abspath(__file__), '..', "datasets", data_name))
