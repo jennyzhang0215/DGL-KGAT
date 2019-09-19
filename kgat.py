@@ -121,12 +121,18 @@ def train(args):
             cf_sampler = dataset.CF_sampler(segment='test')
             test_hit_l = []
             for test_user_ids, test_item_ids, _ in cf_sampler:
+                test_user_ids_th = th.LongTensor(test_user_ids)
+                test_item_ids_th = th.LongTensor(test_item_ids)
+                item_id_range = th.arange(dataset.num_items)
+                if use_cuda:
+                    test_user_ids_th, test_item_ids_th = test_user_ids_th.cuda(), test_item_ids_th.cuda()
+                    item_id_range = item_id_range.cuda()
                 embedding = model(graph, th_n_id, th_e_type)
-
-                hit_rate = utils.calc_hit(embedding, (test_user_ids, test_item_ids), th.arange(dataset.num_items),
+                hit_rate = utils.calc_hit(embedding, (test_user_ids_th, test_item_ids_th), item_id_range,
                                       K=20, eval_bz=args.eval_batch_size)
+                print("hit_rate", hit_rate)
                 test_hit_l.append(hit_rate)
-            hit_score = np.mean(test_hit_l)
+            hit_score = th.mean(th.cat(test_hit_l).float()).items()
             # save best model
             if hit_score > best_hit_score:
                 best_hit_score = hit_score
