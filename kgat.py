@@ -58,9 +58,9 @@ def train(args):
     kg_sampler = dataset.KG_sampler(batch_size=args.batch_size_kg, sequential=True, segment='train')
     print("Dataset prepared ...")
     ### model
-
+    ## n_entities, n_relations, entity_dim, relation_dim, num_gnn_layers, n_hidden, dropout, reg_lambda
     cf_model = CFModel(n_entities=dataset.num_all_entities, n_relations=dataset.num_all_relations,
-                       entity_dim=args.embed_size, num_gnn_layers=args.gnn_num_layer,
+                       entity_dim=args.embed_size, relation_dim=args.embed_size, num_gnn_layers=args.gnn_num_layer,
                        n_hidden=args.gnn_hidden_size, dropout=args.dropout_rate, reg_lambda=0.01)
     kge_model = KGEModel(n_entities=dataset.num_KG_entities, n_relations=dataset.num_KG_relations,
                          entity_dim=args.embed_size, relation_dim=args.embed_size, reg_lambda=0.01)
