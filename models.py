@@ -7,8 +7,7 @@ from dgl.nn.pytorch.softmax import edge_softmax
 
 def _cal_score(pos_score, neg_score):
     ### L = -1. * ln(sigmpid(neg_score, pos_score))
-    s = th.log(th.sigmoid(neg_score - pos_score))
-    return (-1.) * th.mean(s.float())
+    return (-1.) * th.mean(th.log(th.sigmoid(neg_score - pos_score)))
 def _L2_norm(x):
     ### sum(t ** 2) / 2
     ### th.pow(th.norm(x, dim=1), 2) / 2.
@@ -158,28 +157,17 @@ class CFModel(nn.Module):
         final_h = th.cat(node_embed_cache, 1)
         return final_h
 
-    def cf_loss(self, embedding, src_ids, pos_dst_ids, neg_dst_ids):
+
+
+    def get_loss(self, embedding, src_ids, pos_dst_ids, neg_dst_ids):
         src_vec = embedding[src_ids]
         pos_dst_vec = embedding[pos_dst_ids]
         neg_dst_vec = embedding[neg_dst_ids]
         pos_score = th.bmm(src_vec.unsqueeze(1), pos_dst_vec.unsqueeze(2)).squeeze()  ### (batch_size, )
         neg_score = th.bmm(src_vec.unsqueeze(1), neg_dst_vec.unsqueeze(2)).squeeze()  ### (batch_size, )
-        cf_loss = _cal_score(pos_score, neg_score)
-        return cf_loss
-
-    def reg_loss(self, embedding, src_ids, pos_dst_ids, neg_dst_ids):
-        src_vec = embedding[src_ids]
-        pos_dst_vec = embedding[pos_dst_ids]
-        neg_dst_vec = embedding[neg_dst_ids]
-        cf_reg_loss = _L2_norm_mean(src_vec) + _L2_norm_mean(pos_dst_vec) + _L2_norm_mean(neg_dst_vec)
-        return cf_reg_loss
-
-    def get_loss(self, embedding, src_ids, pos_dst_ids, neg_dst_ids):
-        loss = self.cf_loss(embedding, src_ids, pos_dst_ids, neg_dst_ids) + \
-               self._reg_lambda * self.reg_loss(embedding, src_ids, pos_dst_ids, neg_dst_ids)
-
-        return loss
-
+        self.cf_loss = _cal_score(pos_score, neg_score)
+        self.cf_reg_loss = _L2_norm_mean(src_vec) + _L2_norm_mean(pos_dst_vec) + _L2_norm_mean(neg_dst_vec)
+        return self.cf_loss + self._reg_lambda * self.reg_loss
 
 
 
