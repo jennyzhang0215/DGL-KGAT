@@ -85,15 +85,14 @@ class KGEModel(nn.Module):
 
 
 class KGATConv(nn.Module):
-    def __init__(self, in_feats, out_feats, n_relations, feat_drop, res_type="Bi"):
+    def __init__(self, entity_in_feats, relation_in_feats, out_feats, n_relations, feat_drop, res_type="Bi"):
         super(KGATConv, self).__init__()
-        self._in_feats = in_feats
-        self.relation_weight = nn.Parameter(th.Tensor(n_relations, in_feats, out_feats))  ### W_r
+        self.relation_weight = nn.Parameter(th.Tensor(n_relations, entity_in_feats, relation_in_feats))  ### W_r
         self.feat_drop = nn.Dropout(feat_drop)
         self._res_type = res_type
         if res_type == "Bi":
-            self.res_fc = nn.Linear(out_feats, out_feats, bias=False)
-            self.res_fc_2 = nn.Linear(out_feats, out_feats, bias=False)
+            self.res_fc = nn.Linear(entity_in_feats, out_feats, bias=False)
+            self.res_fc_2 = nn.Linear(entity_in_feats, out_feats, bias=False)
         else:
             raise NotImplementedError
     def att_score(self, edges):
@@ -132,18 +131,19 @@ class KGATConv(nn.Module):
         return h
 
 class CFModel(nn.Module):
-    def __init__(self, n_entities, n_relations, num_gnn_layers, n_hidden, dropout, reg_lambda):
+    def __init__(self, n_entities, n_relations, entity_dim, relation_dim, num_gnn_layers, n_hidden, dropout, reg_lambda,
+                 res_type="Bi"):
         super(CFModel, self).__init__()
         self._reg_lambda = reg_lambda
-        self.relation_embed = nn.Embedding(n_relations, n_hidden)  ### e_r
-        self.entity_embed = nn.Embedding(n_entities, n_hidden)
+        self.relation_embed = nn.Embedding(n_relations, relation_dim)  ### e_r
+        self.entity_embed = nn.Embedding(n_entities, entity_dim)
         self.layers = nn.ModuleList()
         for i in range(num_gnn_layers):
             if i == 0:
                 # in_feats, out_feats, n_relations, feat_drop,
-                kgatConv = KGATConv(n_hidden, n_hidden, n_relations, dropout)
+                kgatConv = KGATConv(entity_dim, relation_dim, n_hidden, n_relations, dropout)
             else:
-                kgatConv = KGATConv(n_hidden, n_hidden, n_relations, dropout)
+                kgatConv = KGATConv(n_hidden, relation_dim, n_hidden, n_relations, dropout)
             self.layers.append(kgatConv)
 
     def forward(self, g, node_ids, relation_ids):
@@ -157,6 +157,7 @@ class CFModel(nn.Module):
             h = layer(g, h, efeat)
             node_embed_cache.append(h)
         final_h = th.cat(node_embed_cache, 1)
+        print("final_h", final_h)
         return final_h
 
     def get_loss(self, embedding, src_ids, pos_dst_ids, neg_dst_ids):
