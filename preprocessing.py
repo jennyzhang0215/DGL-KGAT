@@ -1,5 +1,7 @@
 import pandas as pd
 import os
+import numpy as np
+
 data_name = "yelp2018"
 
 
@@ -11,3 +13,12 @@ kg_pd = kg_pd.sort_values(by=['h'])
 print(kg_pd)
 kg_pd = kg_pd.sort_values(by=['t'])
 print(kg_pd)
+
+
+num_hop = 2
+item_ids = np.arange(45538).tolist()
+print(item_ids)
+
+for i in range(num_hop):
+    new_pd = [kg_pd[kg_pd['h'] in item_ids]]
+    print(new_pd)
