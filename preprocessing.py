@@ -12,7 +12,7 @@ kg_pd = pd.read_csv(kg_file, sep=" ", names=['h', "r", "t"], engine='python')
 kg_pd = kg_pd.sort_values(by=['h'])
 print(kg_pd)
 
-num_hop = 3
+num_hop = 2
 item_ids = np.arange(45538).tolist()
 
 for i in range(num_hop):
@@ -22,3 +22,10 @@ for i in range(num_hop):
     item_ids= np.unique(np.concatenate((new_pd['h'].values, new_pd['t'].values)))
     print("item_ids",item_ids.size)
     item_ids = item_ids.tolist()
+
+new_pd = kg_pd[kg_pd.h.isin(item_ids)]
+unique_h = new_pd["h"].nunique()
+unique_r = new_pd["r"].nunique()
+unique_t = new_pd["t"].nunique()
+print("#h:{}, #r:{}, #t:{}".format(unique_h, unique_r, unique_t))
+
