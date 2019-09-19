@@ -2,7 +2,7 @@ import pandas as pd
 import os
 import numpy as np
 
-data_name = "last-fm"
+data_name = "amazon-book"
 if data_name == "yelp2018":
     num_items = 45538
 elif data_name == "last-fm":
