@@ -147,6 +147,9 @@ class CFModel(nn.Module):
             self.layers.append(kgatConv)
 
     def forward(self, g, node_ids, relation_ids):
+        print("node_ids", node_ids.shape, node_ids)
+        print("relation_ids", relation_ids.shape, relation_ids)
+        g.edata['type'] = relation_ids
         h = self.entity_embed(node_ids)
         efeat = self.relation_embed(relation_ids)
         node_embed_cache = [h]

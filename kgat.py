@@ -54,12 +54,11 @@ def train(args):
     if use_cuda:
         th_e_type = th_e_type.cuda()
         th_n_id = th_n_id.cuda()
-    graph.edata['type'] = th_e_type
-    # graph.ndata['id'] = th_n_id
     cf_sampler = dataset.CF_sampler(segment='train')
     kg_sampler = dataset.KG_sampler(batch_size=args.batch_size_kg, sequential=True, segment='train')
     print("Dataset prepared ...")
     ### model
+
     cf_model = CFModel(n_entities=dataset.num_all_entities, n_relations=dataset.num_all_relations,
                        entity_dim=args.embed_size, num_gnn_layers=args.gnn_num_layer,
                        n_hidden=args.gnn_hidden_size, dropout=args.dropout_rate, reg_lambda=0.01)
