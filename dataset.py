@@ -38,10 +38,11 @@ class DataLoader(object):
         ### <item>       |=====================|=======
         ### <att entity> |=====================|+++++++
         ### <user>       |=======|+++++++++++++++++++++
+
+        ### TODO apply sampling strategy here
         g = dgl.DGLGraph()
         g.add_nodes(self.num_all_entities)
         g.add_edges(all_triplet[:, 0], all_triplet[:, 2])
-
         self.g = g
         self.etype = all_triplet[:, 1]
 
