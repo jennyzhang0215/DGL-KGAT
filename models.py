@@ -63,7 +63,6 @@ class KGEModel(nn.Module):
         self.relation_weight = nn.Parameter(th.Tensor(n_relations, entity_dim, relation_dim))  ### W_r
         nn.init.xavier_uniform_(self.relation_weight, gain=nn.init.calculate_gain('relu'))
 
-
     def forward(self, h, r, pos_t, neg_t):
         h_embed = self.entity_embed(h)  ### Shape(batch_size, dim)
         r_embed = self.relation_embed(r)
@@ -149,28 +148,43 @@ class CFModel(nn.Module):
                 kgatConv = KGATConv(n_hidden, n_hidden, n_relations, dropout)
             self.layers.append(kgatConv)
 
-    def forward(self, g, src_ids, pos_dst_ids, neg_dst_ids):
-        h = self.entity_embed(g.ndata['id'])
-        efeat = self.relation_embed(g.edata['type'])
+    def forward(self, g, node_ids, relation_ids):
+        h = self.entity_embed(node_ids)
+        efeat = self.relation_embed(relation_ids)
         node_embed_cache = [h]
         for i, layer in enumerate(self.layers):
             h = layer(g, h, efeat)
             node_embed_cache.append(h)
         final_h = th.cat(node_embed_cache, 1)
-        #print("final_h", final_h.shape, final_h)
-        src_vec = final_h[src_ids]
-        pos_dst_vec = final_h[pos_dst_ids]
-        neg_dst_vec = final_h[neg_dst_ids]
-        #print("src_vec", src_vec.shape)
-        #print("pos_dst_vec", pos_dst_vec.shape)
-        #print("neg_dst_vec", neg_dst_vec.shape)
-        pos_score = th.bmm(src_vec.unsqueeze(1), pos_dst_vec.unsqueeze(2)).squeeze() ### (batch_size, )
-        neg_score = th.bmm(src_vec.unsqueeze(1), neg_dst_vec.unsqueeze(2)).squeeze() ### (batch_size, )
-        cf_reg_loss = _L2_norm_mean(src_vec) + _L2_norm_mean(pos_dst_vec) + _L2_norm_mean(neg_dst_vec)
+        return final_h
+
+    def cf_loss(self, embedding, src_ids, pos_dst_ids, neg_dst_ids):
+        src_vec = embedding[src_ids]
+        pos_dst_vec = embedding[pos_dst_ids]
+        neg_dst_vec = embedding[neg_dst_ids]
+        pos_score = th.bmm(src_vec.unsqueeze(1), pos_dst_vec.unsqueeze(2)).squeeze()  ### (batch_size, )
+        neg_score = th.bmm(src_vec.unsqueeze(1), neg_dst_vec.unsqueeze(2)).squeeze()  ### (batch_size, )
         cf_loss = _cal_score(pos_score, neg_score)
-        loss = cf_loss + self._reg_lambda * cf_reg_loss
+        return cf_loss
+
+    def reg_loss(self, embedding, src_ids, pos_dst_ids, neg_dst_ids):
+        ### TODO need to verify this
+        src_vec = embedding[src_ids]
+        pos_dst_vec = embedding[pos_dst_ids]
+        neg_dst_vec = embedding[neg_dst_ids]
+        cf_reg_loss = th.mean(src_vec.pow(2)) + th.mean(pos_dst_vec.pow(2)) + th.mean(neg_dst_vec.pow(2))
+        return cf_reg_loss
+
+    def get_loss(self, embedding, src_ids, pos_dst_ids, neg_dst_ids):
+        loss = self.cf_loss(embedding, src_ids, pos_dst_ids, neg_dst_ids) + \
+               self._reg_lambda * self.reg_loss(embedding, src_ids, pos_dst_ids, neg_dst_ids)
 
         return loss
+
+
+
+
+
 
 
 

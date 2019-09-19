@@ -25,7 +25,7 @@ def parse_args():
     parser.add_argument('--Ks', nargs='?', default='[20, 40, 60, 80, 100]', help='Output sizes of every layer')
     parser.add_argument('--dropout_rate', type=float, default=0.1, help='Keep probability w.r.t. node dropout (i.e., 1-dropout_ratio) for each deep layer. 1: no dropout.')
     parser.add_argument('--use_att', type=bool, default=True, help='whether using attention mechanism')
-    parser.add_argument('--train_kge', type=bool, default=True, help='Just for testing. Train KGE model')
+    parser.add_argument('--train_kge', type=bool, default=False, help='Just for testing. Train KGE model')
     parser.add_argument('--regs', nargs='?', default='[1e-5,1e-5,1e-2]', help='Regularization for user and item embeddings.')
 
     ### Training parameters
@@ -53,8 +53,8 @@ def train(args):
     if use_cuda:
         th_e_type = th_e_type.cuda()
         th_n_id = th_n_id.cuda()
-    graph.edata['type'] = th_e_type
-    graph.ndata['id'] = th_n_id
+    # graph.edata['type'] = th_e_type
+    # graph.ndata['id'] = th_n_id
     cf_sampler = dataset.CF_sampler(segment='train')
     kg_sampler = dataset.KG_sampler(batch_size=args.batch_size_kg, sequential=True, segment='train')
     print("Dataset prepared ...")
@@ -90,8 +90,6 @@ def train(args):
                 kg_optimizer.step()
                 print("Epoch {:04d}, Iter {:04d} | Loss {:.4f} ".format(epoch, iter, loss.item()))
                 kg_optimizer.zero_grad()
-
-
         else:
             cf_model.train()
             user_ids, item_pos_ids, item_neg_ids = next(cf_sampler)
@@ -102,7 +100,8 @@ def train(args):
                 user_ids_th, item_pos_ids_th, item_neg_ids_th = \
                     user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda()
 
-            loss = cf_model(graph, user_ids_th, item_pos_ids_th, item_neg_ids_th)
+            embedding = cf_model(graph, th_n_id, th_e_type)
+            loss = cf_model.get_loss(embedding, user_ids_th, item_pos_ids_th, item_neg_ids_th)
             #print("loss", loss)
             loss.backward()
             #print("start computing gradient ...")
@@ -110,11 +109,11 @@ def train(args):
             print("Iter {:04d} | Loss {:.4f} ".format(iter, loss.item()))
             cf_optimizer.zero_grad()
 
-        if epoch % args.evaluate_every == 0:
-            if use_cuda:
-                model.cpu()
-
-            model.eval()
+        # if epoch % args.evaluate_every == 0:
+        #     if use_cuda:
+        #         model.cpu()
+        #
+        #     model.eval()
 
 
 if __name__ == '__main__':
