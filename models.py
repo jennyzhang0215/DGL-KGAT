@@ -120,7 +120,9 @@ class KGATConv(nn.Module):
 
         ### compute attention weight using edge_softmax
         graph.apply_edges(self.att_score)
+        print("attention_score:", graph.edata['att_w'])
         att_w = edge_softmax(graph, graph.edata.pop('att_w'))
+        print("att_w", att_w)
         graph.edata['a'] = att_w
         graph.update_all(fn.u_mul_e('h', 'a', 'm'), fn.sum('m', 'h_neighbor'))
         if self._res_type == "Bi":
