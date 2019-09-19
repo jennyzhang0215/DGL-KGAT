@@ -21,7 +21,7 @@ def parse_args():
     parser.add_argument('--kge_size', type=int, default=32, help='KG Embedding size.')
     parser.add_argument('--embed_size', type=int, default=16, help='CF Embedding size.')
     parser.add_argument('--gnn_num_layer', type=int, default=2, help='the number of layers')
-    parser.add_argument('--gnn_hidden_size', type=int, default=7, help='Output sizes of every layer')
+    parser.add_argument('--gnn_hidden_size', type=int, default=16, help='Output sizes of every layer')
     parser.add_argument('--Ks', nargs='?', default='[20, 40, 60, 80, 100]', help='Output sizes of every layer')
     parser.add_argument('--dropout_rate', type=float, default=0.1, help='Keep probability w.r.t. node dropout (i.e., 1-dropout_ratio) for each deep layer. 1: no dropout.')
     parser.add_argument('--use_att', type=bool, default=True, help='whether using attention mechanism')
@@ -30,6 +30,7 @@ def parse_args():
 
     ### Training parameters
     parser.add_argument('--max_iter', type=int, default=80000, help='train xx iterations')
+    parser.add_argument("--grad_norm", type=float, default=1.0, help="norm to clip gradient to")
     parser.add_argument('--evaluate_every', type=int, default=4096, help='the evaluation duration')
     parser.add_argument('--batch_size', type=int, default=1024, help='CF batch size.')
     parser.add_argument('--batch_size_kg', type=int, default=4096, help='KG batch size.')
@@ -104,6 +105,8 @@ def train(args):
             loss = cf_model.get_loss(embedding, user_ids_th, item_pos_ids_th, item_neg_ids_th)
             #print("loss", loss)
             loss.backward()
+            th.nn.utils.clip_grad_norm_(cf_model.parameters(), args.grad_norm)  # clip gradients
+
             #print("start computing gradient ...")
             cf_optimizer.step()
             print("Epoch {:04d} | Loss {:.4f} ".format(epoch, loss.item()))
