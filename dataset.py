@@ -33,6 +33,7 @@ class DataLoader(object):
         user_item_triplet[:, 2] = np.concatenate((self.train_pairs[1], self.train_pairs[0]))
         ### reverse the (head, relation, tail) direction, because we need tail --> head
         all_triplet = np.vstack((self.kg_triples_np[:, [2,1,0]],  user_item_triplet)).astype(np.int32)
+        assert np.max(all_triplet) + 1 == self.num_all_entities
 
         ###              |<item>  <att entity> | <user>
         ### <item>       |=====================|=======
@@ -59,11 +60,11 @@ class DataLoader(object):
         kg_pd = kg_pd.sort_values(by=['h'])
 
         item_ids = self.item_ids
-        print("0-> # triplets:{}, #items".format(kg_pd.shape[0], item_ids.size))
+        print("0-> # triplets:{}, #entities:{}".format(kg_pd.shape[0], item_ids.size))
         for i in range(self._num_neighbor_hop):
             new_pd = kg_pd[kg_pd.h.isin(item_ids)]
             item_ids = np.unique(np.concatenate((new_pd['h'].values, new_pd['t'].values)))
-            print("{}-> new #triplets:{}, new #items:{}".format(i+1, new_pd.shape[0], item_ids.size))
+            print("{}-> new #triplets:{}, #entities:{}".format(i+1, new_pd.shape[0], item_ids.size))
 
         print("original:\t#h:{}, #r:{}, #t:{}".format(kg_pd['h'].nunique(), kg_pd['r'].nunique(), kg_pd['t'].nunique()))
         print("filtered:\t#h:{}, #r:{}, #t:{}".format(new_pd["h"].nunique(), new_pd["r"].nunique(), new_pd["t"].nunique()))

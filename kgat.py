@@ -24,6 +24,7 @@ def parse_args():
     parser.add_argument('--regs', nargs='?', default='[1e-5,1e-5,1e-2]', help='Regularization for user and item embeddings.')
 
     ### Training parameters
+    parser.add_argument('--train_kge', type=bool, default=False, help='Just for testing. Train KGE model')
     parser.add_argument('--max_iter', type=int, default=80000, help='train xx iterations')
     parser.add_argument("--grad_norm", type=float, default=1.0, help="norm to clip gradient to")
     parser.add_argument('--lr', type=float, default=0.001, help='Learning rate.')
