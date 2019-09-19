@@ -113,10 +113,10 @@ class KGATConv(nn.Module):
 
     def forward(self, graph, nfeat, efeat):
         graph = graph.local_var()
-        node_embed = self.feat_drop(nfeat)
+        # node_embed = self.feat_drop(nfeat)
+        node_embed = nfeat
         graph.ndata.update({'h': node_embed})
-        edge_embed = self.feat_drop(efeat)
-        graph.edata.update({'e': edge_embed})
+        graph.edata.update({'e': efeat})
 
         ### compute attention weight using edge_softmax
         graph.apply_edges(self.att_score)
