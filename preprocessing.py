@@ -15,7 +15,7 @@ kg_pd = kg_pd.sort_values(by=['t'])
 print(kg_pd)
 
 
-num_hop = 2
+num_hop = 3
 item_ids = np.arange(45538).tolist()
 print("item_ids", len(item_ids))
 
