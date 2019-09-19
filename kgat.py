@@ -53,7 +53,7 @@ def train(args):
     if use_cuda:
         th_e_type = th_e_type.cuda()
         th_n_id = th_n_id.cuda()
-    # graph.edata['type'] = th_e_type
+    graph.edata['type'] = th_e_type
     # graph.ndata['id'] = th_n_id
     cf_sampler = dataset.CF_sampler(segment='train')
     kg_sampler = dataset.KG_sampler(batch_size=args.batch_size_kg, sequential=True, segment='train')
@@ -106,7 +106,7 @@ def train(args):
             loss.backward()
             #print("start computing gradient ...")
             cf_optimizer.step()
-            print("Iter {:04d} | Loss {:.4f} ".format(iter, loss.item()))
+            print("Epoch {:04d} | Loss {:.4f} ".format(epoch, loss.item()))
             cf_optimizer.zero_grad()
 
         # if epoch % args.evaluate_every == 0:
