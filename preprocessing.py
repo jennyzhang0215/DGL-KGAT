@@ -19,7 +19,7 @@ kg_pd = pd.read_csv(kg_file, sep=" ", names=['h', "r", "t"], engine='python')
 kg_pd = kg_pd.sort_values(by=['h'])
 print(kg_pd)
 
-num_hop = 2
+num_hop = 3
 
 item_ids = np.arange(num_items).tolist()
 
