@@ -171,8 +171,7 @@ class CFModel(nn.Module):
         src_vec = embedding[src_ids]
         pos_dst_vec = embedding[pos_dst_ids]
         neg_dst_vec = embedding[neg_dst_ids]
-        cf_reg_loss = _L2_norm_mean(src_vec) + _L2_norm_mean(pos_dst_vec) + \
-                      _L2_norm_mean(neg_dst_vec)
+        cf_reg_loss = _L2_norm_mean(src_vec) + _L2_norm_mean(pos_dst_vec) + _L2_norm_mean(neg_dst_vec)
         return cf_reg_loss
 
     def get_loss(self, embedding, src_ids, pos_dst_ids, neg_dst_ids):
