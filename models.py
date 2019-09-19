@@ -14,8 +14,7 @@ def _L2_norm(x):
     return th.sum(th.pow(x, 2), dim=1, keepdim=False) / 2.
 def _L2_norm_mean(x):
     ### ### mean( sum(t ** 2) / 2)
-    s = _L2_norm(x)
-    return th.mean(s.float())
+    return th.mean(_L2_norm(x))
 
 def bmm_maybe_select(A, B, index):
     """Slice submatrices of B by the given index and perform bmm.
@@ -167,6 +166,8 @@ class CFModel(nn.Module):
         neg_score = th.bmm(src_vec.unsqueeze(1), neg_dst_vec.unsqueeze(2)).squeeze()  ### (batch_size, )
         self.cf_loss = _cal_score(pos_score, neg_score)
         self.reg_loss = _L2_norm_mean(src_vec) + _L2_norm_mean(pos_dst_vec) + _L2_norm_mean(neg_dst_vec)
+        print("cf_loss", self.cf_loss)
+        print("reg_loss", self.reg_loss)
         return self.cf_loss + self._reg_lambda * self.reg_loss
 
 
