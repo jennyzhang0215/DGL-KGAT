@@ -156,14 +156,14 @@ class CFModel(nn.Module):
         final_h = th.cat(node_embed_cache, 1)
         return final_h
 
-
-
     def get_loss(self, embedding, src_ids, pos_dst_ids, neg_dst_ids):
         src_vec = embedding[src_ids]
         pos_dst_vec = embedding[pos_dst_ids]
         neg_dst_vec = embedding[neg_dst_ids]
         pos_score = th.bmm(src_vec.unsqueeze(1), pos_dst_vec.unsqueeze(2)).squeeze()  ### (batch_size, )
         neg_score = th.bmm(src_vec.unsqueeze(1), neg_dst_vec.unsqueeze(2)).squeeze()  ### (batch_size, )
+        print("pos_score", pos_score)
+        print("neg_score", neg_score)
         self.cf_loss = _cal_score(pos_score, neg_score)
         self.reg_loss = _L2_norm_mean(src_vec) + _L2_norm_mean(pos_dst_vec) + _L2_norm_mean(neg_dst_vec)
         print("cf_loss", self.cf_loss)
