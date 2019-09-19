@@ -132,7 +132,7 @@ class KGATConv(nn.Module):
         return h
 
 class CFModel(nn.Module):
-    def __init__(self, n_entities, n_relations, entity_dim, num_gnn_layers, n_hidden, dropout, reg_lambda):
+    def __init__(self, n_entities, n_relations, num_gnn_layers, n_hidden, dropout, reg_lambda):
         super(CFModel, self).__init__()
         self._reg_lambda = reg_lambda
         self.relation_embed = nn.Embedding(n_relations, n_hidden)  ### e_r
