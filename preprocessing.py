@@ -17,11 +17,11 @@ print(kg_pd)
 
 num_hop = 2
 item_ids = np.arange(45538).tolist()
-print(item_ids)
+print("item_ids", len(item_ids))
 
 for i in range(num_hop):
     new_pd = kg_pd[kg_pd.h.isin(item_ids)]
     print(new_pd)
     ds = np.unique(np.concatenate((new_pd['h'].values, new_pd['t'].values)))
-    print("item_ids.size", item_ids.size)
+    print("item_ids", len(item_ids))
     item_ids = item_ids.tolist()
