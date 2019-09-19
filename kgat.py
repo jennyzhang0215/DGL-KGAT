@@ -16,12 +16,11 @@ def parse_args():
 
     ### Model parameters
     parser.add_argument('--use_kge', type=bool, default=True, help='whether using knowledge graph embedding')
-    parser.add_argument('--kge_size', type=int, default=32, help='KG Embedding size.')
-    parser.add_argument('--embed_size', type=int, default=8, help='CF Embedding size.')
+    parser.add_argument('--kge_size', type=int, default=5, help='KG Embedding size.')
+    parser.add_argument('--embed_size', type=int, default=7, help='CF Embedding size.')
     parser.add_argument('--gnn_num_layer', type=int, default=2, help='the number of layers')
-    parser.add_argument('--gnn_hidden_size', type=int, default=8, help='Output sizes of every layer')
+    parser.add_argument('--gnn_hidden_size', type=int, default=3, help='Output sizes of every layer')
     parser.add_argument('--dropout_rate', type=float, default=0.1, help='Keep probability w.r.t. node dropout (i.e., 1-dropout_ratio) for each deep layer. 1: no dropout.')
-    parser.add_argument('--train_kge', type=bool, default=False, help='Just for testing. Train KGE model')
     parser.add_argument('--regs', nargs='?', default='[1e-5,1e-5,1e-2]', help='Regularization for user and item embeddings.')
 
     ### Training parameters
@@ -51,11 +50,8 @@ def train(args):
     if use_cuda:
         th_e_type = th_e_type.cuda()
         th_n_id = th_n_id.cuda()
-    cf_sampler = dataset.CF_sampler(segment='train')
-    kg_sampler = dataset.KG_sampler(batch_size=args.batch_size_kg, sequential=True, segment='train')
     print("Dataset prepared ...")
     ### model
-    ## n_entities, n_relations, entity_dim, relation_dim, num_gnn_layers, n_hidden, dropout, reg_lambda
     if args.train_kge:
         model = KGEModel(n_entities=dataset.num_KG_entities, n_relations=dataset.num_KG_relations,
                              entity_dim=args.embed_size, relation_dim=args.embed_size, reg_lambda=0.01)
@@ -73,6 +69,7 @@ def train(args):
 
     for epoch in range(1, args.max_iter+1):
         if args.train_kge:
+            kg_sampler = dataset.KG_sampler(batch_size=args.batch_size_kg, sequential=True, segment='train')
             iter = 0
             for h, r, pos_t, neg_t in kg_sampler:
                 iter +=1
