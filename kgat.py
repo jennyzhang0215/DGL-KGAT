@@ -102,6 +102,7 @@ def train(args):
                     user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda()
 
             embedding = cf_model(graph, th_n_id, th_e_type)
+            print("embedding", embedding)
             loss = cf_model.get_loss(embedding, user_ids_th, item_pos_ids_th, item_neg_ids_th)
             #print("loss", loss)
             loss.backward()
