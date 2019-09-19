@@ -47,6 +47,8 @@ class DataLoader(object):
         print(g)
         self.g = g
         self.etype = all_triplet[:, 1]
+        deg = g.in_degrees()
+        print("degree: min:{}, max:{}".format(deg.min(), deg.max()), g.in_degrees())
 
     @property
     def num_all_entities(self):
