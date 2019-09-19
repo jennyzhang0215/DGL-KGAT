@@ -3,7 +3,14 @@ import os
 import numpy as np
 
 data_name = "last-fm"
-
+if data_name == "yelp2018":
+    num_items = 45538
+elif data_name == "last-fm":
+    num_items = 48123
+elif data_name == "amazon-book":
+    num_items = 24915
+else:
+    raise NotImplementedError
 
 data_dir = os.path.realpath(os.path.join(os.path.abspath(__file__), '..', "datasets", data_name))
 kg_file = os.path.join(data_dir, "kg_final.txt")
@@ -13,7 +20,8 @@ kg_pd = kg_pd.sort_values(by=['h'])
 print(kg_pd)
 
 num_hop = 2
-item_ids = np.arange(45538).tolist()
+
+item_ids = np.arange(num_items).tolist()
 
 for i in range(num_hop):
     print(i, "curr_items", len(item_ids))
