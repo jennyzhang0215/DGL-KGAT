@@ -19,9 +19,9 @@ def parse_args():
     parser.add_argument('--model_type', nargs='?', default='kgat', help='Specify a loss type from {kgat, bprmf, fm, nfm, cke, cfkg}.')
     parser.add_argument('--use_kge', type=bool, default=True, help='whether using knowledge graph embedding')
     parser.add_argument('--kge_size', type=int, default=32, help='KG Embedding size.')
-    parser.add_argument('--embed_size', type=int, default=16, help='CF Embedding size.')
+    parser.add_argument('--embed_size', type=int, default=8, help='CF Embedding size.')
     parser.add_argument('--gnn_num_layer', type=int, default=2, help='the number of layers')
-    parser.add_argument('--gnn_hidden_size', type=int, default=16, help='Output sizes of every layer')
+    parser.add_argument('--gnn_hidden_size', type=int, default=8, help='Output sizes of every layer')
     parser.add_argument('--Ks', nargs='?', default='[20, 40, 60, 80, 100]', help='Output sizes of every layer')
     parser.add_argument('--dropout_rate', type=float, default=0.1, help='Keep probability w.r.t. node dropout (i.e., 1-dropout_ratio) for each deep layer. 1: no dropout.')
     parser.add_argument('--use_att', type=bool, default=True, help='whether using attention mechanism')
@@ -34,7 +34,7 @@ def parse_args():
     parser.add_argument('--evaluate_every', type=int, default=4096, help='the evaluation duration')
     parser.add_argument('--batch_size', type=int, default=1024, help='CF batch size.')
     parser.add_argument('--batch_size_kg', type=int, default=4096, help='KG batch size.')
-    parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate.')
+    parser.add_argument('--lr', type=float, default=0.001, help='Learning rate.')
     args = parser.parse_args()
 
     return args
