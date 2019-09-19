@@ -8,7 +8,7 @@ from dgl.nn.pytorch.softmax import edge_softmax
 def _cal_score(pos_score, neg_score):
     ### L = -1. * ln(sigmpid(neg_score, pos_score))
     s = th.log(th.sigmoid(neg_score - pos_score))
-    return (-1.) * th.mean(s.double())
+    return (-1.) * th.mean(s.float())
 def _L2_norm(x):
     ### sum(t ** 2) / 2
     ### th.pow(th.norm(x, dim=1), 2) / 2.
@@ -16,7 +16,7 @@ def _L2_norm(x):
 def _L2_norm_mean(x):
     ### ### mean( sum(t ** 2) / 2)
     s = _L2_norm(x)
-    return th.mean(s.double())
+    return th.mean(s.float())
 
 def bmm_maybe_select(A, B, index):
     """Slice submatrices of B by the given index and perform bmm.
