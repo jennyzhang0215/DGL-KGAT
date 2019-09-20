@@ -6,7 +6,7 @@ from dgl.nn.pytorch.softmax import edge_softmax
 
 
 def _cal_score(pos_score, neg_score):
-    ### L = -1. * ln(sigmpid(neg_score, pos_score))
+    ### L = -1. * ln(sigmoid(neg_score, pos_score))
     return (-1.) * th.mean(th.log(th.sigmoid(neg_score - pos_score)))
 def _L2_norm(x):
     ### sum(t ** 2) / 2
@@ -76,8 +76,9 @@ class KGEModel(nn.Module):
         # print("neg_t_vec", neg_t_vec.shape)
         pos_score = _L2_norm(h_vec + r_embed - pos_t_vec)
         neg_score = _L2_norm(h_vec + r_embed - neg_t_vec)
-        kg_loss = _cal_score(pos_score, neg_score)
-        #print(kg_loss)
+        kg_loss = F.logsigmoid(neg_score - pos_score) * (-1.0)
+        print(kg_loss)
+        kg_loss = th.mean(kg_loss)
         kg_reg_loss = _L2_norm_mean(h_embed) + _L2_norm_mean(r_embed) + \
                       _L2_norm_mean(pos_t_embed) + _L2_norm_mean(neg_t_embed)
         loss = kg_loss + self._reg_lambda * kg_reg_loss
