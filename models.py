@@ -177,7 +177,7 @@ class CFModel(nn.Module):
         neg_score = th.bmm(src_vec.unsqueeze(1), neg_dst_vec.unsqueeze(2)).squeeze()  ### (batch_size, )
         print("pos_score", pos_score)
         print("neg_score", neg_score)
-        self.cf_loss = F.logsigmoid(pos_score - neg_score) * (-1.0)
+        self.cf_loss = th.mean(F.logsigmoid(pos_score - neg_score) ) * (-1.0)
         self.reg_loss = _L2_norm_mean(self.relation_embed.weight) + _L2_norm_mean(self.entity_embed.weight) +\
                         _L2_norm_mean(self.relation_weight)
         print("cf_loss", self.cf_loss)
