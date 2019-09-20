@@ -26,8 +26,11 @@ def perturb_and_get_rank(embedding, user, item, all_item_id_range, batch_size=10
         score = th.sum(out_prod, dim=0) # size E x V
         score = th.sigmoid(score)
         target = item[batch_start: batch_end]
-        ranks.append(sort_and_rank(score, target).cpu().numpy())
-    return th.cat(ranks)
+        rank = sort_and_rank(score, target).cpu().numpy()
+        print(rank)
+        ranks.append(rank)
+    ranks = np.concatenate(ranks)
+    return ranks
 
 # return Hits @ (K)
 def calc_hit(embedding, test_pairs, all_item_id_range, K, eval_bz=100):
@@ -37,8 +40,8 @@ def calc_hit(embedding, test_pairs, all_item_id_range, K, eval_bz=100):
                                      all_item_id_range=all_item_id_range, batch_size=eval_bz)
         ranks += 1 # change to 1-indexed
 
-        avg_count = th.mean((ranks <= K).float())
-        return avg_count.item()
+        avg_count = np.mean((ranks <= K).float())
+        return avg_count
 
 
 #
