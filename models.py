@@ -88,6 +88,7 @@ class KGATConv(nn.Module):
     def __init__(self, entity_in_feats, relation_in_feats, out_feats, n_relations, feat_drop, res_type="Bi"):
         super(KGATConv, self).__init__()
         self.relation_weight = nn.Parameter(th.Tensor(n_relations, entity_in_feats, relation_in_feats))  ### W_r
+        nn.init.xavier_uniform_(self.relation_weight, gain=nn.init.calculate_gain('relu'))
         self.feat_drop = nn.Dropout(feat_drop)
         self._res_type = res_type
         if res_type == "Bi":
