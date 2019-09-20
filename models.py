@@ -118,7 +118,7 @@ class KGATConv(nn.Module):
         node_embed = nfeat
         graph.ndata.update({'h': node_embed})
         graph.edata.update({'e': efeat})
-
+        print("relation_W", self.relation_W)
         ### compute attention weight using edge_softmax
         graph.apply_edges(self.att_score)
         print("attention_score:", graph.edata['att_w'])
