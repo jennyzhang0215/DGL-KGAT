@@ -52,6 +52,7 @@ def calc_hit(embedding, dataset, all_item_id_range, K, use_cuda):
             emb_all = embedding[all_item_id_range].transpose(0, 1)
             print("emb_all", emb_all)
             score = th.sigmoid(th.matmul(emb_u, emb_all))
+            print("score", score.shape, score)
             ### mask scores of the training items as 0
             score[dataset.train_user_dict[u_id]] = 0.0
             _, rank_indices = th.sort(score, dim=1, descending=True)
