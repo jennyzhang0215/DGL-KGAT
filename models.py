@@ -135,8 +135,8 @@ class KGATConv(nn.Module):
         return h_neighbor, out
 
 class CFModel(nn.Module):
-    def __init__(self, n_entities, n_relations, entity_dim, relation_dim, num_gnn_layers, n_hidden, dropout, reg_lambda,
-                 res_type="Bi"):
+    def __init__(self, n_entities, n_relations, entity_dim, relation_dim, num_gnn_layers, n_hidden,
+                 dropout, reg_lambda, res_type="Bi"):
         super(CFModel, self).__init__()
         self._reg_lambda = reg_lambda
         self.relation_embed = nn.Embedding(n_relations, relation_dim)  ### e_r
