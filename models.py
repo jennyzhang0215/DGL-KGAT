@@ -161,7 +161,7 @@ class CFModel(nn.Module):
         #print("efeat", efeat.shape, efeat)
         node_embed_cache = [h]
         for i, layer in enumerate(self.layers):
-            h = layer(g, h, efeat)
+            h = layer(g, h, efeat, self.relation_weight)
             #print(i, "h", h.shape, h)
             node_embed_cache.append(h)
         final_h = th.cat(node_embed_cache, 1)
