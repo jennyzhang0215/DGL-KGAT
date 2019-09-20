@@ -114,10 +114,10 @@ def train(args):
 
 
         if epoch % args.evaluate_every == 0:
-            if use_cuda:
-                model.cpu()
-                th_n_id = th_n_id.cpu()
-                th_e_type = th_e_type.cpu()
+            # if use_cuda:
+            #     model.cpu()
+            #     th_n_id = th_n_id.cpu()
+            #     th_e_type = th_e_type.cpu()
             model.eval()
             cf_sampler = dataset.CF_sampler(segment='test')
             test_hit_l = []
@@ -125,9 +125,9 @@ def train(args):
                 test_user_ids_th = th.LongTensor(test_user_ids)
                 test_item_ids_th = th.LongTensor(test_item_ids)
                 item_id_range = th.arange(dataset.num_items)
-                # if use_cuda:
-                #     test_user_ids_th, test_item_ids_th, item_id_range = \
-                #         test_user_ids_th.cuda(), test_item_ids_th.cuda(), item_id_range.cuda()
+                if use_cuda:
+                    test_user_ids_th, test_item_ids_th, item_id_range = \
+                        test_user_ids_th.cuda(), test_item_ids_th.cuda(), item_id_range.cuda()
                 embedding = model(graph, th_n_id, th_e_type)
                 hit_rate = utils.calc_hit(embedding, (test_user_ids_th, test_item_ids_th), item_id_range,
                                       K=20, eval_bz=args.eval_batch_size)
@@ -138,10 +138,10 @@ def train(args):
             if hit_score > best_hit_score:
                 best_hit_score = hit_score
                 th.save({'state_dict': model.state_dict(), 'epoch': epoch}, model_state_file)
-            if use_cuda:
-                model.cuda()
-                th_n_id = th_n_id.cuda()
-                th_e_type = th_e_type.cuda()
+            # if use_cuda:
+            #     model.cuda()
+            #     th_n_id = th_n_id.cuda()
+            #     th_e_type = th_e_type.cuda()
 
 if __name__ == '__main__':
     args = parse_args()
