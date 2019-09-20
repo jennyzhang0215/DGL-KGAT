@@ -83,10 +83,11 @@ class KGEModel(nn.Module):
 
 
 class KGATConv(nn.Module):
-    def __init__(self, entity_in_feats, out_feats, feat_drop, res_type="Bi"):
+    def __init__(self, entity_in_feats, out_feats, relation_weight, feat_drop, res_type="Bi"):
         super(KGATConv, self).__init__()
         self.feat_drop = nn.Dropout(feat_drop)
         self._res_type = res_type
+        self.relation_W = relation_weight
         if res_type == "Bi":
             self.res_fc = nn.Linear(entity_in_feats, out_feats, bias=False)
             self.res_fc_2 = nn.Linear(entity_in_feats, out_feats, bias=False)
@@ -111,8 +112,7 @@ class KGATConv(nn.Module):
         att_w = th.bmm(t_r.unsqueeze(1), th.tanh(h_r + edges.data['e']).unsqueeze(2)).squeeze(-1)
         return {'att_w': att_w}
 
-    def forward(self, graph, nfeat, efeat, relation_W):
-        self.relation_W = relation_W
+    def forward(self, graph, nfeat, efeat):
         graph = graph.local_var()
         # node_embed = self.feat_drop(nfeat)
         node_embed = nfeat
@@ -146,9 +146,9 @@ class CFModel(nn.Module):
         for i in range(num_gnn_layers):
             if i == 0:
                 # in_feats, out_feats, n_relations, feat_drop,
-                kgatConv = KGATConv(entity_dim, n_hidden, dropout)
+                kgatConv = KGATConv(entity_dim, n_hidden, self.relation_weight, dropout)
             else:
-                kgatConv = KGATConv(n_hidden, n_hidden, dropout)
+                kgatConv = KGATConv(n_hidden, n_hidden, self.relation_weight, dropout)
             self.layers.append(kgatConv)
 
     def forward(self, g, node_ids, relation_ids):
@@ -161,7 +161,7 @@ class CFModel(nn.Module):
         #print("efeat", efeat.shape, efeat)
         node_embed_cache = [h]
         for i, layer in enumerate(self.layers):
-            h = layer(g, h, efeat, self.relation_weight)
+            h = layer(g, h, efeat)
             #print(i, "h", h.shape, h)
             node_embed_cache.append(h)
         final_h = th.cat(node_embed_cache, 1)
