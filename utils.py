@@ -26,7 +26,7 @@ def perturb_and_get_rank(embedding, user, item, all_item_id_range, batch_size=10
         score = th.sum(out_prod, dim=0) # size E x V
         score = th.sigmoid(score)
         target = item[batch_start: batch_end]
-        ranks.append(sort_and_rank(score, target))
+        ranks.append(sort_and_rank(score, target).detach())
     return th.cat(ranks)
 
 # return Hits @ (K)

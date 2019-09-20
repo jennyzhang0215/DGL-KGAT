@@ -31,7 +31,7 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=1024, help='CF batch size.')
     parser.add_argument('--batch_size_kg', type=int, default=4096, help='KG batch size.')
     parser.add_argument('--evaluate_every', type=int, default=1, help='the evaluation duration')
-    parser.add_argument("--eval-batch-size", type=int, default=500, help="batch size when evaluating")
+    parser.add_argument("--eval-batch-size", type=int, default=1000, help="batch size when evaluating")
     args = parser.parse_args()
 
     return args
