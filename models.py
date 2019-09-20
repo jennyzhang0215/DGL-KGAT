@@ -83,10 +83,8 @@ class KGEModel(nn.Module):
 
 
 class KGATConv(nn.Module):
-    def __init__(self, entity_in_feats, relation_in_feats, out_feats, n_relations, feat_drop, res_type="Bi"):
+    def __init__(self, entity_in_feats, out_feats, feat_drop, res_type="Bi"):
         super(KGATConv, self).__init__()
-        self.relation_weight = nn.Parameter(th.Tensor(n_relations, entity_in_feats, relation_in_feats))  ### W_r
-        nn.init.xavier_uniform_(self.relation_weight, gain=nn.init.calculate_gain('relu'))
         self.feat_drop = nn.Dropout(feat_drop)
         self._res_type = res_type
         if res_type == "Bi":
@@ -105,16 +103,16 @@ class KGATConv(nn.Module):
         -------
 
         """
-        print(self.relation_weight )
-        t_r = bmm_maybe_select(edges.src['h'], self.relation_weight, edges.data['type']) ### (edge_num, hidden_dim)
-        print("t_r", t_r)
-        h_r = bmm_maybe_select(edges.dst['h'], self.relation_weight, edges.data['type']) ### (edge_num, hidden_dim)
-        print("h_r", h_r)
-
+        print(self.relation_W)
+        t_r = bmm_maybe_select(edges.src['h'], self.relation_W, edges.data['type']) ### (edge_num, hidden_dim)
+        h_r = bmm_maybe_select(edges.dst['h'], self.relation_W, edges.data['type']) ### (edge_num, hidden_dim)
+        # print("t_r", t_r)
+        # print("h_r", h_r)
         att_w = th.bmm(t_r.unsqueeze(1), th.tanh(h_r + edges.data['e']).unsqueeze(2)).squeeze(-1)
         return {'att_w': att_w}
 
-    def forward(self, graph, nfeat, efeat):
+    def forward(self, graph, nfeat, efeat, relation_W):
+        self.relation_W = relation_W
         graph = graph.local_var()
         # node_embed = self.feat_drop(nfeat)
         node_embed = nfeat
@@ -141,14 +139,16 @@ class CFModel(nn.Module):
         super(CFModel, self).__init__()
         self._reg_lambda = reg_lambda
         self.relation_embed = nn.Embedding(n_relations, relation_dim)  ### e_r
-        self.entity_embed = nn.Embedding(n_entities, entity_dim)
+        self.entity_embed = nn.Embedding(n_entities, entity_dim) ### e_h, e_t
+        self.relation_weight = nn.Parameter(th.Tensor(n_relations, entity_dim, relation_dim))  ### W_r
+        nn.init.xavier_uniform_(self.relation_weight, gain=nn.init.calculate_gain('relu'))
         self.layers = nn.ModuleList()
         for i in range(num_gnn_layers):
             if i == 0:
                 # in_feats, out_feats, n_relations, feat_drop,
-                kgatConv = KGATConv(entity_dim, relation_dim, n_hidden, n_relations, dropout)
+                kgatConv = KGATConv(entity_dim, n_hidden, dropout)
             else:
-                kgatConv = KGATConv(n_hidden, relation_dim, n_hidden, n_relations, dropout)
+                kgatConv = KGATConv(n_hidden, n_hidden, dropout)
             self.layers.append(kgatConv)
 
     def forward(self, g, node_ids, relation_ids):
@@ -177,7 +177,8 @@ class CFModel(nn.Module):
         print("pos_score", pos_score)
         print("neg_score", neg_score)
         self.cf_loss = F.logsigmoid(pos_score - neg_score) * (-1.0)
-        self.reg_loss = _L2_norm_mean(src_vec) + _L2_norm_mean(pos_dst_vec) + _L2_norm_mean(neg_dst_vec)
+        self.reg_loss = _L2_norm_mean(self.relation_embed.weight) + _L2_norm_mean(self.entity_embed.weight) +\
+                        _L2_norm_mean(self.relation_weight)
         print("cf_loss", self.cf_loss)
         print("reg_loss", self.reg_loss)
         return self.cf_loss + self._reg_lambda * self.reg_loss
