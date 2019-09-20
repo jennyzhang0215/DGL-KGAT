@@ -118,7 +118,7 @@ class KGATConv(nn.Module):
         node_embed = nfeat
         graph.ndata.update({'h': node_embed})
         graph.edata.update({'e': efeat})
-        print("relation_W", self.relation_W)
+        print("relation_W", self.relation_W.shape,  self.relation_W)
         ### compute attention weight using edge_softmax
         graph.apply_edges(self.att_score)
         print("attention_score:", graph.edata['att_w'])
@@ -126,12 +126,13 @@ class KGATConv(nn.Module):
         print("att_w", att_w)
         graph.edata['a'] = att_w
         graph.update_all(fn.u_mul_e('h', 'a', 'm'), fn.sum('m', 'h_neighbor'))
+        h_neighbor = graph.ndata['h_neighbor']
         if self._res_type == "Bi":
-            h = F.leaky_relu(self.res_fc(graph.ndata['h']+graph.ndata['h_neighbor']))+\
-                F.leaky_relu(self.res_fc_2(th.mul(graph.ndata['h'], graph.ndata['h_neighbor'])))
+            out = F.leaky_relu(self.res_fc(graph.ndata['h']+h_neighbor))+\
+                F.leaky_relu(self.res_fc_2(th.mul(graph.ndata['h'], h_neighbor)))
         else:
             raise NotImplementedError
-        return h
+        return h_neighbor, out
 
 class CFModel(nn.Module):
     def __init__(self, n_entities, n_relations, entity_dim, relation_dim, num_gnn_layers, n_hidden, dropout, reg_lambda,
@@ -161,9 +162,9 @@ class CFModel(nn.Module):
         #print("efeat", efeat.shape, efeat)
         node_embed_cache = [h]
         for i, layer in enumerate(self.layers):
-            h = layer(g, h, efeat)
+            h, out = layer(g, h, efeat)
             #print(i, "h", h.shape, h)
-            node_embed_cache.append(h)
+            node_embed_cache.append(out)
         final_h = th.cat(node_embed_cache, 1)
         print("final_h", final_h)
         return final_h
