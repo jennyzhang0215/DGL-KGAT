@@ -65,7 +65,7 @@ def train(args):
     ### optimizer
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     print("Start training ...")
-    best_hit_score = 0.0
+    best_recall = 0.0
     model_state_file = 'model_state.pth'
 
     for epoch in range(1, args.max_epoch+1):
@@ -119,24 +119,21 @@ def train(args):
             #     th_n_id = th_n_id.cpu()
             #     th_e_type = th_e_type.cpu()
             model.eval()
-            cf_sampler = dataset.CF_sampler(segment='test')
             test_hit_l = []
-            for test_user_ids, test_item_ids, _ in cf_sampler:
-                test_user_ids_th = th.LongTensor(test_user_ids)
-                test_item_ids_th = th.LongTensor(test_item_ids)
+            test_user_dict = dataset.test_user_dict
+            if use_cuda:
+                test_user_th_dict = {k: th.LongTensor(v).cuda() for k,v in test_user_dict.items()}
+                item_id_range = th.arange(dataset.num_items).cuda()
+            else:
+                test_user_th_dict = {k: th.LongTensor(v) for k,v in test_user_dict.items()}
                 item_id_range = th.arange(dataset.num_items)
-                if use_cuda:
-                    test_user_ids_th, test_item_ids_th, item_id_range = \
-                        test_user_ids_th.cuda(), test_item_ids_th.cuda(), item_id_range.cuda()
-                embedding = model(graph, th_n_id, th_e_type)
-                hit_rate = utils.calc_hit(embedding, (test_user_ids_th, test_item_ids_th), item_id_range,
-                                      K=20, eval_bz=args.eval_batch_size)
-                print("hit_rate", hit_rate)
-                test_hit_l.append(hit_rate)
-            hit_score = th.mean(th.cat(test_hit_l).float()).items()
+
+            embedding = model(graph, th_n_id, th_e_type)
+            recall, ndcg = utils.calc_hit(embedding, dataset, item_id_range, K=20, use_cuda=use_cuda)
+            print("recall:{}, ndcg:{}".format(recall, ndcg))
             # save best model
-            if hit_score > best_hit_score:
-                best_hit_score = hit_score
+            if recall > best_recall:
+                best_recall = recall
                 th.save({'state_dict': model.state_dict(), 'epoch': epoch}, model_state_file)
             # if use_cuda:
             #     model.cuda()

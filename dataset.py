@@ -13,9 +13,9 @@ class DataLoader(object):
         data_dir =  os.path.realpath(os.path.join(os.path.abspath(__file__), '..', "datasets", data_name))
 
         train_file = os.path.join(data_dir, "train.txt")
-        train_pairs = self.load_train_interaction(train_file)
+        train_pairs, train_user_dict = self.load_train_interaction(train_file)
         test_file = os.path.join(data_dir, "test.txt")
-        test_pairs = self.load_test_interaction(test_file)
+        test_pairs, test_user_dict = self.load_test_interaction(test_file)
 
         kg_file = os.path.join(data_dir, "kg_final.txt")
         self.kg_triples_np = self.load_kg_filter_neighbor(kg_file)
@@ -24,8 +24,12 @@ class DataLoader(object):
         self.user_mapping = {i: i+self.num_KG_entities for i in range(self.num_users)}
         self.train_pairs = ((train_pairs[0] + self.num_KG_entities).astype(np.int32),
                             train_pairs[1].astype(np.int32))
+        self.train_user_dict= {self.user_mapping[k]: np.unique(v).astype(np.int32)
+                               for k,v in train_user_dict.items()}
         self.test_pairs = ((test_pairs[0] + self.num_KG_entities).astype(np.int32),
                            test_pairs[1].astype(np.int32))
+        self.test_user_dict= {self.user_mapping[k]: np.unique(v).astype(np.int32)
+                              for k,v in test_user_dict.items()}
         user_item_triplet = np.zeros((self.num_train*2, 3), dtype=np.int32)
         user_item_triplet[:, 0] = np.concatenate((self.train_pairs[0], self.train_pairs[1]))
         user_item_triplet[:, 1] = np.concatenate(((np.ones(self.num_train)*self.num_KG_relations).astype(np.int32),
@@ -39,7 +43,6 @@ class DataLoader(object):
         ### <item>       |=====================|=======
         ### <att entity> |=====================|+++++++
         ### <user>       |=======|+++++++++++++++++++++
-
         ### TODO apply sampling strategy here
         g = dgl.DGLGraph()
         g.add_nodes(self.num_all_entities)
@@ -155,6 +158,7 @@ class DataLoader(object):
     def _load_interaction(self, file_name):
         src = []
         dst = []
+        user_dict = {}
         lines = open(file_name, 'r').readlines()
         for l in lines:
             tmps = l.strip()
@@ -164,10 +168,11 @@ class DataLoader(object):
             for i_id in item_ids:
                 src.append(user_id)
                 dst.append(i_id)
-        return np.array(src, dtype=np.int32), np.array(dst, dtype=np.int32)
+            user_dict[user_id] = item_ids
+        return np.array(src, dtype=np.int32), np.array(dst, dtype=np.int32), user_dict
 
     def load_train_interaction(self, file_name):
-        src, dst = self._load_interaction(file_name)
+        src, dst, train_user_dict = self._load_interaction(file_name)
         ### check whether the user id / item id are continuous and starting from 0
         assert np.unique(src).size == max(src) + 1
         assert np.unique(dst).size == max(dst) + 1
@@ -179,9 +184,10 @@ class DataLoader(object):
         self._n_train = src.size
         print("Train data: #user:{}, #item:{}, #pairs:{}".format(
             self.num_users, self.num_items, self.num_train))
-        return (src, dst)
+        return (src, dst), train_user_dict
+
     def load_test_interaction(self, file_name):
-        src, dst = self._load_interaction(file_name)
+        src, dst, test_user_dict = self._load_interaction(file_name)
         unique_users = np.unique(src)
         unique_items = np.unique(dst)
         for ele in unique_users:
@@ -189,9 +195,9 @@ class DataLoader(object):
         for ele in unique_items:
             assert ele in self.item_ids
         self._n_test = src.size
-        print("Test data: #user:{}, #item:{}, #pairs:{}".format(unique_users.size, unique_items.size, self.num_test))
-
-        return (src, dst)
+        print("Test data: #user:{}, #item:{}, #pairs:{}".format(
+            unique_users.size, unique_items.size, self.num_test))
+        return (src, dst), test_user_dict
 
 
     def CF_sampler(self, segment='train'):
