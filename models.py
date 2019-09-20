@@ -106,8 +106,12 @@ class KGATConv(nn.Module):
         -------
 
         """
+        print(self.relation_weight )
         t_r = bmm_maybe_select(edges.src['h'], self.relation_weight, edges.data['type']) ### (edge_num, hidden_dim)
+        print("t_r", t_r)
         h_r = bmm_maybe_select(edges.dst['h'], self.relation_weight, edges.data['type']) ### (edge_num, hidden_dim)
+        print("h_r", h_r)
+
         att_w = th.bmm(t_r.unsqueeze(1), th.tanh(h_r + edges.data['e']).unsqueeze(2)).squeeze(-1)
         return {'att_w': att_w}
 
