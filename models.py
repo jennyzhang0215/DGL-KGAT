@@ -118,7 +118,7 @@ class KGATConv(nn.Module):
         node_embed = nfeat
         graph.ndata.update({'h': node_embed})
         graph.edata.update({'e': efeat})
-        print("relation_W", self.relation_W.shape,  self.relation_W)
+        #print("relation_W", self.relation_W.shape,  self.relation_W)
         ### compute attention weight using edge_softmax
         graph.apply_edges(self.att_score)
         print("attention_score:", graph.edata['att_w'])
@@ -129,7 +129,7 @@ class KGATConv(nn.Module):
         h_neighbor = graph.ndata['h_neighbor']
         if self._res_type == "Bi":
             out = F.leaky_relu(self.res_fc(graph.ndata['h']+h_neighbor))+\
-                F.leaky_relu(self.res_fc_2(th.mul(graph.ndata['h'], h_neighbor)))
+                  F.leaky_relu(self.res_fc_2(th.mul(graph.ndata['h'], h_neighbor)))
         else:
             raise NotImplementedError
         return h_neighbor, out
@@ -145,12 +145,7 @@ class CFModel(nn.Module):
         nn.init.xavier_uniform_(self.relation_weight, gain=nn.init.calculate_gain('relu'))
         self.layers = nn.ModuleList()
         for i in range(num_gnn_layers):
-            if i == 0:
-                # in_feats, out_feats, n_relations, feat_drop,
-                kgatConv = KGATConv(entity_dim, n_hidden, self.relation_weight, dropout)
-            else:
-                kgatConv = KGATConv(n_hidden, n_hidden, self.relation_weight, dropout)
-            self.layers.append(kgatConv)
+            self.layers.append(KGATConv(entity_dim, n_hidden, self.relation_weight, dropout))
 
     def forward(self, g, node_ids, relation_ids):
         #print("node_ids", node_ids.shape, node_ids)
