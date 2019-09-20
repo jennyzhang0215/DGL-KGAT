@@ -115,6 +115,8 @@ def train(args):
         if epoch % args.evaluate_every == 0:
             if use_cuda:
                 model.cpu()
+                th_n_id = th_n_id.cpu()
+                th_e_type = th_e_type.cpu()
             model.eval()
             cf_sampler = dataset.CF_sampler(segment='test')
             test_hit_l = []
@@ -134,6 +136,8 @@ def train(args):
                 th.save({'state_dict': model.state_dict(), 'epoch': epoch}, model_state_file)
             if use_cuda:
                 model.cuda()
+                th_n_id = th_n_id.cuda()
+                th_e_type = th_e_type.cuda()
 
 if __name__ == '__main__':
     args = parse_args()
