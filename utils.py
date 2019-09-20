@@ -7,10 +7,10 @@ def sort_and_rank(score, target):
     indices = indices[:, 1].view(-1)
     return indices
 
-def perturb_and_get_rank(embedding, user, item, all_item_range, batch_size=100):
+def perturb_and_get_rank(embedding, user, item, all_item_id_range, batch_size=100):
     """ Perturb one element in the triplets
     """
-    test_size = user.size
+    test_size = user.nelement()
     n_batch = (test_size + batch_size - 1) // batch_size
     ranks = []
     for idx in range(n_batch):
@@ -20,7 +20,7 @@ def perturb_and_get_rank(embedding, user, item, all_item_range, batch_size=100):
         batch_u = user[batch_start: batch_end]
         emb_u = embedding[batch_u]
         emb_u = emb_u.transpose(0, 1).unsqueeze(2) # size: D x E x 1
-        emb_all = embedding[all_item_range].transpose(0, 1).unsqueeze(1) # size: D x 1 x V
+        emb_all = embedding[all_item_id_range].transpose(0, 1).unsqueeze(1) # size: D x 1 x V
         # out-prod and reduce sum
         out_prod = th.bmm(emb_u, emb_all) # size D x E x V
         score = th.sum(out_prod, dim=0) # size E x V
@@ -32,10 +32,9 @@ def perturb_and_get_rank(embedding, user, item, all_item_range, batch_size=100):
 # return Hits @ (K)
 def calc_hit(embedding, test_pairs, all_item_id_range, K, eval_bz=100):
     with th.no_grad():
-        user = test_pairs[0]
-        item = test_pairs[1]
         # perturb subject
-        ranks = perturb_and_get_rank(embedding, user, item, all_item_id_range, eval_bz)
+        ranks = perturb_and_get_rank(embedding=embedding, user=test_pairs[0], item=test_pairs[1],
+                                     all_item_id_range=all_item_id_range, batch_size=eval_bz)
         ranks += 1 # change to 1-indexed
 
         avg_count = th.mean((ranks <= K).float())
