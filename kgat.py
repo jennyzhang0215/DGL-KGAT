@@ -25,7 +25,7 @@ def parse_args():
 
     ### Training parameters
     parser.add_argument('--train_kge', type=bool, default=False, help='Just for testing. Train KGE model')
-    parser.add_argument('--max_iter', type=int, default=80000, help='train xx iterations')
+    parser.add_argument('--max_epoch', type=int, default=10, help='train xx iterations')
     parser.add_argument("--grad_norm", type=float, default=1.0, help="norm to clip gradient to")
     parser.add_argument('--lr', type=float, default=0.001, help='Learning rate.')
     parser.add_argument('--batch_size', type=int, default=1024, help='CF batch size.')
@@ -68,7 +68,7 @@ def train(args):
     best_hit_score = 0.0
     model_state_file = 'model_state.pth'
 
-    for epoch in range(1, args.max_iter+1):
+    for epoch in range(1, args.max_epoch+1):
         if args.train_kge:
             kg_sampler = dataset.KG_sampler(batch_size=args.batch_size_kg, sequential=True, segment='train')
             iter = 0
@@ -122,9 +122,6 @@ def train(args):
                 test_user_ids_th = th.LongTensor(test_user_ids)
                 test_item_ids_th = th.LongTensor(test_item_ids)
                 item_id_range = th.arange(dataset.num_items)
-                if use_cuda:
-                    test_user_ids_th, test_item_ids_th = test_user_ids_th.cuda(), test_item_ids_th.cuda()
-                    item_id_range = item_id_range.cuda()
                 embedding = model(graph, th_n_id, th_e_type)
                 hit_rate = utils.calc_hit(embedding, (test_user_ids_th, test_item_ids_th), item_id_range,
                                       K=20, eval_bz=args.eval_batch_size)
