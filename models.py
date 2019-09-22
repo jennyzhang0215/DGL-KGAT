@@ -121,9 +121,9 @@ class KGATConv(nn.Module):
         #print("relation_W", self.relation_W.shape,  self.relation_W)
         ### compute attention weight using edge_softmax
         graph.apply_edges(self.att_score)
-        print("attention_score:", graph.edata['att_w'])
+        #print("attention_score:", graph.edata['att_w'])
         att_w = edge_softmax(graph, graph.edata.pop('att_w'))
-        print("att_w", att_w)
+        #print("att_w", att_w)
         graph.edata['a'] = att_w
         graph.update_all(fn.u_mul_e('h', 'a', 'm'), fn.sum('m', 'h_neighbor'))
         h_neighbor = graph.ndata['h_neighbor']
@@ -161,7 +161,7 @@ class CFModel(nn.Module):
             #print(i, "h", h.shape, h)
             node_embed_cache.append(out)
         final_h = th.cat(node_embed_cache, 1)
-        print("final_h", final_h)
+        #print("final_h", final_h)
         return final_h
 
     def get_loss(self, embedding, src_ids, pos_dst_ids, neg_dst_ids):
@@ -170,8 +170,8 @@ class CFModel(nn.Module):
         neg_dst_vec = embedding[neg_dst_ids]
         pos_score = th.bmm(src_vec.unsqueeze(1), pos_dst_vec.unsqueeze(2)).squeeze()  ### (batch_size, )
         neg_score = th.bmm(src_vec.unsqueeze(1), neg_dst_vec.unsqueeze(2)).squeeze()  ### (batch_size, )
-        print("pos_score", pos_score)
-        print("neg_score", neg_score)
+        #print("pos_score", pos_score)
+        #print("neg_score", neg_score)
         self.cf_loss = th.mean(F.logsigmoid(pos_score - neg_score) ) * (-1.0)
         self.reg_loss = _L2_norm_mean(self.relation_embed.weight) + _L2_norm_mean(self.entity_embed.weight) +\
                         _L2_norm_mean(self.relation_weight)

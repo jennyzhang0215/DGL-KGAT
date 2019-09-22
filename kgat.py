@@ -101,7 +101,7 @@ def train(args):
                     user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda()
 
             embedding = model(graph, th_n_id, th_e_type)
-            print("embedding", embedding)
+            #print("embedding", embedding)
             loss = model.get_loss(embedding, user_ids_th, item_pos_ids_th, item_neg_ids_th)
             #print("loss", loss)
             loss.backward()
@@ -120,7 +120,6 @@ def train(args):
             #     th_e_type = th_e_type.cpu()
             model.eval()
             test_hit_l = []
-            test_user_dict = dataset.test_user_dict
             if use_cuda:
                 item_id_range = th.arange(dataset.num_items).cuda()
             else:
@@ -128,7 +127,7 @@ def train(args):
 
             embedding = model(graph, th_n_id, th_e_type)
             recall, ndcg = utils.calc_recall_ndcg(embedding, dataset, item_id_range, K=20, use_cuda=use_cuda)
-            print("recall:{}, ndcg:{}".format(recall, ndcg))
+            print("Test recall:{}, ndcg:{}".format(recall, ndcg))
             # save best model
             if recall > best_recall:
                 best_recall = recall

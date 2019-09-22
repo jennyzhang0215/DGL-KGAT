@@ -7,8 +7,6 @@ def recall_at_k(r, k, all_pos_num):
     r = np.asfarray(r)[:k]
     return np.sum(r) / all_pos_num
 
-
-
 def dcg_at_k(r, k):
     """Score is discounted cumulative gain (dcg)
     Relevance is positive real values.  Can use binary
