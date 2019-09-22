@@ -104,7 +104,7 @@ class KGATConv(nn.Module):
         -------
 
         """
-        print(self.relation_W)
+        #print(self.relation_W)
         t_r = bmm_maybe_select(edges.src['h'], self.relation_W, edges.data['type']) ### (edge_num, hidden_dim)
         h_r = bmm_maybe_select(edges.dst['h'], self.relation_W, edges.data['type']) ### (edge_num, hidden_dim)
         # print("t_r", t_r)
