@@ -94,7 +94,7 @@ def train(args):
             nid_th = th.LongTensor(uniq_v)
             etype_th = th.LongTensor(etype)
             if use_cuda:
-                user_ids_th, item_pos_ids_th, item_neg_ids_th, nid_th, th_e_type,  = \
+                user_ids_th, item_pos_ids_th, item_neg_ids_th, nid_th, etype_th = \
                     user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda(), nid_th.cuda(), etype_th.cuda()
 
             embedding = model(g, nid_th, etype_th)
@@ -131,7 +131,7 @@ def train(args):
                 nid_th = th.LongTensor(uniq_v)
                 etype_th = th.LongTensor(etype)
                 if use_cuda:
-                    user_ids_th, item_pos_ids_th, item_neg_ids_th, nid_th, th_e_type, = \
+                    user_ids_th, item_pos_ids_th, item_neg_ids_th, nid_th, etype_th, = \
                         user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda(), nid_th.cuda(), etype_th.cuda()
                 embedding = model(g, nid_th, etype_th)
 
