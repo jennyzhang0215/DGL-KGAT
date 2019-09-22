@@ -85,7 +85,7 @@ def train(args):
         else:
             model.train()
             ### sample graph and sample user-item pairs
-            cf_sampler = dataset.CF_sampler(batch_size=args.barch_size,
+            cf_sampler = dataset.CF_sampler(batch_size=args.batch_size,
                                             segment='train', sequential=False)
             user_ids, item_pos_ids, item_neg_ids, g, uniq_v, etype = next(cf_sampler)
             user_ids_th = th.LongTensor(user_ids)
