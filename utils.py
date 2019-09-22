@@ -17,29 +17,24 @@ def dcg_at_k(r, k, method=1):
         Discounted cumulative gain
     """
     r = np.asfarray(r)[:k]
-    if r.size:
-        if method == 0:
-            return r[0] + np.sum(r[1:] / np.log2(np.arange(2, r.size + 1)))
-        elif method == 1:
-            return np.sum(r / np.log2(np.arange(2, r.size + 2)))
-        else:
-            raise ValueError('method must be 0 or 1.')
-    return 0.
+
+    assert r.size > 0
+    return np.sum(r / np.log2(np.arange(2, k + 2)), axis=1)
 
 
-def ndcg_at_k(r, k, method=1):
+def ndcg_at_k(r, k):
     """Score is normalized discounted cumulative gain (ndcg)
     Relevance is positive real values.  Can use binary
     as the previous methods.
     Returns:
         Normalized discounted cumulative gain
     """
-    dcg_max = dcg_at_k(sorted(r, reverse=True), k, method)
+    dcg_max = dcg_at_k(np.flip(np.sort(r), axis=1), k)
     if not dcg_max:
         return 0.
-    return dcg_at_k(r, k, method) / dcg_max
+    return dcg_at_k(r, k) / dcg_max
 
-def calc_hit(embedding, dataset, all_item_id_range, K, use_cuda):
+def calc_recall_ndcg(embedding, dataset, all_item_id_range, K, use_cuda):
     with th.no_grad():
         # perturb subject
         print("Test size: {}".format(len(dataset.test_user_dict)))
