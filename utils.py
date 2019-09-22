@@ -9,7 +9,7 @@ def recall_at_k(r, k, all_pos_num):
 
 
 
-def dcg_at_k(r, k, method=1):
+def dcg_at_k(r, k):
     """Score is discounted cumulative gain (dcg)
     Relevance is positive real values.  Can use binary
     as the previous methods.
@@ -17,7 +17,6 @@ def dcg_at_k(r, k, method=1):
         Discounted cumulative gain
     """
     r = np.asfarray(r)[:k]
-
     assert r.size > 0
     return np.sum(r / np.log2(np.arange(2, k + 2)), axis=1)
 
@@ -30,9 +29,9 @@ def ndcg_at_k(r, k):
         Normalized discounted cumulative gain
     """
     dcg_max = dcg_at_k(np.flip(np.sort(r), axis=1), k)
-    if not dcg_max:
-        return 0.
-    return dcg_at_k(r, k) / dcg_max
+    dcg = dcg_at_k(r, k)
+    dcg_max[dcg_max==0] = np.inf
+    return np.mean(dcg / dcg_max)
 
 def calc_recall_ndcg(embedding, dataset, all_item_id_range, K, use_cuda):
     with th.no_grad():
