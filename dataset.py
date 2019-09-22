@@ -243,7 +243,7 @@ class DataLoader(object):
                 sel = self._rng.choice(all_num, batch_size, replace=False)
                 user_ids = node_pairs[0][sel]
                 item_ids = node_pairs[1][sel]
-                new_entity_ids, new_pd = self._filter_neighbor(np.concatenate(user_ids, item_ids),
+                new_entity_ids, new_pd = self._filter_neighbor(np.concatenate((user_ids, item_ids)),
                                                                self.all_triplet_dp)
                 etype = new_pd['r'].values
                 ### relabel nodes to have consecutive node ids
