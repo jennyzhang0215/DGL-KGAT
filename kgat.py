@@ -122,14 +122,12 @@ def train(args):
             test_hit_l = []
             test_user_dict = dataset.test_user_dict
             if use_cuda:
-                test_user_th_dict = {k: th.LongTensor(v).cuda() for k,v in test_user_dict.items()}
                 item_id_range = th.arange(dataset.num_items).cuda()
             else:
-                test_user_th_dict = {k: th.LongTensor(v) for k,v in test_user_dict.items()}
                 item_id_range = th.arange(dataset.num_items)
 
             embedding = model(graph, th_n_id, th_e_type)
-            recall, ndcg = utils.calc_hit(embedding, dataset, item_id_range, K=20, use_cuda=use_cuda)
+            recall, ndcg = utils.calc_recall_ndcg(embedding, dataset, item_id_range, K=20, use_cuda=use_cuda)
             print("recall:{}, ndcg:{}".format(recall, ndcg))
             # save best model
             if recall > best_recall:
