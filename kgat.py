@@ -25,12 +25,12 @@ def parse_args():
 
     ### Training parameters
     parser.add_argument('--train_kge', type=bool, default=False, help='Just for testing. Train KGE model')
-    parser.add_argument('--max_epoch', type=int, default=10, help='train xx iterations')
+    parser.add_argument('--max_epoch', type=int, default=10000, help='train xx iterations')
     parser.add_argument("--grad_norm", type=float, default=1.0, help="norm to clip gradient to")
     parser.add_argument('--lr', type=float, default=0.001, help='Learning rate.')
     parser.add_argument('--batch_size', type=int, default=1024, help='CF batch size.')
     parser.add_argument('--batch_size_kg', type=int, default=4096, help='KG batch size.')
-    parser.add_argument('--evaluate_every', type=int, default=1, help='the evaluation duration')
+    parser.add_argument('--evaluate_every', type=int, default=10, help='the evaluation duration')
     parser.add_argument("--eval-batch-size", type=int, default=1000, help="batch size when evaluating")
     args = parser.parse_args()
 

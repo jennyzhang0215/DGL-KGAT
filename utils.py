@@ -34,7 +34,7 @@ def ndcg_at_k(r, k):
 def calc_recall_ndcg(embedding, dataset, all_item_id_range, K, use_cuda):
     with th.no_grad():
         # perturb subject
-        print("Test size: {}".format(len(dataset.test_user_dict)))
+        #print("Test size: {}".format(len(dataset.test_user_dict)))
         ranks = []
         pos_item_num = []
         for u_id, pos_item_l in dataset.test_user_dict.items():

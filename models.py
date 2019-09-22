@@ -175,8 +175,7 @@ class CFModel(nn.Module):
         self.cf_loss = th.mean(F.logsigmoid(pos_score - neg_score) ) * (-1.0)
         self.reg_loss = _L2_norm_mean(self.relation_embed.weight) + _L2_norm_mean(self.entity_embed.weight) +\
                         _L2_norm_mean(self.relation_weight)
-        print("cf_loss", self.cf_loss)
-        print("reg_loss", self.reg_loss)
+        print("\tcf_loss:{}, reg_loss:{}".format(self.cf_loss.item(), self.reg_loss.item()))
         return self.cf_loss + self._reg_lambda * self.reg_loss
 
 
