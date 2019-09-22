@@ -11,12 +11,10 @@ class DataLoader(object):
         self._num_neighbor_hop = num_neighbor_hop
         self._rng = np.random.RandomState(seed=seed)
         data_dir =  os.path.realpath(os.path.join(os.path.abspath(__file__), '..', "datasets", data_name))
-
         train_file = os.path.join(data_dir, "train.txt")
         train_pairs, train_user_dict = self.load_train_interaction(train_file)
         test_file = os.path.join(data_dir, "test.txt")
         test_pairs, test_user_dict = self.load_test_interaction(test_file)
-
         kg_file = os.path.join(data_dir, "kg_final.txt")
         self.kg_triples_np = self.load_kg_filter_neighbor(kg_file)
 
@@ -38,20 +36,20 @@ class DataLoader(object):
         ### reverse the (head, relation, tail) direction, because we need tail --> head
         all_triplet = np.vstack((self.kg_triples_np[:, [2,1,0]],  user_item_triplet)).astype(np.int32)
         assert np.max(all_triplet) + 1 == self.num_all_entities
-
+        self.all_triplet_np = all_triplet
+        self.all_triplet_dp = pd.DataFrame(all_triplet, columns=['h', 'r', 't'], dtype=np.int32)
         ###              |<item>  <att entity> | <user>
         ### <item>       |=====================|=======
         ### <att entity> |=====================|+++++++
         ### <user>       |=======|+++++++++++++++++++++
-        ### TODO apply sampling strategy here
+
+    def generate_test_g(self):
         g = dgl.DGLGraph()
         g.add_nodes(self.num_all_entities)
-        g.add_edges(all_triplet[:, 0], all_triplet[:, 2])
+        g.add_edges(self.all_triplet_np[:, 0], self.all_triplet_np[:, 2])
         print(g)
-        self.g = g
-        self.etype = all_triplet[:, 1]
-        deg = g.in_degrees()
-        print("degree: min:{}, max:{}".format(deg.min(), deg.max()), g.in_degrees())
+        all_etype = self.all_triplet_np[:, 1]
+        return g, all_etype
 
     @property
     def num_all_entities(self):
@@ -60,36 +58,43 @@ class DataLoader(object):
     def num_all_relations(self):
         return self._n_KG_relations + 2
 
-    def load_kg_filter_neighbor(self, file_name):
-        kg_pd = pd.read_csv(file_name, sep=" ", names=['h', "r", "t"], engine='python')
-        kg_pd = kg_pd.sort_values(by=['h'])
-
-        item_ids = self.item_ids
+    def _filter_neighbor(self, item_ids, kg_pd):
+        new_pd = None
+        item_ids = np.unique(item_ids)
         print("0-> # triplets:{}, #entities:{}".format(kg_pd.shape[0], item_ids.size))
         for i in range(self._num_neighbor_hop):
             new_pd = kg_pd[kg_pd.h.isin(item_ids)]
             item_ids = np.unique(np.concatenate((new_pd['h'].values, new_pd['t'].values)))
             print("{}-> new #triplets:{}, #entities:{}".format(i+1, new_pd.shape[0], item_ids.size))
-
+        new_entity_ids = item_ids
         print("original:\t#h:{}, #r:{}, #t:{}".format(kg_pd['h'].nunique(), kg_pd['r'].nunique(), kg_pd['t'].nunique()))
-        print("filtered:\t#h:{}, #r:{}, #t:{}".format(new_pd["h"].nunique(), new_pd["r"].nunique(), new_pd["t"].nunique()))
+        print("filtered:\t#h:{}, #r:{}, #t:{}".format(new_pd["h"].nunique(), new_pd["r"].nunique(),
+                                                      new_pd["t"].nunique()))
+        return new_entity_ids, new_pd
 
-        kg_np = np.zeros((new_pd.shape[0], 3))
-        self.entity_mapping = {old_id: idx for idx, old_id in enumerate(item_ids)}
-        kg_np[:, 0] = list(map(self.entity_mapping.get, new_pd['h'].values))
-        kg_np[:, 2] = list(map(self.entity_mapping.get, new_pd['t'].values))
-        if new_pd["r"].nunique() != kg_pd['r'].nunique():
-            relation_mapping = {old_id: idx for idx, old_id in enumerate(np.unique(new_pd["r"].values))}
+    def load_kg_filter_neighbor(self, file_name):
+        kg_pd = pd.read_csv(file_name, sep=" ", names=['h', "r", "t"], engine='python')
+        kg_pd = kg_pd.sort_values(by=['h'])
+
+        entity_ids, new_kg_pd = self._filter_neighbor(self.item_ids, kg_pd)
+        ## construct kg_np by relabelling node ids
+        kg_np = np.zeros((new_kg_pd.shape[0], 3))
+        self.entity_mapping = {old_id: idx for idx, old_id in enumerate(entity_ids)}
+        kg_np[:, 0] = list(map(self.entity_mapping.get, new_kg_pd['h'].values))
+        kg_np[:, 2] = list(map(self.entity_mapping.get, new_kg_pd['t'].values))
+        if new_kg_pd["r"].nunique() != kg_pd['r'].nunique():
             print("Relation mapping..")
-            kg_np[:, 1] = list(map(relation_mapping.get, new_pd['r'].values))
+            relation_mapping = {old_id: idx for idx, old_id in enumerate(np.unique(new_kg_pd["r"].values))}
+            kg_np[:, 1] = list(map(relation_mapping.get, new_kg_pd['r'].values))
         else:
-            kg_np[:, 1] = new_pd["r"].values
-        self._n_KG_relations = new_pd["r"].nunique()
-        self._n_KG_entities = item_ids.size
-        self._n_KG_triples = new_pd.shape[0]
+            kg_np[:, 1] = new_kg_pd["r"].values
+        self._n_KG_relations = new_kg_pd["r"].nunique()
+        self._n_KG_entities = entity_ids.size
+        self._n_KG_triples = new_kg_pd.shape[0]
         print("#KG entities:{}, #KG relations:{}, #KG triplet:{}, #head:{}, #tail:{}".format(
             self.num_KG_entities, self.num_KG_relations, self.num_KG_triples,
-            new_pd['h'].nunique(), new_pd['t'].nunique()))
+            new_kg_pd['h'].nunique(), new_kg_pd['t'].nunique()))
+        kg_pd = pd.DataFrame(kg_np, columns=['h', 'r', 't'], dtype=np.int32)
         return kg_np
 
 
@@ -120,7 +125,7 @@ class DataLoader(object):
         return kg_triples_np
 
 
-    def KG_sampler(self, batch_size, sequential=True, segment='train'):
+    def KG_sampler(self, batch_size, sequential=True):
         if batch_size < 0:
             batch_size = self.num_KG_triples
         else:
@@ -199,18 +204,58 @@ class DataLoader(object):
             unique_users.size, unique_items.size, self.num_test))
         return (src, dst), test_user_dict
 
-
-    def CF_sampler(self, segment='train'):
+    def CF_sampler(self, batch_size, segment='train', sequential=True):
         if segment == 'train':
             node_pairs = self.train_pairs
+            all_num = self.num_train
         elif segment == 'test':
             node_pairs = self.test_pairs
+            all_num = self.num_test
         else:
             raise NotImplementedError
-        while True:
-            ### full batch sampling
-            neg_item_ids = self._rng.choice(self.num_items, self.num_train, replace=True).astype(np.int32)
-            yield node_pairs[0], node_pairs[1], neg_item_ids
+        if batch_size < 0:
+            batch_size = all_num
+        else:
+            batch_size = min(batch_size, all_num)
+        if batch_size == all_num:
+            neg_item_ids = self._rng.choice(self.num_items, batch_size, replace=True).astype(np.int32)
+            uniq_v = np.arange(self.num_all_entities)
+            g, etype = self.generate_test_g()
+            yield node_pairs[0], node_pairs[1], neg_item_ids, g, uniq_v, etype
+        if sequential:
+            for start in range(0, all_num, batch_size):
+                end = min(start+batch_size, all_num)
+                user_ids = node_pairs[0][start: end]
+                item_ids = node_pairs[1][start: end]
+                new_entity_ids, new_pd = self._filter_neighbor(np.concatenate(user_ids, item_ids), self.all_triplet_dp)
+                etype = new_pd['r'].values
+                ### relabel nodes to have consecutive node ids
+                uniq_v, edges = np.unique((new_pd['h'].values, new_pd['t'].values), return_inverse=True)
+                src, dst = np.reshape(edges, (2, -1))
+                g = dgl.DGLGraph()
+                g.add_nodes(uniq_v.size)
+                g.add_edges(src, dst)
+                ### get the subgraph via the given user_ids and item_ids pair
+                neg_item_ids = self._rng.choice(uniq_v, batch_size, replace=True).astype(np.int32)
+                yield user_ids, item_ids, neg_item_ids, g, uniq_v, etype
+        else:
+            while True:
+                sel = self._rng.choice(all_num, batch_size, replace=False)
+                user_ids = node_pairs[0][sel]
+                item_ids = node_pairs[1][sel]
+                new_entity_ids, new_pd = self._filter_neighbor(np.concatenate(user_ids, item_ids),
+                                                               self.all_triplet_dp)
+                etype = new_pd['r'].values
+                ### relabel nodes to have consecutive node ids
+                uniq_v, edges = np.unique((new_pd['h'].values, new_pd['t'].values), return_inverse=True)
+                src, dst = np.reshape(edges, (2, -1))
+                g = dgl.DGLGraph()
+                g.add_nodes(uniq_v.size)
+                g.add_edges(src, dst)
+                ### get the subgraph via the given user_ids and item_ids pair
+                neg_item_ids = self._rng.choice(uniq_v, batch_size, replace=True).astype(np.int32)
+                yield user_ids, item_ids, neg_item_ids, g, uniq_v, etype
+
 
     @property
     def num_train(self):

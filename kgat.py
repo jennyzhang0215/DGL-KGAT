@@ -31,7 +31,7 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=1024, help='CF batch size.')
     parser.add_argument('--batch_size_kg', type=int, default=4096, help='KG batch size.')
     parser.add_argument('--evaluate_every', type=int, default=10, help='the evaluation duration')
-    parser.add_argument("--eval-batch-size", type=int, default=1000, help="batch size when evaluating")
+    parser.add_argument("--eval_batch_size", type=int, default=2048, help="batch size when evaluating")
     args = parser.parse_args()
 
     return args
@@ -45,12 +45,6 @@ def train(args):
 
     ### load data
     dataset = DataLoader(args.data_name)
-    graph = dataset.g
-    th_e_type = th.LongTensor(dataset.etype)
-    th_n_id = th.arange(graph.number_of_nodes(), dtype=th.int32).long()
-    if use_cuda:
-        th_e_type = th_e_type.cuda()
-        th_n_id = th_n_id.cuda()
     print("Dataset prepared ...")
     ### model
     if args.train_kge:
@@ -91,16 +85,19 @@ def train(args):
         else:
             model.train()
             ### sample graph and sample user-item pairs
-            cf_sampler = dataset.CF_sampler(segment='train')
-            user_ids, item_pos_ids, item_neg_ids = next(cf_sampler)
+            cf_sampler = dataset.CF_sampler(batch_size=args.barch_size,
+                                            segment='train', sequential=False)
+            user_ids, item_pos_ids, item_neg_ids, g, uniq_v, etype = next(cf_sampler)
             user_ids_th = th.LongTensor(user_ids)
             item_pos_ids_th = th.LongTensor(item_pos_ids)
             item_neg_ids_th = th.LongTensor(item_neg_ids)
+            nid_th = th.LongTensor(uniq_v)
+            etype_th = th.LongTensor(etype)
             if use_cuda:
-                user_ids_th, item_pos_ids_th, item_neg_ids_th = \
-                    user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda()
+                user_ids_th, item_pos_ids_th, item_neg_ids_th, nid_th, th_e_type,  = \
+                    user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda(), nid_th.cuda(), etype_th.cuda()
 
-            embedding = model(graph, th_n_id, th_e_type)
+            embedding = model(g, nid_th, etype_th)
             #print("embedding", embedding)
             loss = model.get_loss(embedding, user_ids_th, item_pos_ids_th, item_neg_ids_th)
             #print("loss", loss)
@@ -119,19 +116,31 @@ def train(args):
             #     th_n_id = th_n_id.cpu()
             #     th_e_type = th_e_type.cpu()
             model.eval()
-            test_hit_l = []
+            test_l = []
+
+            cf_sampler = dataset.CF_sampler(batch_size=args.eval_batch_size,
+                                            segment='test', sequential=True)
             if use_cuda:
                 item_id_range = th.arange(dataset.num_items).cuda()
             else:
                 item_id_range = th.arange(dataset.num_items)
+            for user_ids, item_pos_ids, item_neg_ids, g, uniq_v, etype  in next(cf_sampler):
+                user_ids_th = th.LongTensor(user_ids)
+                item_pos_ids_th = th.LongTensor(item_pos_ids)
+                item_neg_ids_th = th.LongTensor(item_neg_ids)
+                nid_th = th.LongTensor(uniq_v)
+                etype_th = th.LongTensor(etype)
+                if use_cuda:
+                    user_ids_th, item_pos_ids_th, item_neg_ids_th, nid_th, th_e_type, = \
+                        user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda(), nid_th.cuda(), etype_th.cuda()
+                embedding = model(g, nid_th, etype_th)
 
-            embedding = model(graph, th_n_id, th_e_type)
-            recall, ndcg = utils.calc_recall_ndcg(embedding, dataset, item_id_range, K=20, use_cuda=use_cuda)
-            print("Test recall:{}, ndcg:{}".format(recall, ndcg))
+                recall, ndcg = utils.calc_recall_ndcg(embedding, dataset, item_id_range, K=20, use_cuda=use_cuda)
+                print("Test recall:{}, ndcg:{}".format(recall, ndcg))
             # save best model
-            if recall > best_recall:
-                best_recall = recall
-                th.save({'state_dict': model.state_dict(), 'epoch': epoch}, model_state_file)
+            # if recall > best_recall:
+            #     best_recall = recall
+            #     th.save({'state_dict': model.state_dict(), 'epoch': epoch}, model_state_file)
             # if use_cuda:
             #     model.cuda()
             #     th_n_id = th_n_id.cuda()
