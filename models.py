@@ -115,15 +115,14 @@ class KGATConv(nn.Module):
     def forward(self, graph, nfeat, efeat):
         graph = graph.local_var()
         # node_embed = self.feat_drop(nfeat)
-        node_embed = nfeat
-        graph.ndata.update({'h': node_embed})
+        graph.ndata.update({'h': nfeat})
         graph.edata.update({'e': efeat})
-        #print("relation_W", self.relation_W.shape,  self.relation_W)
+        print("relation_W", self.relation_W.shape,  self.relation_W)
         ### compute attention weight using edge_softmax
         graph.apply_edges(self.att_score)
-        #print("attention_score:", graph.edata['att_w'])
+        print("attention_score:", graph.edata['att_w'])
         att_w = edge_softmax(graph, graph.edata.pop('att_w'))
-        #print("att_w", att_w)
+        print("att_w", att_w)
         graph.edata['a'] = att_w
         graph.update_all(fn.u_mul_e('h', 'a', 'm'), fn.sum('m', 'h_neighbor'))
         h_neighbor = graph.ndata['h_neighbor']
@@ -139,8 +138,8 @@ class CFModel(nn.Module):
                  dropout, reg_lambda, res_type="Bi"):
         super(CFModel, self).__init__()
         self._reg_lambda = reg_lambda
-        self.relation_embed = nn.Embedding(n_relations, relation_dim)  ### e_r
         self.entity_embed = nn.Embedding(n_entities, entity_dim) ### e_h, e_t
+        self.relation_embed = nn.Embedding(n_relations, relation_dim)  ### e_r
         self.relation_weight = nn.Parameter(th.Tensor(n_relations, entity_dim, relation_dim))  ### W_r
         nn.init.xavier_uniform_(self.relation_weight, gain=nn.init.calculate_gain('relu'))
         self.layers = nn.ModuleList()

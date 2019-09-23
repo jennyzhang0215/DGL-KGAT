@@ -94,36 +94,7 @@ class DataLoader(object):
         print("#KG entities:{}, #KG relations:{}, #KG triplet:{}, #head:{}, #tail:{}".format(
             self.num_KG_entities, self.num_KG_relations, self.num_KG_triples,
             new_kg_pd['h'].nunique(), new_kg_pd['t'].nunique()))
-        kg_pd = pd.DataFrame(kg_np, columns=['h', 'r', 't'], dtype=np.int32)
         return kg_np
-
-
-    def back_load_kg2triplet(self, file_name):
-        """ Load the KG txt file into the 2-d numpy array
-
-        Parameters
-        ----------
-        file_name: str
-
-        Returns
-        -------
-        np.array Shape:(num_triples, 3)
-        """
-        kg_triples_np = np.loadtxt(file_name, dtype=np.int32)
-        ### check whether entity ids are continuous and start from 0
-        assert np.unique(kg_triples_np[:, 1]).size == max(kg_triples_np[:, 1]) + 1
-        assert np.unique(np.concatenate((kg_triples_np[:, 0], kg_triples_np[:, 2]))).size == \
-               max(max(kg_triples_np[:, 0]), max(kg_triples_np[:, 2])) + 1
-        self._n_KG_relations = np.unique(kg_triples_np[:, 1]).size
-        self._n_KG_entities = np.unique(np.concatenate((kg_triples_np[:, 0], kg_triples_np[:, 2]))).size
-        self._n_KG_triples = kg_triples_np.shape[0]
-        print("{}: #KG entities:{}, #KG relations:{}, #KG triplet:{}, #head:{}, #tail:{}".format(
-            self._data_name, self.num_KG_entities, self.num_KG_relations, self.num_KG_triples,
-            np.unique(kg_triples_np[:, 0]).size, np.unique(kg_triples_np[:, 2]).size))
-
-
-        return kg_triples_np
-
 
     def KG_sampler(self, batch_size, sequential=True):
         if batch_size < 0:
