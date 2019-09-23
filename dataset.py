@@ -189,7 +189,7 @@ class DataLoader(object):
         else:
             batch_size = min(batch_size, all_num)
         if batch_size == all_num:
-            neg_item_ids = self._rng.choice(self.num_items, batch_size, replace=True).astype(np.int32)
+            neg_item_ids = self._rng.choice(self.item_ids, batch_size, replace=True).astype(np.int32)
             uniq_v = np.arange(self.num_all_entities)
             g, etype = self.generate_test_g()
             yield node_pairs[0], node_pairs[1], neg_item_ids, g, uniq_v, etype
@@ -210,7 +210,6 @@ class DataLoader(object):
                 g.add_edges(src, dst)
                 ### map user_ids and items_ids into indicies in the graph
                 node_map = {ele: idx for idx, ele in enumerate(uniq_v)}
-                print("node_map", len(node_map), node_map)
                 user_ids = np.array(list(map(node_map.get, user_ids)), dtype=np.int32)
                 item_ids = np.array(list(map(node_map.get, item_ids)), dtype=np.int32)
                 neg_item_ids = self._rng.choice(item_ids, batch_size, replace=True).astype(np.int32)
@@ -232,7 +231,6 @@ class DataLoader(object):
                 g.add_edges(src, dst)
                 ### map user_ids and items_ids into indicies in the graph
                 node_map = {ele: idx for idx, ele in enumerate(uniq_v)}
-                print("node_map", len(node_map), node_map)
                 user_ids = np.array(list(map(node_map.get, user_ids)), dtype=np.int32)
                 item_ids = np.array(list(map(node_map.get, item_ids)), dtype=np.int32)
                 neg_item_ids = self._rng.choice(item_ids, batch_size, replace=True).astype(np.int32)
