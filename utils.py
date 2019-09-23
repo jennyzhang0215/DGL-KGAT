@@ -57,7 +57,6 @@ def calc_recall_ndcg(embedding, dataset, all_item_id_range, K, use_cuda):
                 if rank_indices[i] in pos_item_l:
                     binary_rank_K[i] = 1
             ranks.append(binary_rank_K)
-
     ranks = np.vstack(ranks)
 
     recall = recall_at_k(ranks, K, dataset.num_test)

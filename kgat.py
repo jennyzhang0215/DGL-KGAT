@@ -111,13 +111,8 @@ def train(args):
 
 
         if epoch % args.evaluate_every == 0:
-            # if use_cuda:
-            #     model.cpu()
-            #     th_n_id = th_n_id.cpu()
-            #     th_e_type = th_e_type.cpu()
+            
             model.eval()
-            test_l = []
-
             cf_sampler = dataset.CF_sampler(batch_size=args.eval_batch_size,
                                             segment='test', sequential=True)
             if use_cuda:
@@ -141,10 +136,8 @@ def train(args):
             # if recall > best_recall:
             #     best_recall = recall
             #     th.save({'state_dict': model.state_dict(), 'epoch': epoch}, model_state_file)
-            # if use_cuda:
-            #     model.cuda()
-            #     th_n_id = th_n_id.cuda()
-            #     th_e_type = th_e_type.cuda()
+            if use_cuda:
+                model.cuda()
 
 if __name__ == '__main__':
     args = parse_args()
