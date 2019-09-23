@@ -136,22 +136,26 @@ class CFModel(nn.Module):
         -------
 
         """
-        t_r = bmm_maybe_select(edges.src['h'], self.W_R, edges.data['type']) ### (edge_num, hidden_dim)
-        h_r = bmm_maybe_select(edges.dst['h'], self.W_R, edges.data['type']) ### (edge_num, hidden_dim)
-        att_w = th.bmm(t_r.unsqueeze(1), th.tanh(h_r + self.relation_embed(edges.data['type'])).unsqueeze(2)).squeeze(-1)
+        t_r = bmm_maybe_select(self.entity_embed(edges.src['id']),
+                               self.W_R, edges.data['type']) ### (edge_num, hidden_dim)
+        h_r = bmm_maybe_select(self.entity_embed(edges.dst['id']),
+                               self.W_R, edges.data['type']) ### (edge_num, hidden_dim)
+        att_w = th.bmm(t_r.unsqueeze(1),
+                       th.tanh(h_r + self.relation_embed(edges.data['type'])).unsqueeze(2)).squeeze(-1)
         # print("A", edges.src['h'].index_select(0, edges.data['type']).shape)
         # print("B", th.tanh(edges.dst['h'].index_select(1, edges.data['type']) + edges.data['e']).shape)
         # att_w = th.bmm(edges.src['h'].index_select(1, edges.data['type']),
         #                th.tanh(edges.dst['h'].index_select(0, edges.data['type']) + \
         #                        edges.data['e'])).squeeze(-1)
         # print("w", att_w)
-        return {'w': att_w}
+        return {'att_w': att_w}
 
     def forward(self, g, node_ids, rel_ids):
         #print("node_ids", node_ids.shape, node_ids)
         #print("relation_ids", relation_ids.shape, relation_ids)
         h = self.entity_embed(node_ids)
-        g.edata.update({'type': rel_ids})
+        g.ndata['id'] = node_ids
+        g.edata['type'] = rel_ids
         ## compute attention weight and store it on edges
         g.apply_edges(self._att_score)
         g.edata['w'] = edge_softmax(g, g.edata.pop('att_w'))
