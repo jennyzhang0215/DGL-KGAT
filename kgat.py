@@ -17,8 +17,8 @@ def parse_args():
     ### Model parameters
     parser.add_argument('--use_kge', type=bool, default=True, help='whether using knowledge graph embedding')
     parser.add_argument('--kge_size', type=int, default=64, help='KG Embedding size.')
-    parser.add_argument('--entity_embed_dim', type=int, default=32, help='CF Embedding size.')
-    parser.add_argument('--relation_embed_dim', type=int, default=16, help='CF Embedding size.')
+    parser.add_argument('--entity_embed_dim', type=int, default=64, help='CF Embedding size.')
+    parser.add_argument('--relation_embed_dim', type=int, default=32, help='CF Embedding size.')
     parser.add_argument('--gnn_num_layer', type=int, default=2, help='the number of layers')
     parser.add_argument('--gnn_hidden_size', type=int, default=16, help='Output sizes of every layer')
     parser.add_argument('--dropout_rate', type=float, default=0.1, help='Keep probability w.r.t. node dropout (i.e., 1-dropout_ratio) for each deep layer. 1: no dropout.')
