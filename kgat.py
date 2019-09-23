@@ -121,7 +121,7 @@ def train(args):
                 item_id_range = th.arange(dataset.num_items).cuda()
             else:
                 item_id_range = th.arange(dataset.num_items)
-            for user_ids, item_pos_ids, item_neg_ids, g, uniq_v, etype  in next(cf_sampler):
+            for user_ids, item_pos_ids, item_neg_ids, g, uniq_v, etype in cf_sampler:
                 user_ids_th = th.LongTensor(user_ids)
                 item_pos_ids_th = th.LongTensor(item_pos_ids)
                 item_neg_ids_th = th.LongTensor(item_neg_ids)
