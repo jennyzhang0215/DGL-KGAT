@@ -195,9 +195,11 @@ class DataLoader(object):
             yield node_pairs[0], node_pairs[1], neg_item_ids, g, uniq_v, etype
         if sequential:
             for start in range(0, all_num, batch_size):
+                ## choose user item pairs
                 end = min(start+batch_size, all_num)
                 user_ids = node_pairs[0][start: end]
                 item_ids = node_pairs[1][start: end]
+                ## obtain k-hop neighbors
                 new_entity_ids, new_pd = self._filter_neighbor(np.concatenate(user_ids, item_ids), self.all_triplet_dp)
                 etype = new_pd['r'].values
                 ### relabel nodes to have consecutive node ids
@@ -206,8 +208,13 @@ class DataLoader(object):
                 g = dgl.DGLGraph()
                 g.add_nodes(uniq_v.size)
                 g.add_edges(src, dst)
-                ### get the subgraph via the given user_ids and item_ids pair
+                ### map user_ids and items_ids into indicies in the graph
+                node_map = {ele: idx for idx, ele in enumerate(uniq_v)}
+                print("node_map", len(node_map), node_map)
+                user_ids = np.array(list(map(node_map.get, user_ids)), dtype=np.int32)
+                item_ids = np.array(list(map(node_map.get, item_ids)), dtype=np.int32)
                 neg_item_ids = self._rng.choice(uniq_v, batch_size, replace=True).astype(np.int32)
+
                 yield user_ids, item_ids, neg_item_ids, g, uniq_v, etype
         else:
             while True:
@@ -223,7 +230,11 @@ class DataLoader(object):
                 g = dgl.DGLGraph()
                 g.add_nodes(uniq_v.size)
                 g.add_edges(src, dst)
-                ### get the subgraph via the given user_ids and item_ids pair
+                ### map user_ids and items_ids into indicies in the graph
+                node_map = {ele: idx for idx, ele in enumerate(uniq_v)}
+                print("node_map", len(node_map), node_map)
+                user_ids = np.array(list(map(node_map.get, user_ids)), dtype=np.int32)
+                item_ids = np.array(list(map(node_map.get, item_ids)), dtype=np.int32)
                 neg_item_ids = self._rng.choice(uniq_v, batch_size, replace=True).astype(np.int32)
                 yield user_ids, item_ids, neg_item_ids, g, uniq_v, etype
 
