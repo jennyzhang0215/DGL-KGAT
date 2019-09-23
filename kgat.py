@@ -16,10 +16,11 @@ def parse_args():
 
     ### Model parameters
     parser.add_argument('--use_kge', type=bool, default=True, help='whether using knowledge graph embedding')
-    parser.add_argument('--kge_size', type=int, default=5, help='KG Embedding size.')
-    parser.add_argument('--embed_size', type=int, default=4, help='CF Embedding size.')
+    parser.add_argument('--kge_size', type=int, default=64, help='KG Embedding size.')
+    parser.add_argument('--entity_embed_dim', type=int, default=64, help='CF Embedding size.')
+    parser.add_argument('--relation_embed_dim', type=int, default=64, help='CF Embedding size.')
     parser.add_argument('--gnn_num_layer', type=int, default=2, help='the number of layers')
-    parser.add_argument('--gnn_hidden_size', type=int, default=8, help='Output sizes of every layer')
+    parser.add_argument('--gnn_hidden_size', type=int, default=32, help='Output sizes of every layer')
     parser.add_argument('--dropout_rate', type=float, default=0.1, help='Keep probability w.r.t. node dropout (i.e., 1-dropout_ratio) for each deep layer. 1: no dropout.')
     parser.add_argument('--regs', nargs='?', default='[1e-5,1e-5,1e-2]', help='Regularization for user and item embeddings.')
 
@@ -49,11 +50,12 @@ def train(args):
     ### model
     if args.train_kge:
         model = KGEModel(n_entities=dataset.num_KG_entities, n_relations=dataset.num_KG_relations,
-                             entity_dim=args.embed_size, relation_dim=args.embed_size, reg_lambda=0.01)
+                         entity_dim=args.entity_embed_dim, relation_dim=args.relation_embed_dim, reg_lambda=0.01)
     else:
         model = CFModel(n_entities=dataset.num_all_entities, n_relations=dataset.num_all_relations,
-                           entity_dim=args.embed_size, relation_dim=args.embed_size, num_gnn_layers=args.gnn_num_layer,
-                           n_hidden=args.gnn_hidden_size, dropout=args.dropout_rate, reg_lambda=0.01)
+                        entity_dim=args.entity_embed_dim, relation_dim=args.relation_embed_dim,
+                        num_gnn_layers=args.gnn_num_layer,
+                        n_hidden=args.gnn_hidden_size, dropout=args.dropout_rate, reg_lambda=0.01)
     if use_cuda:
         model = model.cuda()
     ### optimizer
@@ -111,7 +113,7 @@ def train(args):
 
 
         if epoch % args.evaluate_every == 0:
-            
+
             model.eval()
             cf_sampler = dataset.CF_sampler(batch_size=args.eval_batch_size,
                                             segment='test', sequential=True)
