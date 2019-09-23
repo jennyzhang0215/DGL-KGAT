@@ -213,7 +213,7 @@ class DataLoader(object):
                 print("node_map", len(node_map), node_map)
                 user_ids = np.array(list(map(node_map.get, user_ids)), dtype=np.int32)
                 item_ids = np.array(list(map(node_map.get, item_ids)), dtype=np.int32)
-                neg_item_ids = self._rng.choice(uniq_v, batch_size, replace=True).astype(np.int32)
+                neg_item_ids = self._rng.choice(item_ids, batch_size, replace=True).astype(np.int32)
 
                 yield user_ids, item_ids, neg_item_ids, g, uniq_v, etype
         else:
@@ -235,7 +235,7 @@ class DataLoader(object):
                 print("node_map", len(node_map), node_map)
                 user_ids = np.array(list(map(node_map.get, user_ids)), dtype=np.int32)
                 item_ids = np.array(list(map(node_map.get, item_ids)), dtype=np.int32)
-                neg_item_ids = self._rng.choice(uniq_v, batch_size, replace=True).astype(np.int32)
+                neg_item_ids = self._rng.choice(item_ids, batch_size, replace=True).astype(np.int32)
                 yield user_ids, item_ids, neg_item_ids, g, uniq_v, etype
 
 
