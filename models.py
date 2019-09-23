@@ -113,9 +113,9 @@ class KGATConv(nn.Module):
         # print("h_r", h_r)
         #att_w = th.bmm(t_r.unsqueeze(1), th.tanh(h_r + edges.data['e']).unsqueeze(2)).squeeze(-1)
         print("A", edges.src['h'].index_select(0, edges.data['type']).shape)
-        print("B", th.tanh(edges.dst['h'].index_select(0, edges.data['type']).squeeze() + edges.data['e']).shape)
+        print("B", th.tanh(edges.dst['h'].index_select(0, edges.data['type']) + edges.data['e']).shape)
         att_w = th.bmm(edges.src['h'].index_select(0, edges.data['type']),
-                       th.tanh(edges.dst['h'].index_select(0, edges.data['type']).squeeze() + \
+                       th.tanh(edges.dst['h'].index_select(0, edges.data['type']) + \
                                edges.data['e'])).squeeze(-1)
         print("att_w", att_w)
         return {'att_w': att_w}
