@@ -83,9 +83,9 @@ class KGEModel(nn.Module):
 
 
 class KGATConv(nn.Module):
-    def __init__(self, entity_in_feats, out_feats, feat_drop, res_type="Bi"):
+    def __init__(self, entity_in_feats, out_feats, dropout, res_type="Bi"):
         super(KGATConv, self).__init__()
-        self.feat_drop = nn.Dropout(feat_drop)
+        self.feat_drop = nn.Dropout(dropout)
         self._res_type = res_type
         if res_type == "Bi":
             self.res_fc = nn.Linear(entity_in_feats, out_feats, bias=False)
@@ -123,7 +123,7 @@ class CFModel(nn.Module):
         nn.init.xavier_uniform_(self.W_R, gain=nn.init.calculate_gain('relu'))
         self.layers = nn.ModuleList()
         for i in range(num_gnn_layers):
-            self.layers.append(KGATConv(entity_dim, n_hidden, self.W_R, dropout))
+            self.layers.append(KGATConv(entity_dim, n_hidden, dropout))
 
     def _att_score(self, edges):
         """
@@ -139,7 +139,7 @@ class CFModel(nn.Module):
         print(self.relation_W)
         t_r = bmm_maybe_select(edges.src['h'], self.W_R, edges.data['type']) ### (edge_num, hidden_dim)
         h_r = bmm_maybe_select(edges.dst['h'], self.W_R, edges.data['type']) ### (edge_num, hidden_dim)
-        att_w = th.bmm(t_r.unsqueeze(1), th.tanh(h_r + edges.data['e']).unsqueeze(2)).squeeze(-1)
+        att_w = th.bmm(t_r.unsqueeze(1), th.tanh(h_r + self.relation_embed(edges.data['type'])).unsqueeze(2)).squeeze(-1)
         # print("A", edges.src['h'].index_select(0, edges.data['type']).shape)
         # print("B", th.tanh(edges.dst['h'].index_select(1, edges.data['type']) + edges.data['e']).shape)
         # att_w = th.bmm(edges.src['h'].index_select(1, edges.data['type']),
@@ -152,14 +152,13 @@ class CFModel(nn.Module):
         #print("node_ids", node_ids.shape, node_ids)
         #print("relation_ids", relation_ids.shape, relation_ids)
         h = self.entity_embed(node_ids)
-        efeat = self.relation_embed(rel_ids)
-        g.edata.update({'type': rel_ids, 'e': efeat})
+        g.edata.update({'type': rel_ids})
         ## compute attention weight and store it on edges
-        g.apply_edges(self.att_score)
+        g.apply_edges(self._att_score)
         g.edata['w'] = edge_softmax(g, g.edata.pop('att_w'))
         node_embed_cache = [h]
         for i, layer in enumerate(self.layers):
-            h, out = layer(g, h, efeat)
+            h, out = layer(g, h)
             #print(i, "h", h.shape, h)
             node_embed_cache.append(out)
         final_h = th.cat(node_embed_cache, 1)
