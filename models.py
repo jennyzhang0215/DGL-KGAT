@@ -83,63 +83,31 @@ class KGEModel(nn.Module):
 
 
 class KGATConv(nn.Module):
-    def __init__(self, entity_in_feats, out_feats, relation_weight, feat_drop, res_type="Bi"):
+    def __init__(self, entity_in_feats, out_feats, feat_drop, res_type="Bi"):
         super(KGATConv, self).__init__()
         self.feat_drop = nn.Dropout(feat_drop)
         self._res_type = res_type
-        self.W_r = relation_weight
         if res_type == "Bi":
             self.res_fc = nn.Linear(entity_in_feats, out_feats, bias=False)
             self.res_fc_2 = nn.Linear(entity_in_feats, out_feats, bias=False)
         else:
             raise NotImplementedError
-    def att_score(self, edges):
-        """
-        att_score = (W_r h_t)^T tanh(W_r h_r + e_r)
-        Parameters
-        ----------
-        edges
 
-        Returns
-        -------
-
-        """
-        #print(self.relation_W)
-
-
-        #t_r = bmm_maybe_select(edges.src['h'], self.relation_W, edges.data['type']) ### (edge_num, hidden_dim)
-        #h_r = bmm_maybe_select(edges.dst['h'], self.relation_W, edges.data['type']) ### (edge_num, hidden_dim)
-        # print("t_r", t_r)
-        # print("h_r", h_r)
-        #att_w = th.bmm(t_r.unsqueeze(1), th.tanh(h_r + edges.data['e']).unsqueeze(2)).squeeze(-1)
-        print("A", edges.src['h'].index_select(0, edges.data['type']).shape)
-        print("B", th.tanh(edges.dst['h'].index_select(0, edges.data['type']) + edges.data['e']).shape)
-        att_w = th.bmm(edges.src['h'].index_select(0, edges.data['type']),
-                       th.tanh(edges.dst['h'].index_select(0, edges.data['type']) + \
-                               edges.data['e'])).squeeze(-1)
-        print("att_w", att_w)
-        return {'att_w': att_w}
-
-    def forward(self, graph, nfeat, efeat):
-        graph = graph.local_var()
+    def forward(self, g, nfeat):
+        g = g.local_var()
         # node_embed = self.feat_drop(nfeat)
-        graph.edata.update({'e': efeat})
-        nfeat = nfeat.unsqueeze(1) ### (#node, 1, entity_dim)
-        nfeat = nfeat.unsqueeze(1) ### (#node, 1, 1, entity_dim)
-        graph.ndata['h'] = th.matmul(nfeat, self.W_r).squeeze() ### (#node, #rel, entity_dim)
-
+        g.ndata['h'] = self.feat_drop(nfeat)
+        #g.ndata['h'] = th.matmul(nfeat, self.W_r).squeeze() ### (#node, #rel, entity_dim)
         #print("relation_W", self.relation_W.shape,  self.relation_W)
         ### compute attention weight using edge_softmax
-        graph.apply_edges(self.att_score)
         #print("attention_score:", graph.edata['att_w'])
-        att_w = edge_softmax(graph, graph.edata.pop('att_w'))
         #print("att_w", att_w)
-        graph.edata['a'] = att_w
-        graph.update_all(fn.u_mul_e('h', 'a', 'm'), fn.sum('m', 'h_neighbor'))
-        h_neighbor = graph.ndata['h_neighbor']
+
+        g.update_all(fn.u_mul_e('h', 'w', 'm'), fn.sum('m', 'h_neighbor'))
+        h_neighbor = g.ndata['h_neighbor']
         if self._res_type == "Bi":
-            out = F.leaky_relu(self.res_fc(graph.ndata['h']+h_neighbor))+\
-                  F.leaky_relu(self.res_fc_2(th.mul(graph.ndata['h'], h_neighbor)))
+            out = F.leaky_relu(self.res_fc(g.ndata['h']+h_neighbor))+\
+                  F.leaky_relu(self.res_fc_2(th.mul(g.ndata['h'], h_neighbor)))
         else:
             raise NotImplementedError
         return h_neighbor, out
@@ -151,20 +119,44 @@ class CFModel(nn.Module):
         self._reg_lambda = reg_lambda
         self.entity_embed = nn.Embedding(n_entities, entity_dim) ### e_h, e_t
         self.relation_embed = nn.Embedding(n_relations, relation_dim)  ### e_r
-        self.relation_weight = nn.Parameter(th.Tensor(n_relations, entity_dim, relation_dim))  ### W_r
-        nn.init.xavier_uniform_(self.relation_weight, gain=nn.init.calculate_gain('relu'))
+        self.W_R = nn.Parameter(th.Tensor(n_relations, entity_dim, relation_dim))  ### W_r
+        nn.init.xavier_uniform_(self.W_R, gain=nn.init.calculate_gain('relu'))
         self.layers = nn.ModuleList()
         for i in range(num_gnn_layers):
-            self.layers.append(KGATConv(entity_dim, n_hidden, self.relation_weight, dropout))
+            self.layers.append(KGATConv(entity_dim, n_hidden, self.W_R, dropout))
 
-    def forward(self, g, node_ids, relation_ids):
+    def _att_score(self, edges):
+        """
+        att_score = (W_r h_t)^T tanh(W_r h_r + e_r)
+        Parameters
+        ----------
+        edges
+
+        Returns
+        -------
+
+        """
+        print(self.relation_W)
+        t_r = bmm_maybe_select(edges.src['h'], self.W_R, edges.data['type']) ### (edge_num, hidden_dim)
+        h_r = bmm_maybe_select(edges.dst['h'], self.W_R, edges.data['type']) ### (edge_num, hidden_dim)
+        att_w = th.bmm(t_r.unsqueeze(1), th.tanh(h_r + edges.data['e']).unsqueeze(2)).squeeze(-1)
+        # print("A", edges.src['h'].index_select(0, edges.data['type']).shape)
+        # print("B", th.tanh(edges.dst['h'].index_select(1, edges.data['type']) + edges.data['e']).shape)
+        # att_w = th.bmm(edges.src['h'].index_select(1, edges.data['type']),
+        #                th.tanh(edges.dst['h'].index_select(0, edges.data['type']) + \
+        #                        edges.data['e'])).squeeze(-1)
+        # print("w", att_w)
+        return {'w': att_w}
+
+    def forward(self, g, node_ids, rel_ids):
         #print("node_ids", node_ids.shape, node_ids)
         #print("relation_ids", relation_ids.shape, relation_ids)
-        g.edata['type'] = relation_ids
         h = self.entity_embed(node_ids)
-        efeat = self.relation_embed(relation_ids)
-        #print("h", h.shape, h)
-        #print("efeat", efeat.shape, efeat)
+        efeat = self.relation_embed(rel_ids)
+        g.edata.update({'type': rel_ids, 'e': efeat})
+        ## compute attention weight and store it on edges
+        g.apply_edges(self.att_score)
+        g.edata['w'] = edge_softmax(g, g.edata.pop('att_w'))
         node_embed_cache = [h]
         for i, layer in enumerate(self.layers):
             h, out = layer(g, h, efeat)
