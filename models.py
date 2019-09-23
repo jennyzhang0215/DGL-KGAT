@@ -83,11 +83,13 @@ class KGEModel(nn.Module):
 
 
 class KGATConv(nn.Module):
-    def __init__(self, entity_in_feats, out_feats, relation_weight, feat_drop, res_type="Bi"):
+    def __init__(self, entity_in_feats, out_feats, n_relations, relation_weight, feat_drop, res_type="Bi"):
         super(KGATConv, self).__init__()
         self.feat_drop = nn.Dropout(feat_drop)
+        self._entity_in_feats = entity_in_feats
         self._res_type = res_type
-        self.relation_W = relation_weight
+        self._n_relations = n_relations
+        self.W_r = relation_weight
         if res_type == "Bi":
             self.res_fc = nn.Linear(entity_in_feats, out_feats, bias=False)
             self.res_fc_2 = nn.Linear(entity_in_feats, out_feats, bias=False)
@@ -105,18 +107,28 @@ class KGATConv(nn.Module):
 
         """
         #print(self.relation_W)
-        t_r = bmm_maybe_select(edges.src['h'], self.relation_W, edges.data['type']) ### (edge_num, hidden_dim)
-        h_r = bmm_maybe_select(edges.dst['h'], self.relation_W, edges.data['type']) ### (edge_num, hidden_dim)
+
+
+        #t_r = bmm_maybe_select(edges.src['h'], self.relation_W, edges.data['type']) ### (edge_num, hidden_dim)
+        #h_r = bmm_maybe_select(edges.dst['h'], self.relation_W, edges.data['type']) ### (edge_num, hidden_dim)
         # print("t_r", t_r)
         # print("h_r", h_r)
-        att_w = th.bmm(t_r.unsqueeze(1), th.tanh(h_r + edges.data['e']).unsqueeze(2)).squeeze(-1)
+        #att_w = th.bmm(t_r.unsqueeze(1), th.tanh(h_r + edges.data['e']).unsqueeze(2)).squeeze(-1)
+
+        att_w = th.bmm(edges.src['h'].index_select(0, edges.data['type']),
+                       th.tanh(edges.dst['h'].index_select(0, edges.data['type']).squeeze() + \
+                               edges.data['e'])).squeeze(-1)
+        print("att_w", att_w)
         return {'att_w': att_w}
 
     def forward(self, graph, nfeat, efeat):
         graph = graph.local_var()
         # node_embed = self.feat_drop(nfeat)
-        graph.ndata.update({'h': nfeat})
         graph.edata.update({'e': efeat})
+        nfeat = nfeat.unsqueeze(1) ### (#node, 1, entity_dim)
+        nfeat = nfeat.unsqueeze(1) ### (#node, 1, 1, entity_dim)
+        graph.ndata['h'] = th.matmul(nfeat, self.W_r).squeeze() ### (#node, #rel, entity_dim)
+
         #print("relation_W", self.relation_W.shape,  self.relation_W)
         ### compute attention weight using edge_softmax
         graph.apply_edges(self.att_score)
