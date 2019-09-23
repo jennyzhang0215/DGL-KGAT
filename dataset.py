@@ -200,7 +200,8 @@ class DataLoader(object):
                 user_ids = node_pairs[0][start: end]
                 item_ids = node_pairs[1][start: end]
                 ## obtain k-hop neighbors
-                new_entity_ids, new_pd = self._filter_neighbor(np.concatenate(user_ids, item_ids), self.all_triplet_dp)
+                new_entity_ids, new_pd = self._filter_neighbor(np.concatenate((user_ids, item_ids)),
+                                                               self.all_triplet_dp)
                 etype = new_pd['r'].values
                 ### relabel nodes to have consecutive node ids
                 uniq_v, edges = np.unique((new_pd['h'].values, new_pd['t'].values), return_inverse=True)
