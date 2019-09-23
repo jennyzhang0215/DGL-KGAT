@@ -136,7 +136,6 @@ class CFModel(nn.Module):
         -------
 
         """
-        print(self.relation_W)
         t_r = bmm_maybe_select(edges.src['h'], self.W_R, edges.data['type']) ### (edge_num, hidden_dim)
         h_r = bmm_maybe_select(edges.dst['h'], self.W_R, edges.data['type']) ### (edge_num, hidden_dim)
         att_w = th.bmm(t_r.unsqueeze(1), th.tanh(h_r + self.relation_embed(edges.data['type'])).unsqueeze(2)).squeeze(-1)
@@ -175,7 +174,7 @@ class CFModel(nn.Module):
         #print("neg_score", neg_score)
         self.cf_loss = th.mean(F.logsigmoid(pos_score - neg_score) ) * (-1.0)
         self.reg_loss = _L2_norm_mean(self.relation_embed.weight) + _L2_norm_mean(self.entity_embed.weight) +\
-                        _L2_norm_mean(self.relation_weight)
+                        _L2_norm_mean(self.W_R)
         print("\tcf_loss:{}, reg_loss:{}".format(self.cf_loss.item(), self.reg_loss.item()))
         return self.cf_loss + self._reg_lambda * self.reg_loss
 
