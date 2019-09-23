@@ -11,7 +11,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Reproduce KGAT using DGL")
     parser.add_argument('--gpu', type=int, default=0, help='use GPU')
     ### Data parameters
-    parser.add_argument('--data_name', nargs='?', default='last-fm',  help='Choose a dataset from {yelp2018, last-fm, amazon-book}')
+    parser.add_argument('--data_name', nargs='?', default='yelp',  help='Choose a dataset from {yelp2018, last-fm, amazon-book}')
     parser.add_argument('--adj_type', nargs='?', default='si', help='Specify the type of the adjacency (laplacian) matrix from {bi, si}.')
 
     ### Model parameters
