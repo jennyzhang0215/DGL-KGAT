@@ -117,12 +117,12 @@ class KGATConv(nn.Module):
         # node_embed = self.feat_drop(nfeat)
         graph.ndata.update({'h': nfeat})
         graph.edata.update({'e': efeat})
-        print("relation_W", self.relation_W.shape,  self.relation_W)
+        #print("relation_W", self.relation_W.shape,  self.relation_W)
         ### compute attention weight using edge_softmax
         graph.apply_edges(self.att_score)
-        print("attention_score:", graph.edata['att_w'])
+        #print("attention_score:", graph.edata['att_w'])
         att_w = edge_softmax(graph, graph.edata.pop('att_w'))
-        print("att_w", att_w)
+        #print("att_w", att_w)
         graph.edata['a'] = att_w
         graph.update_all(fn.u_mul_e('h', 'a', 'm'), fn.sum('m', 'h_neighbor'))
         h_neighbor = graph.ndata['h_neighbor']
