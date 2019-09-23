@@ -83,12 +83,10 @@ class KGEModel(nn.Module):
 
 
 class KGATConv(nn.Module):
-    def __init__(self, entity_in_feats, out_feats, n_relations, relation_weight, feat_drop, res_type="Bi"):
+    def __init__(self, entity_in_feats, out_feats, relation_weight, feat_drop, res_type="Bi"):
         super(KGATConv, self).__init__()
         self.feat_drop = nn.Dropout(feat_drop)
-        self._entity_in_feats = entity_in_feats
         self._res_type = res_type
-        self._n_relations = n_relations
         self.W_r = relation_weight
         if res_type == "Bi":
             self.res_fc = nn.Linear(entity_in_feats, out_feats, bias=False)
