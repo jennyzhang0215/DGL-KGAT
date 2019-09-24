@@ -168,7 +168,7 @@ class Model(nn.Module):
         self.reg_loss = _L2_norm_mean(self.relation_embed.weight) + _L2_norm_mean(self.entity_embed.weight) +\
                         _L2_norm_mean(self.W_R)
         print("\tcf_loss:{}, reg_loss:{}".format(self.cf_loss.item(), self.reg_loss.item()))
-        return self.cf_loss + self._reg_lambda * self.reg_loss
+        return self.cf_loss + self._reg_lambda_gnn * self.reg_loss
 
 
 
