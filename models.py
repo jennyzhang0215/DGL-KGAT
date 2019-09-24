@@ -84,6 +84,8 @@ class Model(nn.Module):
     def __init__(self, n_entities, n_relations, entity_dim, relation_dim, num_gnn_layers, n_hidden,
                  dropout, reg_lambda_kg=0.01, reg_lambda_gnn=0.01, res_type="Bi"):
         super(Model, self).__init__()
+        self._n_entities = n_entities
+        self._n_relations = n_relations
         self._reg_lambda_kg = reg_lambda_kg
         self._reg_lambda_gnn = reg_lambda_gnn
         self.entity_embed = nn.Embedding(n_entities, entity_dim) ### e_h, e_t
@@ -124,10 +126,8 @@ class Model(nn.Module):
         att_score = (W_r h_t)^T tanh(W_r h_r + e_r)
 
         """
-        t_r = bmm_maybe_select(self.entity_embed(edges.src['id']),
-                               self.W_R, edges.data['type']) ### (edge_num, hidden_dim)
-        h_r = bmm_maybe_select(self.entity_embed(edges.dst['id']),
-                               self.W_R, edges.data['type']) ### (edge_num, hidden_dim)
+        t_r = th.matmul(self.entity_embed(edges.src['id']), self.W_r) ### (edge_num, hidden_dim)
+        h_r = th.matmul(self.entity_embed(edges.dst['id']), self.W_r) ### (edge_num, hidden_dim)
         att_w = th.bmm(t_r.unsqueeze(1),
                        th.tanh(h_r + self.relation_embed(edges.data['type'])).unsqueeze(2)).squeeze(-1)
         # print("A", edges.src['h'].index_select(0, edges.data['type']).shape)
@@ -142,10 +142,16 @@ class Model(nn.Module):
         #print("node_ids", node_ids.shape, node_ids)
         #print("relation_ids", relation_ids.shape, relation_ids)
         h = self.entity_embed(node_ids)
+        self.g = g
         g.ndata['id'] = node_ids
         g.edata['type'] = rel_ids
         ## compute attention weight and store it on edges
-        g.apply_edges(self._att_score)
+        print("W_R", self.W_R)
+        for i in range(self._n_relations):
+            e_idxs = self.g.filter_edges(g.edata['type'] == i)
+            self.W_r = self.W_R[i]
+            print("W_r", self.W_r)
+            g.apply_edges(self._att_score, e_idxs)
         g.edata['w'] = edge_softmax(g, g.edata.pop('att_w'))
         node_embed_cache = [h]
         for i, layer in enumerate(self.layers):
