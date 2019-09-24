@@ -49,10 +49,12 @@ def train(args):
     dataset = DataLoader(args.data_name)
     print("Dataset prepared ...")
     ### model
+    # n_entities, n_relations, entity_dim, relation_dim, num_gnn_layers, n_hidden,
+    # dropout, reg_lambda_kg=0.01, reg_lambda_gnn=0.01,
     model = Model(n_entities=dataset.num_all_entities, n_relations=dataset.num_all_relations,
                   entity_dim=args.entity_embed_dim, relation_dim=args.relation_embed_dim,
-                  num_gnn_layers=args.gnn_num_layer,
-                  n_hidden=args.gnn_hidden_size, dropout=args.dropout_rate, reg_lambda=0.01)
+                  num_gnn_layers=args.gnn_num_layer, n_hidden=args.gnn_hidden_size, dropout=args.dropout_rate,
+                  reg_lambda_kg=0.01, reg_lambda_gnn=0.01)
     if use_cuda:
         model = model.cuda()
     ### optimizer
@@ -63,7 +65,7 @@ def train(args):
 
     for epoch in range(1, args.max_epoch+1):
         if args.train_kge:
-            kg_sampler = dataset.KG_sampler(batch_size=args.batch_size_kg, sequential=True, segment='train')
+            kg_sampler = dataset.KG_sampler(batch_size=args.batch_size_kg, sequential=True)
             iter = 0
             for h, r, pos_t, neg_t in kg_sampler:
                 iter +=1
