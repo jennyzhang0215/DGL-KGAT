@@ -31,7 +31,7 @@ def parse_args():
     parser.add_argument("--grad_norm", type=float, default=1.0, help="norm to clip gradient to")
     parser.add_argument('--lr', type=float, default=0.001, help='Learning rate.')
     parser.add_argument('--batch_size', type=int, default=-1, help='CF batch size.')
-    parser.add_argument('--batch_size_kg', type=int, default=1024, help='KG batch size.')
+    parser.add_argument('--batch_size_kg', type=int, default=2048, help='KG batch size.')
     parser.add_argument('--evaluate_every', type=int, default=4, help='the evaluation duration')
     parser.add_argument("--eval_batch_size", type=int, default=-1, help="batch size when evaluating")
     args = parser.parse_args()
@@ -81,10 +81,11 @@ def train(args):
                 loss.backward()
                 # print("start computing gradient ...")
                 optimizer.step()
-                print("Epoch {:04d}, Iter {:04d} | Loss {:.4f} ".format(epoch, iter, loss.item()))
                 optimizer.zero_grad()
-        else:
+                if (iter % 100) == 0:
+                    print("Epoch {:04d}, Iter {:04d} | Loss {:.4f} ".format(epoch, iter, loss.item()))
 
+        else:
             ### sample graph and sample user-item pairs
             cf_sampler = dataset.CF_sampler(batch_size=args.batch_size, segment='train', sequential=False)
             user_ids, item_pos_ids, item_neg_ids, g, uniq_v, etype = next(cf_sampler)
@@ -99,7 +100,7 @@ def train(args):
 
             model.train()
             embedding = model.gnn(g, nid_th, etype_th)
-            print("\t\tembedding", embedding.shape)
+            #print("\t\tembedding", embedding.shape)
             loss = model.get_loss(embedding, user_ids_th, item_pos_ids_th, item_neg_ids_th)
             #print("loss", loss)
             loss.backward()

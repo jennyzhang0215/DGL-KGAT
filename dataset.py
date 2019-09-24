@@ -47,7 +47,7 @@ class DataLoader(object):
         g = dgl.DGLGraph()
         g.add_nodes(self.num_all_entities)
         g.add_edges(self.all_triplet_np[:, 0], self.all_triplet_np[:, 2])
-        print(g)
+        #print(g)
         all_etype = self.all_triplet_np[:, 1]
         return g, all_etype
 
