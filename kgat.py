@@ -54,7 +54,7 @@ def train(args):
     model = Model(n_entities=dataset.num_all_entities, n_relations=dataset.num_all_relations,
                   entity_dim=args.entity_embed_dim, relation_dim=args.relation_embed_dim,
                   num_gnn_layers=args.gnn_num_layer, n_hidden=args.gnn_hidden_size, dropout=args.dropout_rate,
-                  reg_lambda_kg=0.01, reg_lambda_gnn=0.01)
+                  reg_lambda_kg=0.001, reg_lambda_gnn=0.001)
     if use_cuda:
         model = model.cuda()
     ### optimizer
@@ -64,7 +64,7 @@ def train(args):
     model_state_file = 'model_state.pth'
 
     for epoch in range(1, args.max_epoch+1):
-        if args.train_kge:
+        if (epoch // args.kg_epoch) % 2 == 0:
             kg_sampler = dataset.KG_sampler(batch_size=args.batch_size_kg, sequential=True)
             iter = 0
             for h, r, pos_t, neg_t in kg_sampler:
@@ -84,10 +84,9 @@ def train(args):
                 print("Epoch {:04d}, Iter {:04d} | Loss {:.4f} ".format(epoch, iter, loss.item()))
                 optimizer.zero_grad()
         else:
-            model.train()
+
             ### sample graph and sample user-item pairs
-            cf_sampler = dataset.CF_sampler(batch_size=args.batch_size,
-                                            segment='train', sequential=False)
+            cf_sampler = dataset.CF_sampler(batch_size=args.batch_size, segment='train', sequential=False)
             user_ids, item_pos_ids, item_neg_ids, g, uniq_v, etype = next(cf_sampler)
             user_ids_th = th.LongTensor(user_ids)
             item_pos_ids_th = th.LongTensor(item_pos_ids)
@@ -98,6 +97,7 @@ def train(args):
                 user_ids_th, item_pos_ids_th, item_neg_ids_th, nid_th, etype_th = \
                     user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda(), nid_th.cuda(), etype_th.cuda()
 
+            model.train()
             embedding = model(g, nid_th, etype_th)
             print("\t\tembedding", embedding.shape)
             loss = model.get_loss(embedding, user_ids_th, item_pos_ids_th, item_neg_ids_th)

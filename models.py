@@ -110,11 +110,10 @@ class Model(nn.Module):
         pos_score = _L2_norm(h_vec + r_embed - pos_t_vec)
         neg_score = _L2_norm(h_vec + r_embed - neg_t_vec)
         l = F.logsigmoid(pos_score - neg_score) * (-1.0)
-        print("kg loss:", l)
         l = th.mean(l)
         reg_loss =_L2_norm_mean(self.relation_embed.weight) + _L2_norm_mean(self.entity_embed.weight) + \
                   _L2_norm_mean(self.W_R)
-        print("reg loss:", reg_loss)
+        print("kg loss:", l, "reg loss:", reg_loss)
         loss = l + self._reg_lambda_kg * reg_loss
         return loss
 
