@@ -51,6 +51,7 @@ class DataLoader(object):
         all_etype = self.all_triplet_np[:, 1]
         return g, all_etype
 
+
     @property
     def num_all_entities(self):
         return self._n_KG_entities + self._n_users
@@ -61,15 +62,16 @@ class DataLoader(object):
     def _filter_neighbor(self, item_ids, kg_pd):
         new_pd = None
         item_ids = np.unique(item_ids)
-        print("0-> # triplets:{}, #entities:{}".format(kg_pd.shape[0], item_ids.size))
+        print("original:\t#triplets:{}, #entities:{}".format(kg_pd.shape[0], item_ids.size))
         for i in range(self._num_neighbor_hop):
             new_pd = kg_pd[kg_pd.h.isin(item_ids)]
             item_ids = np.unique(np.concatenate((new_pd['h'].values, new_pd['t'].values)))
-            print("{}-> new #triplets:{}, #entities:{}".format(i+1, new_pd.shape[0], item_ids.size))
+            #print("{}-> new #triplets:{}, #entities:{}".format(i+1, new_pd.shape[0], item_ids.size))
         new_entity_ids = item_ids
-        print("original:\t#h:{}, #r:{}, #t:{}".format(kg_pd['h'].nunique(), kg_pd['r'].nunique(), kg_pd['t'].nunique()))
-        print("filtered:\t#h:{}, #r:{}, #t:{}".format(new_pd["h"].nunique(), new_pd["r"].nunique(),
-                                                      new_pd["t"].nunique()))
+        #print("original:\t#h:{}, #r:{}, #t:{}".format(kg_pd['h'].nunique(), kg_pd['r'].nunique(), kg_pd['t'].nunique()))
+        #print("filtered:\t#h:{}, #r:{}, #t:{}".format(new_pd["h"].nunique(), new_pd["r"].nunique(),
+        #                                              new_pd["t"].nunique()))
+        print("filtered:\t#triplets:{}, #entities:{}".format(new_pd.shape[0], new_entity_ids.size))
         return new_entity_ids, new_pd
 
     def load_kg_filter_neighbor(self, file_name):
@@ -179,9 +181,6 @@ class DataLoader(object):
         if segment == 'train':
             node_pairs = self.train_pairs
             all_num = self.num_train
-        elif segment == 'test':
-            node_pairs = self.test_pairs
-            all_num = self.num_test
         else:
             raise NotImplementedError
         if batch_size < 0:

@@ -114,20 +114,19 @@ def train(args):
         if epoch % args.evaluate_every == 0:
             model.eval()
             ### TODO need to revise the model
-            cf_sampler = dataset.CF_sampler(batch_size=args.eval_batch_size,
-                                            segment='test', sequential=True)
-            for _, _, _, g, uniq_v, etype in cf_sampler:
-                nid_th = th.LongTensor(uniq_v)
-                etype_th = th.LongTensor(etype)
-                if use_cuda:
-                    nid_th, etype_th, = nid_th.cuda(), etype_th.cuda()
-                embedding = model.gnn(g, nid_th, etype_th)
+            g, all_etype = dataset.generate_test_g()
+
+            nid_th = th.arange(dataset.num_all_entities)
+            etype_th = th.LongTensor(all_etype)
+            if use_cuda:
+                nid_th, etype_th, = nid_th.cuda(), etype_th.cuda()
+            all_embedding = model.gnn(g, nid_th, etype_th)
 
             if use_cuda:
                 item_id_range = th.arange(dataset.num_items).cuda()
             else:
                 item_id_range = th.arange(dataset.num_items)
-            recall, ndcg = utils.calc_recall_ndcg(embedding, dataset, item_id_range, K=20, use_cuda=use_cuda)
+            recall, ndcg = utils.calc_recall_ndcg(all_embedding, dataset, item_id_range, K=20, use_cuda=use_cuda)
             print("Test recall:{}, ndcg:{}".format(recall, ndcg))
             # save best model
             # if recall > best_recall:
