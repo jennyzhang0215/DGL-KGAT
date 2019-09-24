@@ -70,10 +70,10 @@ def train(args):
             for h, r, pos_t, neg_t in kg_sampler:
                 iter +=1
                 model.train()
-                h_th = th.LongTensor(h)
-                r_th = th.LongTensor(r)
-                pos_t_th = th.LongTensor(pos_t)
-                neg_t_th = th.LongTensor(neg_t)
+                h_th = th.IntTensor(h)
+                r_th = th.IntTensor(r)
+                pos_t_th = th.IntTensor(pos_t)
+                neg_t_th = th.IntTensor(neg_t)
                 if use_cuda:
                     h_th, r_th, pos_t_th, neg_t_th = h_th.cuda(), r_th.cuda(), pos_t_th.cuda(), neg_t_th.cuda()
                 loss = model.transR(h_th, r_th, pos_t_th, neg_t_th)
@@ -88,11 +88,11 @@ def train(args):
             ### sample graph and sample user-item pairs
             cf_sampler = dataset.CF_sampler(batch_size=args.batch_size, segment='train', sequential=False)
             user_ids, item_pos_ids, item_neg_ids, g, uniq_v, etype = next(cf_sampler)
-            user_ids_th = th.LongTensor(user_ids)
-            item_pos_ids_th = th.LongTensor(item_pos_ids)
-            item_neg_ids_th = th.LongTensor(item_neg_ids)
-            nid_th = th.LongTensor(uniq_v)
-            etype_th = th.LongTensor(etype)
+            user_ids_th = th.IntTensor(user_ids)
+            item_pos_ids_th = th.IntTensor(item_pos_ids)
+            item_neg_ids_th = th.IntTensor(item_neg_ids)
+            nid_th = th.IntTensor(uniq_v)
+            etype_th = th.IntTensor(etype)
             if use_cuda:
                 user_ids_th, item_pos_ids_th, item_neg_ids_th, nid_th, etype_th = \
                     user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda(), nid_th.cuda(), etype_th.cuda()
@@ -117,7 +117,7 @@ def train(args):
             g, all_etype = dataset.generate_test_g()
 
             nid_th = th.arange(dataset.num_all_entities)
-            etype_th = th.LongTensor(all_etype)
+            etype_th = th.IntTensor(all_etype)
             if use_cuda:
                 nid_th, etype_th, = nid_th.cuda(), etype_th.cuda()
             all_embedding = model.gnn(g, nid_th, etype_th)

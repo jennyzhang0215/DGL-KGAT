@@ -8,10 +8,14 @@ from dgl.nn.pytorch.softmax import edge_softmax
 def _L2_norm(x):
     ### sum(t ** 2) / 2
     ### th.pow(th.norm(x, dim=1), 2) / 2.
-    return th.sum(th.pow(x, 2), dim=1, keepdim=False) / 2.
+    return
 def _L2_norm_mean(x):
     ### ### mean( sum(t ** 2) / 2)
-    return th.mean(_L2_norm(x))
+    return th.mean(th.sum(th.pow(x, 2), dim=1, keepdim=False) / 2.)
+
+def _L2_norm_sum(x):
+    ### ### mean( sum(t ** 2) / 2)
+    return th.sum(th.sum(th.pow(x, 2), dim=1, keepdim=False) / 2.)
 
 def bmm_maybe_select(A, B, index):
     """Slice submatrices of B by the given index and perform bmm.
