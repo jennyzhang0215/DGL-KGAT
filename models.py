@@ -5,16 +5,12 @@ import dgl.function as fn
 from dgl.nn.pytorch.softmax import edge_softmax
 
 
-def _L2_norm(x):
-    ### sum(t ** 2) / 2
-    ### th.pow(th.norm(x, dim=1), 2) / 2.
-    return
-def _L2_norm_mean(x):
+def _L2_loss_mean(x):
     ### ### mean( sum(t ** 2) / 2)
     return th.mean(th.sum(th.pow(x, 2), dim=1, keepdim=False) / 2.)
 
-def _L2_norm_sum(x):
-    ### ### mean( sum(t ** 2) / 2)
+def _L2_loss_sum(x):
+    ### ### sum( sum(t ** 2) / 2)
     return th.sum(th.sum(th.pow(x, 2), dim=1, keepdim=False) / 2.)
 
 def bmm_maybe_select(A, B, index):
@@ -104,19 +100,18 @@ class Model(nn.Module):
         pos_t_embed = self.entity_embed(pos_t)
         neg_t_embed = self.entity_embed(neg_t)
 
-        h_vec = bmm_maybe_select(h_embed, self.W_R, r)
-        pos_t_vec = bmm_maybe_select(pos_t_embed, self.W_R, r)
-        neg_t_vec = bmm_maybe_select(neg_t_embed, self.W_R, r)
-        # print("h_vec:", h_vec.shape)
-        # print("r_vec", r_embed.shape)
-        # print("pos_t_vec", pos_t_vec.shape)
-        # print("neg_t_vec", neg_t_vec.shape)
-        pos_score = _L2_norm(h_vec + r_embed - pos_t_vec)
-        neg_score = _L2_norm(h_vec + r_embed - neg_t_vec)
+        h_vec = F.normalize(bmm_maybe_select(h_embed, self.W_R, r), p=2, dim=1)
+        pos_t_vec = F.normalize(bmm_maybe_select(pos_t_embed, self.W_R, r), p=2, dim=1)
+        neg_t_vec = F.normalize(bmm_maybe_select(neg_t_embed, self.W_R, r), p=2, dim=1)
+
+        pos_score = th.sum(th.pow(h_vec + r_embed - pos_t_vec, 2), dim=1, keepdim=True)
+        neg_score = th.sum(th.pow(h_vec + r_embed - neg_t_vec, 2), dim=1, keepdim=True)
         l = F.logsigmoid(pos_score - neg_score) * (-1.0)
         l = th.mean(l)
-        reg_loss =_L2_norm_mean(self.relation_embed.weight) + _L2_norm_mean(self.entity_embed.weight) + \
-                  _L2_norm_mean(self.W_R)
+        ## tf.reduce_sum(tf.square((h_e + r_e - t_e)), 1, keepdims=True)
+        ###
+        reg_loss =_L2_loss_mean(self.relation_embed.weight) + _L2_loss_mean(self.entity_embed.weight) + \
+                  _L2_loss_mean(self.W_R)
         #print("\tkg loss:", l.items(), "reg loss:", reg_loss.items())
         loss = l + self._reg_lambda_kg * reg_loss
         return loss
@@ -154,6 +149,7 @@ class Model(nn.Module):
         for i, layer in enumerate(self.layers):
             h, out = layer(g, h)
             #print(i, "h", h.shape, h)
+            out = F.normalize(out, p=2, dim=1)
             node_embed_cache.append(out)
         final_h = th.cat(node_embed_cache, 1)
         #print("final_h", final_h)
@@ -168,8 +164,8 @@ class Model(nn.Module):
         #print("pos_score", pos_score)
         #print("neg_score", neg_score)
         self.cf_loss = th.mean(F.logsigmoid(pos_score - neg_score) ) * (-1.0)
-        self.reg_loss = _L2_norm_mean(self.relation_embed.weight) + _L2_norm_mean(self.entity_embed.weight) +\
-                        _L2_norm_mean(self.W_R)
+        self.reg_loss = _L2_loss_mean(self.relation_embed.weight) + _L2_loss_mean(self.entity_embed.weight) +\
+                        _L2_loss_mean(self.W_R)
         #print("\tcf_loss:{}, reg_loss:{}".format(self.cf_loss.item(), self.reg_loss.item()))
         return self.cf_loss + self._reg_lambda_gnn * self.reg_loss
 
