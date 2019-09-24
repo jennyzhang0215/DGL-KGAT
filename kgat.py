@@ -26,13 +26,13 @@ def parse_args():
 
     ### Training parameters
     parser.add_argument('--train_kge', type=bool, default=True, help='Just for testing. Train KGE model')
-    parser.add_argument('--kg_epoch', type=int, default=5, help='train xx iterations')
+    parser.add_argument('--kg_epoch', type=int, default=2, help='train xx iterations')
     parser.add_argument('--max_epoch', type=int, default=10000, help='train xx iterations')
     parser.add_argument("--grad_norm", type=float, default=1.0, help="norm to clip gradient to")
     parser.add_argument('--lr', type=float, default=0.001, help='Learning rate.')
     parser.add_argument('--batch_size', type=int, default=64, help='CF batch size.')
     parser.add_argument('--batch_size_kg', type=int, default=1024, help='KG batch size.')
-    parser.add_argument('--evaluate_every', type=int, default=10, help='the evaluation duration')
+    parser.add_argument('--evaluate_every', type=int, default=4, help='the evaluation duration')
     parser.add_argument("--eval_batch_size", type=int, default=-1, help="batch size when evaluating")
     args = parser.parse_args()
 
@@ -129,7 +129,7 @@ def train(args):
                 if use_cuda:
                     user_ids_th, item_pos_ids_th, item_neg_ids_th, nid_th, etype_th, = \
                         user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda(), nid_th.cuda(), etype_th.cuda()
-                embedding = model(g, nid_th, etype_th)
+                embedding = model.gnn(g, nid_th, etype_th)
 
                 recall, ndcg = utils.calc_recall_ndcg(embedding, dataset, item_id_range, K=20, use_cuda=use_cuda)
                 print("Test recall:{}, ndcg:{}".format(recall, ndcg))
