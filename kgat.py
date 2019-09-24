@@ -18,18 +18,18 @@ def parse_args():
     parser.add_argument('--use_kge', type=bool, default=True, help='whether using knowledge graph embedding')
     parser.add_argument('--kge_size', type=int, default=64, help='KG Embedding size.')
     parser.add_argument('--entity_embed_dim', type=int, default=64, help='CF Embedding size.')
-    parser.add_argument('--relation_embed_dim', type=int, default=32, help='CF Embedding size.')
+    parser.add_argument('--relation_embed_dim', type=int, default=64, help='CF Embedding size.')
     parser.add_argument('--gnn_num_layer', type=int, default=2, help='the number of layers')
-    parser.add_argument('--gnn_hidden_size', type=int, default=32, help='Output sizes of every layer')
+    parser.add_argument('--gnn_hidden_size', type=int, default=64, help='Output sizes of every layer')
     parser.add_argument('--dropout_rate', type=float, default=0.1, help='Keep probability w.r.t. node dropout (i.e., 1-dropout_ratio) for each deep layer. 1: no dropout.')
-    parser.add_argument('--regs', nargs='?', default='[1e-5,1e-5,1e-2]', help='Regularization for user and item embeddings.')
+    parser.add_argument('--regs', type=float, default=0.00001, help='Regularization for user and item embeddings.')
 
     ### Training parameters
     parser.add_argument('--train_kge', type=bool, default=True, help='Just for testing. Train KGE model')
     parser.add_argument('--kg_epoch', type=int, default=2, help='train xx iterations')
     parser.add_argument('--max_epoch', type=int, default=10000, help='train xx iterations')
     parser.add_argument("--grad_norm", type=float, default=1.0, help="norm to clip gradient to")
-    parser.add_argument('--lr', type=float, default=0.001, help='Learning rate.')
+    parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate.')
     parser.add_argument('--batch_size', type=int, default=-1, help='CF batch size.')
     parser.add_argument('--batch_size_kg', type=int, default=2048, help='KG batch size.')
     parser.add_argument('--evaluate_every', type=int, default=4, help='the evaluation duration')
@@ -54,7 +54,7 @@ def train(args):
     model = Model(n_entities=dataset.num_all_entities, n_relations=dataset.num_all_relations,
                   entity_dim=args.entity_embed_dim, relation_dim=args.relation_embed_dim,
                   num_gnn_layers=args.gnn_num_layer, n_hidden=args.gnn_hidden_size, dropout=args.dropout_rate,
-                  reg_lambda_kg=0.001, reg_lambda_gnn=0.001)
+                  reg_lambda_kg=args.regs, reg_lambda_gnn=args.regs)
     if use_cuda:
         model = model.cuda()
     ### optimizer

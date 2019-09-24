@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import dgl.function as fn
 from dgl.nn.pytorch.softmax import edge_softmax
-
+import math
 
 def _L2_loss_mean(x):
     ### ### mean( sum(t ** 2) / 2)
@@ -94,7 +94,8 @@ class Model(nn.Module):
         nn.init.xavier_uniform_(self.W_R, gain=nn.init.calculate_gain('relu'))
         self.layers = nn.ModuleList()
         for i in range(num_gnn_layers):
-            self.layers.append(KGATConv(entity_dim, n_hidden, dropout))
+            r = math.pow(2, i)
+            self.layers.append(KGATConv(entity_dim, n_hidden//r, dropout))
 
     def transR(self, h, r, pos_t, neg_t):
         h_embed = self.entity_embed(h)  ### Shape(batch_size, dim)
@@ -119,7 +120,6 @@ class Model(nn.Module):
         #print("\tkg loss:", l.items(), "reg loss:", reg_loss.items())
         loss = l + self._reg_lambda_kg * reg_loss
         return loss
-
 
     def _att_score(self, edges):
         """
