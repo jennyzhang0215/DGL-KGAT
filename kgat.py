@@ -98,7 +98,7 @@ def train(args):
                     user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda(), nid_th.cuda(), etype_th.cuda()
 
             model.train()
-            embedding = model(g, nid_th, etype_th)
+            embedding = model.gnn(g, nid_th, etype_th)
             print("\t\tembedding", embedding.shape)
             loss = model.get_loss(embedding, user_ids_th, item_pos_ids_th, item_neg_ids_th)
             #print("loss", loss)
