@@ -58,7 +58,7 @@ def calc_recall_ndcg(embedding, dataset, all_item_id_range, K, use_cuda):
                     binary_rank_K[i] = 1
             ranks.append(binary_rank_K)
     ranks = np.vstack(ranks)
-
+    ### the output is the sum
     recall = recall_at_k(ranks, K, dataset.num_test)
     ndcg = ndcg_at_k(ranks, K)
 

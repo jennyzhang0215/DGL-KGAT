@@ -17,10 +17,10 @@ def parse_args():
     ### Model parameters
     parser.add_argument('--use_kge', type=bool, default=True, help='whether using knowledge graph embedding')
     parser.add_argument('--kge_size', type=int, default=64, help='KG Embedding size.')
-    parser.add_argument('--entity_embed_dim', type=int, default=64, help='CF Embedding size.')
-    parser.add_argument('--relation_embed_dim', type=int, default=32, help='CF Embedding size.')
+    parser.add_argument('--entity_embed_dim', type=int, default=8, help='CF Embedding size.')
+    parser.add_argument('--relation_embed_dim', type=int, default=4, help='CF Embedding size.')
     parser.add_argument('--gnn_num_layer', type=int, default=2, help='the number of layers')
-    parser.add_argument('--gnn_hidden_size', type=int, default=16, help='Output sizes of every layer')
+    parser.add_argument('--gnn_hidden_size', type=int, default=4, help='Output sizes of every layer')
     parser.add_argument('--dropout_rate', type=float, default=0.1, help='Keep probability w.r.t. node dropout (i.e., 1-dropout_ratio) for each deep layer. 1: no dropout.')
     parser.add_argument('--regs', nargs='?', default='[1e-5,1e-5,1e-2]', help='Regularization for user and item embeddings.')
 
@@ -64,7 +64,7 @@ def train(args):
     model_state_file = 'model_state.pth'
 
     for epoch in range(1, args.max_epoch+1):
-        if (epoch // args.kg_epoch) % 2 == 0:
+        if ((epoch-1) // args.kg_epoch) % 2 == 0:
             kg_sampler = dataset.KG_sampler(batch_size=args.batch_size_kg, sequential=True)
             iter = 0
             for h, r, pos_t, neg_t in kg_sampler:
@@ -112,27 +112,23 @@ def train(args):
 
 
         if epoch % args.evaluate_every == 0:
-
             model.eval()
+            ### TODO need to revise the model
             cf_sampler = dataset.CF_sampler(batch_size=args.eval_batch_size,
                                             segment='test', sequential=True)
+            for _, _, _, g, uniq_v, etype in cf_sampler:
+                nid_th = th.LongTensor(uniq_v)
+                etype_th = th.LongTensor(etype)
+                if use_cuda:
+                    nid_th, etype_th, = nid_th.cuda(), etype_th.cuda()
+                embedding = model.gnn(g, nid_th, etype_th)
+
             if use_cuda:
                 item_id_range = th.arange(dataset.num_items).cuda()
             else:
                 item_id_range = th.arange(dataset.num_items)
-            for user_ids, item_pos_ids, item_neg_ids, g, uniq_v, etype in cf_sampler:
-                user_ids_th = th.LongTensor(user_ids)
-                item_pos_ids_th = th.LongTensor(item_pos_ids)
-                item_neg_ids_th = th.LongTensor(item_neg_ids)
-                nid_th = th.LongTensor(uniq_v)
-                etype_th = th.LongTensor(etype)
-                if use_cuda:
-                    user_ids_th, item_pos_ids_th, item_neg_ids_th, nid_th, etype_th, = \
-                        user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda(), nid_th.cuda(), etype_th.cuda()
-                embedding = model.gnn(g, nid_th, etype_th)
-
-                recall, ndcg = utils.calc_recall_ndcg(embedding, dataset, item_id_range, K=20, use_cuda=use_cuda)
-                print("Test recall:{}, ndcg:{}".format(recall, ndcg))
+            recall, ndcg = utils.calc_recall_ndcg(embedding, dataset, item_id_range, K=20, use_cuda=use_cuda)
+            print("Test recall:{}, ndcg:{}".format(recall, ndcg))
             # save best model
             # if recall > best_recall:
             #     best_recall = recall
