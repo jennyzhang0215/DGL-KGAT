@@ -148,7 +148,7 @@ class Model(nn.Module):
         ## compute attention weight and store it on edges
         print("W_R", self.W_R)
         for i in range(self._n_relations):
-            e_idxs = self.g.filter_edges(g.edata['type'] == i)
+            e_idxs = self.g.filter_edges(lambda edges: edges.data['type'] == i)
             self.W_r = self.W_R[i]
             print("W_r", self.W_r)
             g.apply_edges(self._att_score, e_idxs)
