@@ -130,12 +130,6 @@ class Model(nn.Module):
         h_r = th.matmul(self.entity_embed(edges.dst['id']), self.W_r) ### (edge_num, hidden_dim)
         att_w = th.bmm(t_r.unsqueeze(1),
                        th.tanh(h_r + self.relation_embed(edges.data['type'])).unsqueeze(2)).squeeze(-1)
-        # print("A", edges.src['h'].index_select(0, edges.data['type']).shape)
-        # print("B", th.tanh(edges.dst['h'].index_select(1, edges.data['type']) + edges.data['e']).shape)
-        # att_w = th.bmm(edges.src['h'].index_select(1, edges.data['type']),
-        #                th.tanh(edges.dst['h'].index_select(0, edges.data['type']) + \
-        #                        edges.data['e'])).squeeze(-1)
-        # print("w", att_w)
         return {'att_w': att_w}
 
     def gnn(self, g, node_ids, rel_ids):
@@ -146,11 +140,9 @@ class Model(nn.Module):
         g.ndata['id'] = node_ids
         g.edata['type'] = rel_ids
         ## compute attention weight and store it on edges
-        print("W_R", self.W_R)
         for i in range(self._n_relations):
             e_idxs = self.g.filter_edges(lambda edges: edges.data['type'] == i)
             self.W_r = self.W_R[i]
-            print("W_r", self.W_r)
             g.apply_edges(self._att_score, e_idxs)
         g.edata['w'] = edge_softmax(g, g.edata.pop('att_w'))
         node_embed_cache = [h]
