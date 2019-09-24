@@ -94,7 +94,7 @@ class Model(nn.Module):
         nn.init.xavier_uniform_(self.W_R, gain=nn.init.calculate_gain('relu'))
         self.layers = nn.ModuleList()
         for i in range(num_gnn_layers):
-            r = math.pow(2, i)
+            r = int(math.pow(2, i))
             self.layers.append(KGATConv(entity_dim, n_hidden//r, dropout))
 
     def transR(self, h, r, pos_t, neg_t):
