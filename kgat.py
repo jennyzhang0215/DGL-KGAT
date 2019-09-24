@@ -26,7 +26,7 @@ def parse_args():
 
     ### Training parameters
     parser.add_argument('--train_kge', type=bool, default=True, help='Just for testing. Train KGE model')
-    parser.add_argument('--max_epoch', type=int, default=10000, help='train xx iterations')
+    parser.add_argument('--kg_epoch', type=int, default=10, help='train xx iterations')
     parser.add_argument('--max_epoch', type=int, default=10000, help='train xx iterations')
     parser.add_argument("--grad_norm", type=float, default=1.0, help="norm to clip gradient to")
     parser.add_argument('--lr', type=float, default=0.001, help='Learning rate.')
