@@ -99,13 +99,15 @@ class Model(nn.Module):
         r_embed = self.relation_embed(r)
         pos_t_embed = self.entity_embed(pos_t)
         neg_t_embed = self.entity_embed(neg_t)
-
+        print("h_embed", h_embed)
         h_vec = F.normalize(bmm_maybe_select(h_embed, self.W_R, r), p=2, dim=1)
+        print("h_vec", h_vec)
+        r_vec = F.normalize(r_embed, p=2, dim=1)
         pos_t_vec = F.normalize(bmm_maybe_select(pos_t_embed, self.W_R, r), p=2, dim=1)
         neg_t_vec = F.normalize(bmm_maybe_select(neg_t_embed, self.W_R, r), p=2, dim=1)
 
-        pos_score = th.sum(th.pow(h_vec + r_embed - pos_t_vec, 2), dim=1, keepdim=True)
-        neg_score = th.sum(th.pow(h_vec + r_embed - neg_t_vec, 2), dim=1, keepdim=True)
+        pos_score = th.sum(th.pow(h_vec + r_vec - pos_t_vec, 2), dim=1, keepdim=True)
+        neg_score = th.sum(th.pow(h_vec + r_vec - neg_t_vec, 2), dim=1, keepdim=True)
         l = F.logsigmoid(pos_score - neg_score) * (-1.0)
         l = th.mean(l)
         ## tf.reduce_sum(tf.square((h_e + r_e - t_e)), 1, keepdims=True)
