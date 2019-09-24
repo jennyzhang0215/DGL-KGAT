@@ -49,38 +49,6 @@ def bmm_maybe_select(A, B, index):
         BB = B.index_select(0, index)
         return th.bmm(A.unsqueeze(1), BB).squeeze()
 
-class KGEModel(nn.Module):
-    def __init__(self, n_entities, n_relations, entity_dim, relation_dim, reg_lambda):
-        super(KGEModel, self).__init__()
-        self._reg_lambda = reg_lambda
-        self.entity_embed = nn.Embedding(n_entities, entity_dim)
-        self.relation_embed = nn.Embedding(n_relations, relation_dim)
-        self.relation_weight = nn.Parameter(th.Tensor(n_relations, entity_dim, relation_dim))  ### W_r
-        nn.init.xavier_uniform_(self.relation_weight, gain=nn.init.calculate_gain('relu'))
-
-    def forward(self, h, r, pos_t, neg_t):
-        h_embed = self.entity_embed(h)  ### Shape(batch_size, dim)
-        r_embed = self.relation_embed(r)
-        pos_t_embed = self.entity_embed(pos_t)
-        neg_t_embed = self.entity_embed(neg_t)
-
-        h_vec = bmm_maybe_select(h_embed, self.relation_weight, r)
-        pos_t_vec = bmm_maybe_select(pos_t_embed, self.relation_weight, r)
-        neg_t_vec = bmm_maybe_select(neg_t_embed, self.relation_weight, r)
-        # print("h_vec:", h_vec.shape)
-        # print("r_vec", r_embed.shape)
-        # print("pos_t_vec", pos_t_vec.shape)
-        # print("neg_t_vec", neg_t_vec.shape)
-        pos_score = _L2_norm(h_vec + r_embed - pos_t_vec)
-        neg_score = _L2_norm(h_vec + r_embed - neg_t_vec)
-        kg_loss = F.logsigmoid(pos_score - neg_score) * (-1.0)
-        print(kg_loss)
-        kg_loss = th.mean(kg_loss)
-        kg_reg_loss = _L2_norm_mean(h_embed) + _L2_norm_mean(r_embed) + \
-                      _L2_norm_mean(pos_t_embed) + _L2_norm_mean(neg_t_embed)
-        loss = kg_loss + self._reg_lambda * kg_reg_loss
-        return loss
-
 
 class KGATConv(nn.Module):
     def __init__(self, entity_in_feats, out_feats, dropout, res_type="Bi"):
@@ -112,11 +80,12 @@ class KGATConv(nn.Module):
             raise NotImplementedError
         return h_neighbor, out
 
-class CFModel(nn.Module):
+class Model(nn.Module):
     def __init__(self, n_entities, n_relations, entity_dim, relation_dim, num_gnn_layers, n_hidden,
-                 dropout, reg_lambda, res_type="Bi"):
-        super(CFModel, self).__init__()
-        self._reg_lambda = reg_lambda
+                 dropout, reg_lambda_kg=0.01, reg_lambda_gnn=0.01, res_type="Bi"):
+        super(Model, self).__init__()
+        self._reg_lambda_kg = reg_lambda_kg
+        self._reg_lambda_gnn = reg_lambda_gnn
         self.entity_embed = nn.Embedding(n_entities, entity_dim) ### e_h, e_t
         self.relation_embed = nn.Embedding(n_relations, relation_dim)  ### e_r
         self.W_R = nn.Parameter(th.Tensor(n_relations, entity_dim, relation_dim))  ### W_r
@@ -125,15 +94,34 @@ class CFModel(nn.Module):
         for i in range(num_gnn_layers):
             self.layers.append(KGATConv(entity_dim, n_hidden, dropout))
 
+    def transR(self, h, r, pos_t, neg_t):
+        h_embed = self.entity_embed(h)  ### Shape(batch_size, dim)
+        r_embed = self.relation_embed(r)
+        pos_t_embed = self.entity_embed(pos_t)
+        neg_t_embed = self.entity_embed(neg_t)
+
+        h_vec = bmm_maybe_select(h_embed, self.W_R, r)
+        pos_t_vec = bmm_maybe_select(pos_t_embed, self.W_R, r)
+        neg_t_vec = bmm_maybe_select(neg_t_embed, self.W_R, r)
+        # print("h_vec:", h_vec.shape)
+        # print("r_vec", r_embed.shape)
+        # print("pos_t_vec", pos_t_vec.shape)
+        # print("neg_t_vec", neg_t_vec.shape)
+        pos_score = _L2_norm(h_vec + r_embed - pos_t_vec)
+        neg_score = _L2_norm(h_vec + r_embed - neg_t_vec)
+        l = F.logsigmoid(pos_score - neg_score) * (-1.0)
+        print("kg loss:", l)
+        l = th.mean(l)
+        reg_loss =_L2_norm_mean(self.relation_embed.weight) + _L2_norm_mean(self.entity_embed.weight) + \
+                  _L2_norm_mean(self.W_R)
+        print("reg loss:", reg_loss)
+        loss = l + self._reg_lambda_kg * reg_loss
+        return loss
+
+
     def _att_score(self, edges):
         """
         att_score = (W_r h_t)^T tanh(W_r h_r + e_r)
-        Parameters
-        ----------
-        edges
-
-        Returns
-        -------
 
         """
         t_r = bmm_maybe_select(self.entity_embed(edges.src['id']),
@@ -150,7 +138,7 @@ class CFModel(nn.Module):
         # print("w", att_w)
         return {'att_w': att_w}
 
-    def forward(self, g, node_ids, rel_ids):
+    def gnn(self, g, node_ids, rel_ids):
         #print("node_ids", node_ids.shape, node_ids)
         #print("relation_ids", relation_ids.shape, relation_ids)
         h = self.entity_embed(node_ids)

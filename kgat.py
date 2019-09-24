@@ -1,7 +1,7 @@
 import argparse
 
 from dataset import DataLoader
-from models import KGEModel, CFModel
+from models import Model
 import torch as th
 import torch.optim as optim
 import utils
@@ -25,7 +25,8 @@ def parse_args():
     parser.add_argument('--regs', nargs='?', default='[1e-5,1e-5,1e-2]', help='Regularization for user and item embeddings.')
 
     ### Training parameters
-    parser.add_argument('--train_kge', type=bool, default=False, help='Just for testing. Train KGE model')
+    parser.add_argument('--train_kge', type=bool, default=True, help='Just for testing. Train KGE model')
+    parser.add_argument('--max_epoch', type=int, default=10000, help='train xx iterations')
     parser.add_argument('--max_epoch', type=int, default=10000, help='train xx iterations')
     parser.add_argument("--grad_norm", type=float, default=1.0, help="norm to clip gradient to")
     parser.add_argument('--lr', type=float, default=0.001, help='Learning rate.')
@@ -48,14 +49,10 @@ def train(args):
     dataset = DataLoader(args.data_name)
     print("Dataset prepared ...")
     ### model
-    if args.train_kge:
-        model = KGEModel(n_entities=dataset.num_KG_entities, n_relations=dataset.num_KG_relations,
-                         entity_dim=args.entity_embed_dim, relation_dim=args.relation_embed_dim, reg_lambda=0.01)
-    else:
-        model = CFModel(n_entities=dataset.num_all_entities, n_relations=dataset.num_all_relations,
-                        entity_dim=args.entity_embed_dim, relation_dim=args.relation_embed_dim,
-                        num_gnn_layers=args.gnn_num_layer,
-                        n_hidden=args.gnn_hidden_size, dropout=args.dropout_rate, reg_lambda=0.01)
+    model = Model(n_entities=dataset.num_all_entities, n_relations=dataset.num_all_relations,
+                  entity_dim=args.entity_embed_dim, relation_dim=args.relation_embed_dim,
+                  num_gnn_layers=args.gnn_num_layer,
+                  n_hidden=args.gnn_hidden_size, dropout=args.dropout_rate, reg_lambda=0.01)
     if use_cuda:
         model = model.cuda()
     ### optimizer
@@ -77,7 +74,7 @@ def train(args):
                 neg_t_th = th.LongTensor(neg_t)
                 if use_cuda:
                     h_th, r_th, pos_t_th, neg_t_th = h_th.cuda(), r_th.cuda(), pos_t_th.cuda(), neg_t_th.cuda()
-                loss = model(h_th, r_th, pos_t_th, neg_t_th)
+                loss = model.transR(h_th, r_th, pos_t_th, neg_t_th)
                 # print("loss", loss)
                 loss.backward()
                 # print("start computing gradient ...")
