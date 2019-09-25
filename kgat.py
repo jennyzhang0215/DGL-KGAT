@@ -15,7 +15,7 @@ def parse_args():
 
     ### Model parameters
     parser.add_argument('--entity_embed_dim', type=int, default=32, help='CF Embedding size.')
-    parser.add_argument('--relation_embed_dim', type=int, default=64, help='CF Embedding size.')
+    parser.add_argument('--relation_embed_dim', type=int, default=32, help='CF Embedding size.')
     parser.add_argument('--gnn_num_layer', type=int, default=2, help='the number of layers')
     parser.add_argument('--gnn_hidden_size', type=int, default=32, help='Output sizes of every layer')
     parser.add_argument('--dropout_rate', type=float, default=0.1, help='Keep probability w.r.t. node dropout (i.e., 1-dropout_ratio) for each deep layer. 1: no dropout.')
@@ -24,9 +24,9 @@ def parse_args():
     ### Training parameters
     parser.add_argument('--train_kge', type=bool, default=True, help='Just for testing. Train KGE model')
     parser.add_argument('--kg_epoch', type=int, default=2, help='train xx iterations')
-    parser.add_argument('--max_epoch', type=int, default=10000, help='train xx iterations')
+    parser.add_argument('--max_epoch', type=int, default=1000, help='train xx iterations')
     parser.add_argument("--grad_norm", type=float, default=1.0, help="norm to clip gradient to")
-    parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate.')
+    parser.add_argument('--lr', type=float, default=0.001, help='Learning rate.')
     parser.add_argument('--batch_size', type=int, default=-1, help='CF batch size.')
     parser.add_argument('--batch_size_kg', type=int, default=4096, help='KG batch size.')
     parser.add_argument('--evaluate_every', type=int, default=4, help='the evaluation duration')
