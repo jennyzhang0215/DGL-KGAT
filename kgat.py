@@ -1,5 +1,4 @@
 import argparse
-
 from dataset import DataLoader
 from models import Model
 import torch as th
@@ -15,10 +14,10 @@ def parse_args():
     parser.add_argument('--adj_type', nargs='?', default='si', help='Specify the type of the adjacency (laplacian) matrix from {bi, si}.')
 
     ### Model parameters
-    parser.add_argument('--entity_embed_dim', type=int, default=32, help='CF Embedding size.')
-    parser.add_argument('--relation_embed_dim', type=int, default=32, help='CF Embedding size.')
+    parser.add_argument('--entity_embed_dim', type=int, default=64, help='CF Embedding size.')
+    parser.add_argument('--relation_embed_dim', type=int, default=64, help='CF Embedding size.')
     parser.add_argument('--gnn_num_layer', type=int, default=2, help='the number of layers')
-    parser.add_argument('--gnn_hidden_size', type=int, default=64, help='Output sizes of every layer')
+    parser.add_argument('--gnn_hidden_size', type=int, default=32, help='Output sizes of every layer')
     parser.add_argument('--dropout_rate', type=float, default=0.1, help='Keep probability w.r.t. node dropout (i.e., 1-dropout_ratio) for each deep layer. 1: no dropout.')
     parser.add_argument('--regs', type=float, default=0.001, help='Regularization for user and item embeddings.')
 
@@ -80,7 +79,7 @@ def train(args):
                 # print("start computing gradient ...")
                 optimizer.step()
                 optimizer.zero_grad()
-                if (iter % 50) == 0:
+                if (iter % 10) == 0:
                     print("Epoch {:04d}, Iter {:04d} | Loss {:.4f} ".format(epoch, iter, loss.item()))
 
         else:
