@@ -95,7 +95,7 @@ def train(args):
 
             print("\t\tembedding", embedding.shape)
             cf_sampler = dataset.CF_sampler(batch_size=args.batch_size, segment='train', sequential=True)
-            l = []
+            loss_sum = None
             train_pairs = 0
             for user_ids, item_pos_ids, item_neg_ids, batch_size in cf_sampler:
                 user_ids_th = th.LongTensor(user_ids)
@@ -107,8 +107,11 @@ def train(args):
 
                 loss = model.get_loss(embedding, user_ids_th, item_pos_ids_th, item_neg_ids_th)
                 train_pairs += 1
-                l.append(loss)
-            loss = th.sum(l) / train_pairs
+                if loss_sum is None:
+                    loss_sum = loss
+                else:
+                    loss_sum += loss
+            loss = loss_sum / train_pairs
             loss.backward()
             th.nn.utils.clip_grad_norm_(model.parameters(), args.grad_norm)  # clip gradients
 
