@@ -136,8 +136,6 @@ class Model(nn.Module):
         return {'att_w': att_w}
 
     def gnn(self, g, node_ids, rel_ids):
-        print("node_ids", node_ids.shape, node_ids)
-        print("relation_ids", rel_ids.shape, rel_ids)
         h = self.entity_embed(node_ids)
         self.g = g
         g.ndata['id'] = node_ids
@@ -151,11 +149,11 @@ class Model(nn.Module):
         node_embed_cache = [h]
         for i, layer in enumerate(self.layers):
             h, out = layer(g, h)
-            print(i, "h", h.shape, h)
+            #print(i, "h", h.shape, h)
             out = F.normalize(out, p=2, dim=1)
             node_embed_cache.append(out)
         final_h = th.cat(node_embed_cache, 1)
-        print("final_h", final_h)
+        #print("final_h", final_h)
         return final_h
 
     def get_loss(self, embedding, src_ids, pos_dst_ids, neg_dst_ids):
@@ -166,9 +164,9 @@ class Model(nn.Module):
         neg_score = th.bmm(src_vec.unsqueeze(1), neg_dst_vec.unsqueeze(2)).squeeze()  ### (batch_size, )
         #print("pos_score", pos_score)
         #print("neg_score", neg_score)
-        self.cf_loss = th.sum(F.logsigmoid(pos_score - neg_score) ) * (-1.0)
-        self.reg_loss = _L2_loss_sum(self.relation_embed.weight) + _L2_loss_sum(self.entity_embed.weight) +\
-                        _L2_loss_sum(self.W_R)
+        self.cf_loss = th.mean(F.logsigmoid(pos_score - neg_score) ) * (-1.0)
+        self.reg_loss = _L2_loss_mean(self.relation_embed.weight) + _L2_loss_mean(self.entity_embed.weight) +\
+                        _L2_loss_mean(self.W_R)
         #print("\tcf_loss:{}, reg_loss:{}".format(self.cf_loss.item(), self.reg_loss.item()))
         return self.cf_loss + self._reg_lambda_gnn * self.reg_loss
 
