@@ -97,7 +97,7 @@ def train(args):
             cf_sampler = dataset.CF_sampler(batch_size=args.batch_size, segment='train', sequential=True)
             l = []
             train_pairs = 0
-            for user_ids, item_pos_ids, item_neg_ids, batch_size in next(cf_sampler):
+            for user_ids, item_pos_ids, item_neg_ids, batch_size in cf_sampler:
                 user_ids_th = th.LongTensor(user_ids)
                 item_pos_ids_th = th.LongTensor(item_pos_ids)
                 item_neg_ids_th = th.LongTensor(item_neg_ids)
