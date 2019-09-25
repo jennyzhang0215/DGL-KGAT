@@ -155,7 +155,7 @@ class Model(nn.Module):
             out = F.normalize(out, p=2, dim=1)
             node_embed_cache.append(out)
         final_h = th.cat(node_embed_cache, 1)
-        #print("final_h", final_h)
+        print("final_h", final_h)
         return final_h
 
     def get_loss(self, embedding, src_ids, pos_dst_ids, neg_dst_ids):
