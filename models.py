@@ -166,9 +166,9 @@ class Model(nn.Module):
         neg_score = th.bmm(src_vec.unsqueeze(1), neg_dst_vec.unsqueeze(2)).squeeze()  ### (batch_size, )
         #print("pos_score", pos_score)
         #print("neg_score", neg_score)
-        self.cf_loss = th.mean(F.logsigmoid(pos_score - neg_score) ) * (-1.0)
-        self.reg_loss = _L2_loss_mean(self.relation_embed.weight) + _L2_loss_mean(self.entity_embed.weight) +\
-                        _L2_loss_mean(self.W_R)
+        self.cf_loss = th.sum(F.logsigmoid(pos_score - neg_score) ) * (-1.0)
+        self.reg_loss = _L2_loss_sum(self.relation_embed.weight) + _L2_loss_sum(self.entity_embed.weight) +\
+                        _L2_loss_sum(self.W_R)
         #print("\tcf_loss:{}, reg_loss:{}".format(self.cf_loss.item(), self.reg_loss.item()))
         return self.cf_loss + self._reg_lambda_gnn * self.reg_loss
 

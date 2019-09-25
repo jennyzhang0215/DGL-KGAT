@@ -84,22 +84,31 @@ def train(args):
 
         else:
             ### sample graph and sample user-item pairs
-            cf_sampler = dataset.CF_sampler(batch_size=args.batch_size, segment='train', sequential=False)
-            user_ids, item_pos_ids, item_neg_ids, g, uniq_v, etype = next(cf_sampler)
-            user_ids_th = th.LongTensor(user_ids)
-            item_pos_ids_th = th.LongTensor(item_pos_ids)
-            item_neg_ids_th = th.LongTensor(item_neg_ids)
-            nid_th = th.LongTensor(uniq_v)
-            etype_th = th.LongTensor(etype)
+            g, all_etype = dataset.generate_test_g()
+            nid_th = th.arange(dataset.num_all_entities)
+            etype_th = th.LongTensor(all_etype)
             if use_cuda:
-                user_ids_th, item_pos_ids_th, item_neg_ids_th, nid_th, etype_th = \
-                    user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda(), nid_th.cuda(), etype_th.cuda()
-
+                nid_th, etype_th, = nid_th.cuda(), etype_th.cuda()
             model.train()
             embedding = model.gnn(g, nid_th, etype_th)
+
+
             print("\t\tembedding", embedding.shape)
-            loss = model.get_loss(embedding, user_ids_th, item_pos_ids_th, item_neg_ids_th)
-            print("loss", loss)
+            cf_sampler = dataset.CF_sampler(batch_size=args.batch_size, segment='train', sequential=True)
+            l = []
+            train_pairs = 0
+            for user_ids, item_pos_ids, item_neg_ids, batch_size in next(cf_sampler):
+                user_ids_th = th.LongTensor(user_ids)
+                item_pos_ids_th = th.LongTensor(item_pos_ids)
+                item_neg_ids_th = th.LongTensor(item_neg_ids)
+                if use_cuda:
+                    user_ids_th, item_pos_ids_th, item_neg_ids_th = \
+                        user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda()
+
+                loss = model.get_loss(embedding, user_ids_th, item_pos_ids_th, item_neg_ids_th)
+                train_pairs += 1
+                l.append(loss)
+            loss = th.sum(l) / train_pairs
             loss.backward()
             th.nn.utils.clip_grad_norm_(model.parameters(), args.grad_norm)  # clip gradients
 

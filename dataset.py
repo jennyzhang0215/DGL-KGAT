@@ -189,7 +189,7 @@ class DataLoader(object):
             batch_size = min(batch_size, all_num)
         if batch_size == all_num:
             neg_item_ids = self._rng.choice(self.num_items, batch_size, replace=True).astype(np.int32)
-            yield node_pairs[0], node_pairs[1], neg_item_ids
+            yield node_pairs[0], node_pairs[1], neg_item_ids, batch_size
         if sequential:
             for start in range(0, all_num, batch_size):
                 ## choose user item pairs
@@ -197,14 +197,14 @@ class DataLoader(object):
                 user_ids = node_pairs[0][start: end]
                 item_ids = node_pairs[1][start: end]
                 neg_item_ids = self._rng.choice(self.num_items, batch_size, replace=True).astype(np.int32)
-                yield user_ids, item_ids, neg_item_ids,
+                yield user_ids, item_ids, neg_item_ids, end-start
         else:
             while True:
                 sel = self._rng.choice(all_num, batch_size, replace=False)
                 user_ids = node_pairs[0][sel]
                 item_ids = node_pairs[1][sel]
                 neg_item_ids = self._rng.choice(self.num_items, batch_size, replace=True).astype(np.int32)
-                yield user_ids, item_ids, neg_item_ids
+                yield user_ids, item_ids, neg_item_ids, batch_size
 
     def CF_all_sampler(self, batch_size, segment='train', sequential=True):
         if segment == 'train':
