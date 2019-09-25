@@ -97,9 +97,9 @@ def train(args):
 
             model.train()
             embedding = model.gnn(g, nid_th, etype_th)
-            #print("\t\tembedding", embedding.shape)
+            print("\t\tembedding", embedding.shape)
             loss = model.get_loss(embedding, user_ids_th, item_pos_ids_th, item_neg_ids_th)
-            #print("loss", loss)
+            print("loss", loss)
             loss.backward()
             th.nn.utils.clip_grad_norm_(model.parameters(), args.grad_norm)  # clip gradients
 

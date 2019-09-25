@@ -127,12 +127,12 @@ class Model(nn.Module):
 
         """
         t_r = th.matmul(self.entity_embed(edges.src['id']), self.W_r) ### (edge_num, hidden_dim)
-        print("t_r", t_r.shape, t_r)
+        #print("t_r", t_r.shape, t_r)
         h_r = th.matmul(self.entity_embed(edges.dst['id']), self.W_r) ### (edge_num, hidden_dim)
-        print("h_r", h_r.shape, h_r)
+        #print("h_r", h_r.shape, h_r)
         att_w = th.bmm(t_r.unsqueeze(1),
                        th.tanh(h_r + self.relation_embed(edges.data['type'])).unsqueeze(2)).squeeze(-1)
-        print("att_w", att_w.shape, att_w)
+        #print("att_w", att_w.shape, att_w)
         return {'att_w': att_w}
 
     def gnn(self, g, node_ids, rel_ids):
