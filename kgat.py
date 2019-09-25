@@ -133,7 +133,7 @@ def train(args):
                 th.nn.utils.clip_grad_norm_(model.parameters(), args.grad_norm)  # clip gradients
                 #print("start computing gradient ...")
                 optimizer.step()
-                print("Epoch {:04d} iter {:04d| Loss {:.4f} ".format(epoch, iter, loss.item()))
+                print("Epoch {:04d} iter {:04d}: Loss {:.4f} ".format(epoch, iter, loss.item()))
                 optimizer.zero_grad()
 
 
