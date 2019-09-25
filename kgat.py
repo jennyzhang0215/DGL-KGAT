@@ -14,7 +14,7 @@ def parse_args():
     parser.add_argument('--adj_type', nargs='?', default='si', help='Specify the type of the adjacency (laplacian) matrix from {bi, si}.')
 
     ### Model parameters
-    parser.add_argument('--entity_embed_dim', type=int, default=64, help='CF Embedding size.')
+    parser.add_argument('--entity_embed_dim', type=int, default=32, help='CF Embedding size.')
     parser.add_argument('--relation_embed_dim', type=int, default=64, help='CF Embedding size.')
     parser.add_argument('--gnn_num_layer', type=int, default=2, help='the number of layers')
     parser.add_argument('--gnn_hidden_size', type=int, default=32, help='Output sizes of every layer')
