@@ -127,14 +127,17 @@ class Model(nn.Module):
 
         """
         t_r = th.matmul(self.entity_embed(edges.src['id']), self.W_r) ### (edge_num, hidden_dim)
+        print("t_r", t_r.shape, t_r)
         h_r = th.matmul(self.entity_embed(edges.dst['id']), self.W_r) ### (edge_num, hidden_dim)
+        print("h_r", h_r.shape, h_r)
         att_w = th.bmm(t_r.unsqueeze(1),
                        th.tanh(h_r + self.relation_embed(edges.data['type'])).unsqueeze(2)).squeeze(-1)
+        print("att_w", att_w.shape, att_w)
         return {'att_w': att_w}
 
     def gnn(self, g, node_ids, rel_ids):
-        #print("node_ids", node_ids.shape, node_ids)
-        #print("relation_ids", relation_ids.shape, relation_ids)
+        print("node_ids", node_ids.shape, node_ids)
+        print("relation_ids", rel_ids.shape, rel_ids)
         h = self.entity_embed(node_ids)
         self.g = g
         g.ndata['id'] = node_ids
@@ -148,7 +151,7 @@ class Model(nn.Module):
         node_embed_cache = [h]
         for i, layer in enumerate(self.layers):
             h, out = layer(g, h)
-            #print(i, "h", h.shape, h)
+            print(i, "h", h.shape, h)
             out = F.normalize(out, p=2, dim=1)
             node_embed_cache.append(out)
         final_h = th.cat(node_embed_cache, 1)
