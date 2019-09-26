@@ -135,13 +135,14 @@ def train(args):
             optimizer.zero_grad()
 
         if epoch % args.evaluate_every == 0:
-            g, all_etype = dataset.generate_test_g()
-            nid_th = th.arange(dataset.num_all_entities)
-            etype_th = th.LongTensor(all_etype)
-            if use_cuda:
-                nid_th, etype_th, = nid_th.cuda(), etype_th.cuda()
-            model.eval()
             with th.no_grad():
+                model.eval()
+                g, all_etype = dataset.generate_test_g()
+                nid_th = th.arange(dataset.num_all_entities)
+                etype_th = th.LongTensor(all_etype)
+                if use_cuda:
+                    nid_th, etype_th, = nid_th.cuda(), etype_th.cuda()
+
                 all_embedding = model.gnn(g, nid_th, etype_th)
                 if use_cuda:
                     item_id_range = th.arange(dataset.num_items).cuda()
