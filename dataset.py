@@ -2,6 +2,8 @@ import numpy as np
 import os
 import dgl
 import pandas as pd
+import collections
+import random as rd
 
 class DataLoader(object):
     def __init__(self, data_name, full_batch=True, num_neighbor_hop=2, seed=1234):
@@ -16,7 +18,7 @@ class DataLoader(object):
         test_file = os.path.join(data_dir, "test.txt")
         test_pairs, test_user_dict = self.load_test_interaction(test_file)
         kg_file = os.path.join(data_dir, "kg_final.txt")
-        self.kg_triples_np = self.load_kg_filter_neighbor(kg_file)
+        kg_triples_np = self.load_kg_filter_neighbor(kg_file)
 
         ## stack user ids after entities
         self.user_mapping = {i: i+self.num_KG_entities for i in range(self.num_users)}
@@ -34,7 +36,7 @@ class DataLoader(object):
                                                   (np.ones(self.num_train)*(self.num_KG_relations+1)).astype(np.int32)))
         user_item_triplet[:, 2] = np.concatenate((self.train_pairs[1], self.train_pairs[0]))
         ### reverse the (head, relation, tail) direction, because we need tail --> head
-        all_triplet = np.vstack((self.kg_triples_np,  user_item_triplet)).astype(np.int32)
+        all_triplet = np.vstack((kg_triples_np,  user_item_triplet)).astype(np.int32)
         assert np.max(all_triplet) + 1 == self.num_all_entities
         self.all_triplet_np = all_triplet
         self.all_triplet_dp = pd.DataFrame(all_triplet, columns=['h', 'r', 't'], dtype=np.int32)
@@ -102,17 +104,68 @@ class DataLoader(object):
             new_kg_pd['h'].nunique(), new_kg_pd['t'].nunique()))
         return kg_np
 
+    def _get_all_kg_dict(self):
+        all_kg_dict = collections.defaultdict(list)
+        for h, r, t in self.all_triplet_np:
+            if h in all_kg_dict.keys():
+                all_kg_dict[h].append((t, r))
+            else:
+                all_kg_dict[h] = [(t, r)]
+        self.all_kg_dict = all_kg_dict
+
+    def _sample_pos_triples_for_h(self, h, num):
+        pos_triples = self.all_kg_dict[h]
+        n_pos_triples = len(pos_triples)
+        pos_rs, pos_ts = [], []
+        while True:
+            if len(pos_rs) == num: break
+            pos_id = np.random.randint(low=0, high=n_pos_triples, size=1)[0]
+            t = pos_triples[pos_id][0]
+            r = pos_triples[pos_id][1]
+            if r not in pos_rs and t not in pos_ts:
+                pos_rs.append(r)
+                pos_ts.append(t)
+        return pos_rs, pos_ts
+
+    def _sample_neg_triples_for_h(self, h, r, num):
+        neg_ts = []
+        while True:
+            if len(neg_ts) == num: break
+            t = np.random.randint(low=0, high=self.num_all_entities, size=1)[0]
+            if (t, r) not in self.all_kg_dict[h] and t not in neg_ts:
+                neg_ts.append(t)
+        return neg_ts
+
     def KG_sampler(self, batch_size, sequential=True):
-        ### generate head dict
-        # for h, r, t in self.kg_triples_np:
+        ### generate negative triplets
+        self._get_all_kg_dict()
+        exist_heads = self.all_kg_dict.keys()
+        n_batch = self.num_all_triplets // batch_size + 1
+        i = 0
+        while i < n_batch:
+            i += 1
+            if batch_size <= len(exist_heads):
+                heads = rd.sample(exist_heads, batch_size)
+            else:
+                heads = [rd.choice(exist_heads) for _ in range(batch_size)]
+            pos_r_batch, pos_t_batch, neg_t_batch = [], [], []
+            for h in heads:
+                pos_rs, pos_ts = self._sample_pos_triples_for_h(h, 1)
+                pos_r_batch += pos_rs
+                pos_t_batch += pos_ts
+                neg_ts = self._sample_neg_triples_for_h(h, pos_rs[0], 1)
+                neg_t_batch += neg_ts
+            yield heads, pos_r_batch, pos_t_batch, neg_t_batch
+
+
+    def KG_sampler2(self, batch_size, sequential=True):
         if batch_size < 0:
             batch_size = self.num_all_triplets
         else:
             batch_size = min(self.num_all_triplets, batch_size)
         if sequential:
-            idx = np.arange(self.num_all_triplets)
-            self._rng.shuffle(idx)
-            all_triplet_np = self.all_triplet_np[idx, :]
+            shuffled_idx = self._rng.permutation(self.num_all_triplets)
+            all_triplet_np = self.all_triplet_np[shuffled_idx, :]
             for start in range(0, self.num_all_triplets, batch_size):
                 end = min(start+batch_size, self.num_all_triplets)
                 h = all_triplet_np[start: end][:, 0]
@@ -231,10 +284,9 @@ class DataLoader(object):
             g, etype = self.generate_test_g()
             yield node_pairs[0], node_pairs[1], neg_item_ids, g, uniq_v, etype
         if sequential:
-            idx = np.arange(self.num_train)
-            self._rng.shuffle(idx)
-            all_user_ids = node_pairs[0][idx]
-            all_item_idx = node_pairs[1][idx]
+            shuffled_idx = self._rng.permutation(self.num_train)
+            all_user_ids = node_pairs[0][shuffled_idx]
+            all_item_idx = node_pairs[1][shuffled_idx]
             for start in range(0, all_num, batch_size):
                 ## choose user item pairs
                 end = min(start+batch_size, all_num)
