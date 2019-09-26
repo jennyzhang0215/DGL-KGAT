@@ -112,7 +112,7 @@ def train(args):
                     loss_sum += loss
             loss = loss_sum / train_pairs
             """
-            cf_sampler = dataset.CF_all_sampler(batch_size=args.batch_size, segment='train', sequential=False)
+            cf_sampler = dataset.CF_all_sampler(batch_size=args.batch_size, segment='train', sequential=True)
             iter = 0
             for user_ids, item_pos_ids, item_neg_ids, g, uniq_v, etype in cf_sampler:
                 iter += 1
