@@ -121,7 +121,7 @@ class Model(nn.Module):
         ###
         reg_loss =_L2_loss_mean(self.relation_embed.weight) + _L2_loss_mean(self.entity_embed.weight) + \
                   _L2_loss_mean(self.W_R)
-        print("\tkg loss:", l, "reg loss:", reg_loss, "*", self._reg_lambda_kg)
+        #print("\tkg loss:", l, "reg loss:", reg_loss, "*", self._reg_lambda_kg)
         loss = l + self._reg_lambda_kg * reg_loss
         return loss
 
@@ -172,7 +172,7 @@ class Model(nn.Module):
         cf_loss = th.mean(F.logsigmoid(pos_score - neg_score) ) * (-1.0)
         reg_loss = _L2_loss_mean(self.relation_embed.weight) + _L2_loss_mean(self.entity_embed.weight) +\
                    _L2_loss_mean(self.W_R)
-        print("\tcf loss:", cf_loss, "reg loss:", reg_loss, "*", self._reg_lambda_gnn)
+        #print("\tcf loss:", cf_loss, "reg loss:", reg_loss, "*", self._reg_lambda_gnn)
         return cf_loss + self._reg_lambda_gnn * reg_loss
 
 
