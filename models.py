@@ -111,7 +111,7 @@ class Model(nn.Module):
 
         pos_score = th.sum(th.pow(h_vec + r_vec - pos_t_vec, 2), dim=1, keepdim=True)
         neg_score = th.sum(th.pow(h_vec + r_vec - neg_t_vec, 2), dim=1, keepdim=True)
-        l = F.logsigmoid(pos_score - neg_score) * (-1.0)
+        l = F.logsigmoid(neg_score-pos_score) * (-1.0)
         l = th.mean(l)
         ## tf.reduce_sum(tf.square((h_e + r_e - t_e)), 1, keepdims=True)
         ###
