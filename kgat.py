@@ -23,9 +23,9 @@ def parse_args():
 
     ### Training parameters
     parser.add_argument('--kg_epoch', type=int, default=1, help='train xx iterations')
-    parser.add_argument('--max_epoch', type=int, default=1000, help='train xx iterations')
+    parser.add_argument('--max_epoch', type=int, default=100, help='train xx iterations')
     parser.add_argument("--grad_norm", type=float, default=1.0, help="norm to clip gradient to")
-    parser.add_argument('--lr', type=float, default=0.001, help='Learning rate.')
+    parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate.')
     parser.add_argument('--batch_size', type=int, default=-1, help='CF batch size.')
     parser.add_argument('--batch_size_kg', type=int, default=2048, help='KG batch size.')
     parser.add_argument('--evaluate_every', type=int, default=2, help='the evaluation duration')
