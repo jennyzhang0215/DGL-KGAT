@@ -239,36 +239,72 @@ class DataLoader(object):
             unique_users.size, unique_items.size, self.num_test))
         return (src, dst), test_user_dict
 
-    def use_item_pair_sampler(self, batch_size, segment='train', sequential=True):
-        if segment == 'train':
-            node_pairs = self.train_pairs
-            all_num = self.num_train
-        else:
-            raise NotImplementedError
-        if batch_size < 0:
-            batch_size = all_num
-        else:
-            batch_size = min(batch_size, all_num)
-        if batch_size == all_num:
-            neg_item_ids = self._rng.choice(self.num_items, batch_size, replace=True).astype(np.int32)
-            yield node_pairs[0], node_pairs[1], neg_item_ids, batch_size
-        if sequential:
-            for start in range(0, all_num, batch_size):
-                ## choose user item pairs
-                end = min(start+batch_size, all_num)
-                user_ids = node_pairs[0][start: end]
-                item_ids = node_pairs[1][start: end]
-                neg_item_ids = self._rng.choice(self.num_items, batch_size, replace=True).astype(np.int32)
-                yield user_ids, item_ids, neg_item_ids, end-start
-        else:
-            while True:
-                sel = self._rng.choice(all_num, batch_size, replace=False)
-                user_ids = node_pairs[0][sel]
-                item_ids = node_pairs[1][sel]
-                neg_item_ids = self._rng.choice(self.num_items, batch_size, replace=True).astype(np.int32)
-                yield user_ids, item_ids, neg_item_ids, batch_size
+    def _sample_pos_items_for_u(self, u, num):
+        pos_items = self.train_user_dict[u]
+        n_pos_items = len(pos_items)
+        pos_batch = []
+        while True:
+            if len(pos_batch) == num: break
+            pos_id = np.random.randint(low=0, high=n_pos_items, size=1)[0]
+            pos_i_id = pos_items[pos_id]
 
-    def CF_all_sampler(self, batch_size, segment='train', sequential=True):
+            if pos_i_id not in pos_batch:
+                pos_batch.append(pos_i_id)
+        return pos_batch
+    def _sample_neg_items_for_u(self, u, num):
+        neg_items = []
+        while True:
+            if len(neg_items) == num: break
+            neg_i_id = np.random.randint(low=0, high=self.num_items, size=1)[0]
+            if neg_i_id not in self.train_user_dict[u] and neg_i_id not in neg_items:
+                neg_items.append(neg_i_id)
+        return neg_items
+
+
+    def _generate_user_pos_neg_items(self, batch_size):
+
+        if batch_size <= self.num_users:
+            users = rd.sample(self.exist_users, batch_size)
+        else:
+            users = [rd.choice(self.exist_users) for _ in range(batch_size)]
+
+        pos_items, neg_items = [], []
+        for u in users:
+            pos_items += self._sample_pos_items_for_u(u, 1)
+            neg_items += self._sample_neg_items_for_u(u, 1)
+
+        return users, pos_items, neg_items
+
+    def CF_all_sampler(self, batch_size):
+        self.exist_users = self.train_user_dict.keys()
+        if batch_size < 0:
+            batch_size = self.num_train-1
+        else:
+            batch_size = min(batch_size, self.num_train)
+
+        n_batch = self.num_train // batch_size + 1
+        i = 0
+        while i < n_batch:
+            i += 1
+            user_ids, item_ids, neg_item_ids = self._generate_user_pos_neg_items(batch_size)
+            new_entity_ids, new_pd = self._filter_neighbor(np.concatenate((user_ids, item_ids, neg_item_ids)),
+                                                           self.all_triplet_dp)
+            etype = new_pd['r'].values
+            ### relabel nodes to have consecutive node ids
+            uniq_v, edges = np.unique((new_pd['h'].values, new_pd['t'].values), return_inverse=True)
+            src, dst = np.reshape(edges, (2, -1))
+            g = dgl.DGLGraph()
+            g.add_nodes(uniq_v.size)
+            g.add_edges(dst, src)
+            ### map user_ids and items_ids into indicies in the graph
+            node_map = {ele: idx for idx, ele in enumerate(uniq_v)}
+            user_ids = np.array(list(map(node_map.get, user_ids)), dtype=np.int32)
+            item_ids = np.array(list(map(node_map.get, item_ids)), dtype=np.int32)
+            neg_item_ids = np.array(list(map(node_map.get, neg_item_ids)), dtype=np.int32)
+
+            yield user_ids, item_ids, neg_item_ids, g, uniq_v, etype
+
+    def old_CF_all_sampler(self, batch_size, segment='train', sequential=True):
         if segment == 'train':
             node_pairs = self.train_pairs
             all_num = self.num_train

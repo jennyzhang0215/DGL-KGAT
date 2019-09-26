@@ -25,8 +25,8 @@ def parse_args():
     parser.add_argument('--max_epoch', type=int, default=100, help='train xx iterations')
     parser.add_argument("--grad_norm", type=float, default=1.0, help="norm to clip gradient to")
     parser.add_argument('--lr', type=float, default=0.001, help='Learning rate.')
-    parser.add_argument('--batch_size', type=int, default=100000, help='CF batch size.')
-    parser.add_argument('--batch_size_kg', type=int, default=1024, help='KG batch size.')
+    parser.add_argument('--batch_size', type=int, default=1024, help='CF batch size.')
+    parser.add_argument('--batch_size_kg', type=int, default=2048, help='KG batch size.')
     parser.add_argument('--evaluate_every', type=int, default=1, help='the evaluation duration')
     parser.add_argument("--eval_batch_size", type=int, default=-1, help="batch size when evaluating")
     args = parser.parse_args()
@@ -78,7 +78,7 @@ def train(args):
             # print("start computing gradient ...")
             optimizer.step()
             optimizer.zero_grad()
-            if (iter % 10) == 0:
+            if (iter % 100) == 0:
                 print("Epoch {:04d}, Iter {:04d} | Loss {:.4f} ".format(epoch, iter, loss.item()))
 
         ### Then train GNN
@@ -110,7 +110,8 @@ def train(args):
                 loss_sum += loss
         loss = loss_sum / train_pairs
         """
-        cf_sampler = dataset.CF_all_sampler(batch_size=args.batch_size, segment='train', sequential=True)
+        #         cf_sampler = dataset.CF_all_sampler(batch_size=args.batch_size, segment='train', sequential=True)
+        cf_sampler = dataset.CF_all_sampler(batch_size=args.batch_size)
         iter = 0
         for user_ids, item_pos_ids, item_neg_ids, g, uniq_v, etype in cf_sampler:
             iter += 1
