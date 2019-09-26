@@ -155,12 +155,12 @@ class Model(nn.Module):
         node_embed_cache = [h]
         for i, layer in enumerate(self.layers):
             h = layer(g, h)
-            print(i, "h", h.shape, h)
+            # print(i, "h", h.shape, h)
             out = F.normalize(h, p=2, dim=1)
-            print(i, "norm_h", out.shape, out)
+            #print(i, "norm_h", out.shape, out)
             node_embed_cache.append(out)
         final_h = th.cat(node_embed_cache, 1)
-        #print("final_h", final_h)
+        print("final_h", final_h.shape, final_h)
         return final_h
 
     def get_loss(self, embedding, src_ids, pos_dst_ids, neg_dst_ids):
