@@ -53,7 +53,6 @@ class DataLoader(object):
         all_etype = self.all_triplet_np[:, 1]
         return g, all_etype
 
-
     @property
     def num_all_entities(self):
         return self._n_KG_entities + self._n_users
@@ -106,17 +105,20 @@ class DataLoader(object):
     def KG_sampler(self, batch_size, sequential=True):
         ### generate head dict
         # for h, r, t in self.kg_triples_np:
-
         if batch_size < 0:
             batch_size = self.num_all_triplets
         else:
             batch_size = min(self.num_all_triplets, batch_size)
         if sequential:
+            idx = np.arange(self.num_all_triplets)
+            self._rng.shuffle(id)
+            print(idx)
+            all_triplet_np = self.all_triplet_np[idx, :]
             for start in range(0, self.num_all_triplets, batch_size):
                 end = min(start+batch_size, self.num_all_triplets)
-                h = self.all_triplet_np[start: end][:, 0]
-                r = self.all_triplet_np[start: end][:, 1]
-                pos_t = self.all_triplet_np[start: end][:, 2]
+                h = all_triplet_np[start: end][:, 0]
+                r = all_triplet_np[start: end][:, 1]
+                pos_t = all_triplet_np[start: end][:, 2]
                 neg_t = self._rng.choice(self.num_all_entities, end-start, replace=True).astype(np.int32)
                 yield h, r, pos_t, neg_t
         else:
