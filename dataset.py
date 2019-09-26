@@ -62,7 +62,7 @@ class DataLoader(object):
     def _filter_neighbor(self, item_ids, kg_pd):
         new_pd = None
         item_ids = np.unique(item_ids)
-        print("original:\t#triplets:{}, #entities:{}".format(kg_pd.shape[0], item_ids.size))
+        #print("original:\t#triplets:{}, #entities:{}".format(kg_pd.shape[0], item_ids.size))
         for i in range(self._num_neighbor_hop):
             new_pd = kg_pd[kg_pd.h.isin(item_ids)]
             item_ids = np.unique(np.concatenate((new_pd['h'].values, new_pd['t'].values)))
@@ -71,7 +71,7 @@ class DataLoader(object):
         #print("original:\t#h:{}, #r:{}, #t:{}".format(kg_pd['h'].nunique(), kg_pd['r'].nunique(), kg_pd['t'].nunique()))
         #print("filtered:\t#h:{}, #r:{}, #t:{}".format(new_pd["h"].nunique(), new_pd["r"].nunique(),
         #                                              new_pd["t"].nunique()))
-        print("filtered:\t#triplets:{}, #entities:{}".format(new_pd.shape[0], new_entity_ids.size))
+        print("Filtered G:\t#entities:{}, #triplets:{}".format(new_entity_ids.size, new_pd.shape[0]))
         return new_entity_ids, new_pd
 
     def load_kg_filter_neighbor(self, file_name):
@@ -264,7 +264,6 @@ class DataLoader(object):
                 item_ids = np.array(list(map(node_map.get, item_ids)), dtype=np.int32)
                 neg_item_ids = self._rng.choice(item_ids, batch_size, replace=True).astype(np.int32)
                 yield user_ids, item_ids, neg_item_ids, g, uniq_v, etype
-
 
     @property
     def num_train(self):
