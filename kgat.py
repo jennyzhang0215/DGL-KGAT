@@ -26,7 +26,7 @@ def parse_args():
     parser.add_argument('--max_epoch', type=int, default=100, help='train xx iterations')
     parser.add_argument("--grad_norm", type=float, default=1.0, help="norm to clip gradient to")
     parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate.')
-    parser.add_argument('--batch_size', type=int, default=-1, help='CF batch size.')
+    parser.add_argument('--batch_size', type=int, default=100000, help='CF batch size.')
     parser.add_argument('--batch_size_kg', type=int, default=1024, help='KG batch size.')
     parser.add_argument('--evaluate_every', type=int, default=2, help='the evaluation duration')
     parser.add_argument("--eval_batch_size", type=int, default=-1, help="batch size when evaluating")
@@ -61,59 +61,58 @@ def train(args):
     model_state_file = 'model_state.pth'
 
     for epoch in range(1, args.max_epoch+1):
-        if ((epoch-1) // args.kg_epoch) % 2 == 0:
-            kg_sampler = dataset.KG_sampler(batch_size=args.batch_size_kg, sequential=True)
-            iter = 0
-            for h, r, pos_t, neg_t in kg_sampler:
-                iter +=1
-                model.train()
-                h_th = th.LongTensor(h)
-                r_th = th.LongTensor(r)
-                pos_t_th = th.LongTensor(pos_t)
-                neg_t_th = th.LongTensor(neg_t)
-                if use_cuda:
-                    h_th, r_th, pos_t_th, neg_t_th = h_th.cuda(), r_th.cuda(), pos_t_th.cuda(), neg_t_th.cuda()
-                loss = model.transR(h_th, r_th, pos_t_th, neg_t_th)
-                # print("loss", loss)
-                loss.backward()
-                # print("start computing gradient ...")
-                optimizer.step()
-                optimizer.zero_grad()
-                if (iter % 10) == 0:
-                    print("Epoch {:04d}, Iter {:04d} | Loss {:.4f} ".format(epoch, iter, loss.item()))
-
-        else:
-            ### sample graph and sample user-item pairs
-            """
-            g, all_etype = dataset.generate_test_g()
-            nid_th = th.arange(dataset.num_all_entities)
-            etype_th = th.LongTensor(all_etype)
-            if use_cuda:
-                nid_th, etype_th, = nid_th.cuda(), etype_th.cuda()
+        ### train kg first
+        kg_sampler = dataset.KG_sampler(batch_size=args.batch_size_kg, sequential=True)
+        iter = 0
+        for h, r, pos_t, neg_t in kg_sampler:
+            iter +=1
             model.train()
-            embedding = model.gnn(g, nid_th, etype_th)
-            print("\t\tembedding", embedding.shape)
-            cf_sampler = dataset.CF_sampler(batch_size=args.batch_size, segment='train', sequential=True)
-            loss_sum = None
-            train_pairs = 0
-            for user_ids, item_pos_ids, item_neg_ids, batch_size in cf_sampler:
-                user_ids_th = th.LongTensor(user_ids)
-                item_pos_ids_th = th.LongTensor(item_pos_ids)
-                item_neg_ids_th = th.LongTensor(item_neg_ids)
-                if use_cuda:
-                    user_ids_th, item_pos_ids_th, item_neg_ids_th = \
-                        user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda()
+            h_th = th.LongTensor(h)
+            r_th = th.LongTensor(r)
+            pos_t_th = th.LongTensor(pos_t)
+            neg_t_th = th.LongTensor(neg_t)
+            if use_cuda:
+                h_th, r_th, pos_t_th, neg_t_th = h_th.cuda(), r_th.cuda(), pos_t_th.cuda(), neg_t_th.cuda()
+            loss = model.transR(h_th, r_th, pos_t_th, neg_t_th)
+            # print("loss", loss)
+            loss.backward()
+            # print("start computing gradient ...")
+            optimizer.step()
+            optimizer.zero_grad()
+            if (iter % 10) == 0:
+                print("Epoch {:04d}, Iter {:04d} | Loss {:.4f} ".format(epoch, iter, loss.item()))
 
-                loss = model.get_loss(embedding, user_ids_th, item_pos_ids_th, item_neg_ids_th)
-                train_pairs += 1
-                if loss_sum is None:
-                    loss_sum = loss
-                else:
-                    loss_sum += loss
-            loss = loss_sum / train_pairs
-            """
-            cf_sampler = dataset.CF_all_sampler(batch_size=args.batch_size, segment='train', sequential=True)
-            user_ids, item_pos_ids, item_neg_ids, g, uniq_v, etype = next(cf_sampler)
+        ### Then train GNN
+        """
+        g, all_etype = dataset.generate_test_g()
+        nid_th = th.arange(dataset.num_all_entities)
+        etype_th = th.LongTensor(all_etype)
+        if use_cuda:
+            nid_th, etype_th, = nid_th.cuda(), etype_th.cuda()
+        model.train()
+        embedding = model.gnn(g, nid_th, etype_th)
+        print("\t\tembedding", embedding.shape)
+        cf_sampler = dataset.CF_sampler(batch_size=args.batch_size, segment='train', sequential=True)
+        loss_sum = None
+        train_pairs = 0
+        for user_ids, item_pos_ids, item_neg_ids, batch_size in cf_sampler:
+            user_ids_th = th.LongTensor(user_ids)
+            item_pos_ids_th = th.LongTensor(item_pos_ids)
+            item_neg_ids_th = th.LongTensor(item_neg_ids)
+            if use_cuda:
+                user_ids_th, item_pos_ids_th, item_neg_ids_th = \
+                    user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda()
+
+            loss = model.get_loss(embedding, user_ids_th, item_pos_ids_th, item_neg_ids_th)
+            train_pairs += 1
+            if loss_sum is None:
+                loss_sum = loss
+            else:
+                loss_sum += loss
+        loss = loss_sum / train_pairs
+        """
+        cf_sampler = dataset.CF_all_sampler(batch_size=args.batch_size, segment='train', sequential=True)
+        for user_ids, item_pos_ids, item_neg_ids, g, uniq_v, etype in cf_sampler:
             user_ids_th = th.LongTensor(user_ids)
             item_pos_ids_th = th.LongTensor(item_pos_ids)
             item_neg_ids_th = th.LongTensor(item_neg_ids)
@@ -121,14 +120,12 @@ def train(args):
             etype_th = th.LongTensor(etype)
             if use_cuda:
                 user_ids_th, item_pos_ids_th, item_neg_ids_th, nid_th, etype_th = \
-                        user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda(), \
-                        nid_th.cuda(), etype_th.cuda()
+                    user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda(), nid_th.cuda(), etype_th.cuda()
             model.train()
             embedding = model.gnn(g, nid_th, etype_th)
             loss = model.get_loss(embedding, user_ids_th, item_pos_ids_th, item_neg_ids_th)
-
             loss.backward()
-            th.nn.utils.clip_grad_norm_(model.parameters(), args.grad_norm)  # clip gradients
+            #th.nn.utils.clip_grad_norm_(model.parameters(), args.grad_norm)  # clip gradients
             #print("start computing gradient ...")
             optimizer.step()
             print("Epoch {:04d}  Loss {:.4f} ".format(epoch, loss.item()))
