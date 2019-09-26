@@ -64,7 +64,7 @@ class KGATConv(nn.Module):
     def forward(self, g, nfeat):
         g = g.local_var()
         # node_embed = self.feat_drop(nfeat)
-        h = self.feat_drop(nfeat)
+        #h = self.feat_drop(nfeat)
         g.ndata['h'] = nfeat
         #g.ndata['h'] = th.matmul(nfeat, self.W_r).squeeze() ### (#node, #rel, entity_dim)
         #print("relation_W", self.relation_W.shape,  self.relation_W)
