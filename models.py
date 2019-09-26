@@ -119,7 +119,7 @@ class Model(nn.Module):
         ###
         reg_loss =_L2_loss_mean(self.relation_embed.weight) + _L2_loss_mean(self.entity_embed.weight) + \
                   _L2_loss_mean(self.W_R)
-        print("\tkg loss:", l.items(), "reg loss:", reg_loss.items(), "*", self._reg_lambda_kg)
+        #print("\tkg loss:", l.items(), "reg loss:", reg_loss.items(), "*", self._reg_lambda_kg)
         loss = l + self._reg_lambda_kg * reg_loss
         return loss
 
