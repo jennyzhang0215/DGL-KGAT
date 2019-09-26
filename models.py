@@ -53,10 +53,10 @@ def bmm_maybe_select(A, B, index):
 class KGATConv(nn.Module):
     def __init__(self, entity_in_feats, out_feats, dropout, res_type="Bi"):
         super(KGATConv, self).__init__()
-        self.feat_drop = nn.Dropout(dropout)
+        #self.feat_drop = nn.Dropout(dropout)
         self._res_type = res_type
         if res_type == "Bi":
-            self.res_fc = nn.Linear(entity_in_feats, out_feats, bias=False)
+            #self.res_fc = nn.Linear(entity_in_feats, out_feats, bias=False)
             self.res_fc_2 = nn.Linear(entity_in_feats, out_feats, bias=False)
         else:
             raise NotImplementedError
@@ -64,21 +64,22 @@ class KGATConv(nn.Module):
     def forward(self, g, nfeat):
         g = g.local_var()
         # node_embed = self.feat_drop(nfeat)
-        g.ndata['h'] = self.feat_drop(nfeat)
+        h = self.feat_drop(nfeat)
+        g.ndata['h'] = nfeat
         #g.ndata['h'] = th.matmul(nfeat, self.W_r).squeeze() ### (#node, #rel, entity_dim)
         #print("relation_W", self.relation_W.shape,  self.relation_W)
         ### compute attention weight using edge_softmax
         #print("attention_score:", graph.edata['att_w'])
         #print("att_w", att_w)
-
         g.update_all(fn.u_mul_e('h', 'w', 'm'), fn.sum('m', 'h_neighbor'))
         h_neighbor = g.ndata['h_neighbor']
         if self._res_type == "Bi":
-            out = F.leaky_relu(self.res_fc(g.ndata['h']+h_neighbor))+\
-                  F.leaky_relu(self.res_fc_2(th.mul(g.ndata['h'], h_neighbor)))
+            # out = F.leaky_relu(self.res_fc(g.ndata['h']+h_neighbor))+\
+            #       F.leaky_relu(self.res_fc_2(th.mul(g.ndata['h'], h_neighbor)))
+            out = F.leaky_relu(self.res_fc_2(th.mul(g.ndata['h'], h_neighbor)))
         else:
             raise NotImplementedError
-        return h_neighbor, out
+        return out
 
 class Model(nn.Module):
     def __init__(self, n_entities, n_relations, entity_dim, relation_dim, num_gnn_layers, n_hidden,
@@ -88,6 +89,7 @@ class Model(nn.Module):
         self._n_relations = n_relations
         self._reg_lambda_kg = reg_lambda_kg
         self._reg_lambda_gnn = reg_lambda_gnn
+        self.mess_dropout = nn.Dropout(dropout)
         self.entity_embed = nn.Embedding(n_entities, entity_dim) ### e_h, e_t
         self.relation_embed = nn.Embedding(n_relations, relation_dim)  ### e_r
         self.W_R = nn.Parameter(th.Tensor(n_relations, entity_dim, relation_dim))  ### W_r
@@ -95,7 +97,10 @@ class Model(nn.Module):
         self.layers = nn.ModuleList()
         for i in range(num_gnn_layers):
             r = int(math.pow(2, i))
-            self.layers.append(KGATConv(entity_dim, n_hidden//r, dropout))
+            if i==0:
+                self.layers.append(KGATConv(entity_dim, n_hidden//r, dropout))
+            else:
+                self.layers.append(KGATConv(n_hidden // (r-1), n_hidden // r, dropout))
 
     def transR(self, h, r, pos_t, neg_t):
         h_embed = self.entity_embed(h)  ### Shape(batch_size, dim)
@@ -150,8 +155,9 @@ class Model(nn.Module):
         g.edata['w'] = edge_softmax(g, g.edata.pop('att_w'))
         node_embed_cache = [h]
         for i, layer in enumerate(self.layers):
-            h, out = layer(g, h)
+            h = layer(g, h)
             #print(i, "h", h.shape, h)
+            out = self.mess_dropout(h)
             out = F.normalize(out, p=2, dim=1)
             node_embed_cache.append(out)
         final_h = th.cat(node_embed_cache, 1)
