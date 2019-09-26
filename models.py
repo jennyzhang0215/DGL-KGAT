@@ -116,14 +116,12 @@ class Model(nn.Module):
         neg_score = th.sum(th.pow(h_vec + r_vec - neg_t_vec, 2), dim=1, keepdim=True)
         ### pairwise ranking loss
         l = (-1.0) * F.logsigmoid(neg_score-pos_score)
-
-
         l = th.mean(l)
         ## tf.reduce_sum(tf.square((h_e + r_e - t_e)), 1, keepdims=True)
         ###
         reg_loss =_L2_loss_mean(self.relation_embed.weight) + _L2_loss_mean(self.entity_embed.weight) + \
                   _L2_loss_mean(self.W_R)
-        #print("\tkg loss:", l.items(), "reg loss:", reg_loss.items(), "*", self._reg_lambda_kg)
+        print("\tkg loss:", l, "reg loss:", reg_loss, "*", self._reg_lambda_kg)
         loss = l + self._reg_lambda_kg * reg_loss
         return loss
 
@@ -171,11 +169,11 @@ class Model(nn.Module):
         neg_score = th.bmm(src_vec.unsqueeze(1), neg_dst_vec.unsqueeze(2)).squeeze()  ### (batch_size, )
         #print("pos_score", pos_score)
         #print("neg_score", neg_score)
-        self.cf_loss = th.mean(F.logsigmoid(pos_score - neg_score) ) * (-1.0)
-        self.reg_loss = _L2_loss_mean(self.relation_embed.weight) + _L2_loss_mean(self.entity_embed.weight) +\
+        cf_loss = th.mean(F.logsigmoid(pos_score - neg_score) ) * (-1.0)
+        reg_loss = _L2_loss_mean(self.relation_embed.weight) + _L2_loss_mean(self.entity_embed.weight) +\
                         _L2_loss_mean(self.W_R)
-        #print("\tcf_loss:{}, reg_loss:{}".format(self.cf_loss.item(), self.reg_loss.item()))
-        return self.cf_loss + self._reg_lambda_gnn * self.reg_loss
+        print("\tcf loss:", cf_loss, "reg loss:", reg_loss, "*", self._reg_lambda_gnn)
+        return cf_loss + self._reg_lambda_gnn * reg_loss
 
 
 

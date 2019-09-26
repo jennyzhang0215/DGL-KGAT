@@ -71,7 +71,7 @@ class DataLoader(object):
         #print("original:\t#h:{}, #r:{}, #t:{}".format(kg_pd['h'].nunique(), kg_pd['r'].nunique(), kg_pd['t'].nunique()))
         #print("filtered:\t#h:{}, #r:{}, #t:{}".format(new_pd["h"].nunique(), new_pd["r"].nunique(),
         #                                              new_pd["t"].nunique()))
-        print("Filtered G:\t#entities:{}, #triplets:{}".format(new_entity_ids.size, new_pd.shape[0]))
+        #print("Filtered G:\t#entities:{}, #triplets:{}".format(new_entity_ids.size, new_pd.shape[0]))
         return new_entity_ids, new_pd
 
     def load_kg_filter_neighbor(self, file_name):
