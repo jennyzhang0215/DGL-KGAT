@@ -53,7 +53,7 @@ def bmm_maybe_select(A, B, index):
 class KGATConv(nn.Module):
     def __init__(self, entity_in_feats, out_feats, dropout, res_type="Bi"):
         super(KGATConv, self).__init__()
-        #self.feat_drop = nn.Dropout(dropout)
+        self.mess_drop = nn.Dropout(dropout)
         self._res_type = res_type
         if res_type == "Bi":
             #self.res_fc = nn.Linear(entity_in_feats, out_feats, bias=False)
@@ -63,8 +63,6 @@ class KGATConv(nn.Module):
 
     def forward(self, g, nfeat):
         g = g.local_var()
-        # node_embed = self.feat_drop(nfeat)
-        #h = self.feat_drop(nfeat)
         g.ndata['h'] = nfeat
         #g.ndata['h'] = th.matmul(nfeat, self.W_r).squeeze() ### (#node, #rel, entity_dim)
         #print("relation_W", self.relation_W.shape,  self.relation_W)
@@ -79,7 +77,8 @@ class KGATConv(nn.Module):
             out = F.leaky_relu(self.res_fc_2(th.mul(g.ndata['h'], h_neighbor)))
         else:
             raise NotImplementedError
-        return out
+
+        return self.mess_drop(out)
 
 class Model(nn.Module):
     def __init__(self, n_entities, n_relations, entity_dim, relation_dim, num_gnn_layers, n_hidden,
@@ -89,7 +88,6 @@ class Model(nn.Module):
         self._n_relations = n_relations
         self._reg_lambda_kg = reg_lambda_kg
         self._reg_lambda_gnn = reg_lambda_gnn
-        self.mess_dropout = nn.Dropout(dropout)
         self.entity_embed = nn.Embedding(n_entities, entity_dim) ### e_h, e_t
         self.relation_embed = nn.Embedding(n_relations, relation_dim)  ### e_r
         self.W_R = nn.Parameter(th.Tensor(n_relations, entity_dim, relation_dim))  ### W_r
@@ -157,9 +155,9 @@ class Model(nn.Module):
         node_embed_cache = [h]
         for i, layer in enumerate(self.layers):
             h = layer(g, h)
-            #print(i, "h", h.shape, h)
-            out = self.mess_dropout(h)
-            out = F.normalize(out, p=2, dim=1)
+            print(i, "h", h.shape, h)
+            out = F.normalize(h, p=2, dim=1)
+            print(i, "norm_h", out.shape, out)
             node_embed_cache.append(out)
         final_h = th.cat(node_embed_cache, 1)
         #print("final_h", final_h)

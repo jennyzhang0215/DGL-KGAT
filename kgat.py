@@ -53,6 +53,7 @@ def train(args):
                   reg_lambda_kg=args.regs, reg_lambda_gnn=args.regs)
     if use_cuda:
         model = model.cuda()
+    print(model)
     ### optimizer
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     print("Start training ...")
