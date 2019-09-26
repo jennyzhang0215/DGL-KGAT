@@ -112,7 +112,9 @@ def train(args):
         loss = loss_sum / train_pairs
         """
         cf_sampler = dataset.CF_all_sampler(batch_size=args.batch_size, segment='train', sequential=True)
+        iter = 0
         for user_ids, item_pos_ids, item_neg_ids, g, uniq_v, etype in cf_sampler:
+            iter += 1
             user_ids_th = th.LongTensor(user_ids)
             item_pos_ids_th = th.LongTensor(item_pos_ids)
             item_neg_ids_th = th.LongTensor(item_neg_ids)
@@ -128,7 +130,7 @@ def train(args):
             #th.nn.utils.clip_grad_norm_(model.parameters(), args.grad_norm)  # clip gradients
             #print("start computing gradient ...")
             optimizer.step()
-            print("Epoch {:04d}  Loss {:.4f} ".format(epoch, loss.item()))
+            print("Epoch {:04d}  Iter: {:04d} Loss {:.4f} ".format(epoch, iter, loss.item()))
             optimizer.zero_grad()
 
         if epoch % args.evaluate_every == 0:
