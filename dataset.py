@@ -37,7 +37,7 @@ class DataLoader(object):
         all_triplet = np.vstack((self.kg_triples_np[:, [2,1,0]],  user_item_triplet)).astype(np.int32)
         assert np.max(all_triplet) + 1 == self.num_all_entities
         self.all_triplet_np = all_triplet
-        self.all_triplet_dp = pd.DataFrame(all_triplet, columns=['h', 'r', 't'], dtype=np.int32)
+        self.all_triplet_dp = pd.DataFrame(all_triplet, columns=['t', 'r', 'h'], dtype=np.int32)
         ###              |<item>  <att entity> | <user>
         ### <item>       |=====================|=======
         ### <att entity> |=====================|+++++++
@@ -93,12 +93,15 @@ class DataLoader(object):
         self._n_KG_relations = new_kg_pd["r"].nunique()
         self._n_KG_entities = entity_ids.size
         self._n_KG_triples = new_kg_pd.shape[0]
-        print("#KG entities:{}, #KG relations:{}, #KG triplet:{}, #head:{}, #tail:{}".format(
+        print("#KG entities:{}, relations:{}, triplet:{}, #head:{}, #tail:{}".format(
             self.num_KG_entities, self.num_KG_relations, self.num_KG_triples,
             new_kg_pd['h'].nunique(), new_kg_pd['t'].nunique()))
         return kg_np
 
     def KG_sampler(self, batch_size, sequential=True):
+        ### generate head dict
+        # for h, r, t in self.kg_triples_np:
+
         if batch_size < 0:
             batch_size = self.num_KG_triples
         else:
