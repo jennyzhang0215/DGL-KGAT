@@ -112,32 +112,28 @@ def train(args):
             loss = loss_sum / train_pairs
             """
             cf_sampler = dataset.CF_all_sampler(batch_size=args.batch_size, segment='train', sequential=True)
-            iter = 0
-            for user_ids, item_pos_ids, item_neg_ids, g, uniq_v, etype in cf_sampler:
-                iter += 1
-                user_ids_th = th.LongTensor(user_ids)
-                item_pos_ids_th = th.LongTensor(item_pos_ids)
-                item_neg_ids_th = th.LongTensor(item_neg_ids)
-                nid_th = th.LongTensor(uniq_v)
-                etype_th = th.LongTensor(etype)
-                if use_cuda:
-                    user_ids_th, item_pos_ids_th, item_neg_ids_th, nid_th, etype_th = \
+            user_ids, item_pos_ids, item_neg_ids, g, uniq_v, etype = next(cf_sampler)
+            user_ids_th = th.LongTensor(user_ids)
+            item_pos_ids_th = th.LongTensor(item_pos_ids)
+            item_neg_ids_th = th.LongTensor(item_neg_ids)
+            nid_th = th.LongTensor(uniq_v)
+            etype_th = th.LongTensor(etype)
+            if use_cuda:
+                user_ids_th, item_pos_ids_th, item_neg_ids_th, nid_th, etype_th = \
                         user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda(), \
                         nid_th.cuda(), etype_th.cuda()
-                model.train()
-                embedding = model.gnn(g, nid_th, etype_th)
-                loss = model.get_loss(embedding, user_ids_th, item_pos_ids_th, item_neg_ids_th)
+            model.train()
+            embedding = model.gnn(g, nid_th, etype_th)
+            loss = model.get_loss(embedding, user_ids_th, item_pos_ids_th, item_neg_ids_th)
 
-                loss.backward()
-                th.nn.utils.clip_grad_norm_(model.parameters(), args.grad_norm)  # clip gradients
-                #print("start computing gradient ...")
-                optimizer.step()
-                print("Epoch {:04d} iter {:04d}: Loss {:.4f} ".format(epoch, iter, loss.item()))
-                optimizer.zero_grad()
-
+            loss.backward()
+            th.nn.utils.clip_grad_norm_(model.parameters(), args.grad_norm)  # clip gradients
+            #print("start computing gradient ...")
+            optimizer.step()
+            print("Epoch {:04d}  Loss {:.4f} ".format(epoch, loss.item()))
+            optimizer.zero_grad()
 
         if epoch % args.evaluate_every == 0:
-
             g, all_etype = dataset.generate_test_g()
             nid_th = th.arange(dataset.num_all_entities)
             etype_th = th.LongTensor(all_etype)
