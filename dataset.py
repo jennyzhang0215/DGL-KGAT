@@ -111,7 +111,7 @@ class DataLoader(object):
             batch_size = min(self.num_all_triplets, batch_size)
         if sequential:
             idx = np.arange(self.num_all_triplets)
-            self._rng.shuffle(id)
+            self._rng.shuffle(idx)
             print(idx)
             all_triplet_np = self.all_triplet_np[idx, :]
             for start in range(0, self.num_all_triplets, batch_size):
