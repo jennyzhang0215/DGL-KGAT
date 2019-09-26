@@ -100,7 +100,8 @@ class Model(nn.Module):
             if i==0:
                 self.layers.append(KGATConv(entity_dim, n_hidden//r, dropout))
             else:
-                self.layers.append(KGATConv(n_hidden // (r-1), n_hidden // r, dropout))
+                r2 = int(math.pow(2, i-1))
+                self.layers.append(KGATConv(n_hidden // r2, n_hidden // r, dropout))
 
     def transR(self, h, r, pos_t, neg_t):
         h_embed = self.entity_embed(h)  ### Shape(batch_size, dim)
