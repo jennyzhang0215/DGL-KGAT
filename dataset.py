@@ -112,7 +112,6 @@ class DataLoader(object):
         if sequential:
             idx = np.arange(self.num_all_triplets)
             self._rng.shuffle(idx)
-            print(idx)
             all_triplet_np = self.all_triplet_np[idx, :]
             for start in range(0, self.num_all_triplets, batch_size):
                 end = min(start+batch_size, self.num_all_triplets)
@@ -232,11 +231,15 @@ class DataLoader(object):
             g, etype = self.generate_test_g()
             yield node_pairs[0], node_pairs[1], neg_item_ids, g, uniq_v, etype
         if sequential:
+            idx = np.arange(self.num_train)
+            self._rng.shuffle(idx)
+            all_user_ids = node_pairs[0][idx]
+            all_item_idx = node_pairs[1][idx]
             for start in range(0, all_num, batch_size):
                 ## choose user item pairs
                 end = min(start+batch_size, all_num)
-                user_ids = node_pairs[0][start: end]
-                item_ids = node_pairs[1][start: end]
+                user_ids = all_user_ids[start: end]
+                item_ids = all_item_idx[start: end]
                 ## obtain k-hop neighbors
                 new_entity_ids, new_pd = self._filter_neighbor(np.concatenate((user_ids, item_ids)),
                                                                self.all_triplet_dp)
