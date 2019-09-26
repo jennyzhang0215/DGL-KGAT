@@ -34,19 +34,21 @@ class DataLoader(object):
                                                   (np.ones(self.num_train)*(self.num_KG_relations+1)).astype(np.int32)))
         user_item_triplet[:, 2] = np.concatenate((self.train_pairs[1], self.train_pairs[0]))
         ### reverse the (head, relation, tail) direction, because we need tail --> head
-        all_triplet = np.vstack((self.kg_triples_np[:, [2,1,0]],  user_item_triplet)).astype(np.int32)
+        all_triplet = np.vstack((self.kg_triples_np,  user_item_triplet)).astype(np.int32)
         assert np.max(all_triplet) + 1 == self.num_all_entities
         self.all_triplet_np = all_triplet
-        self.all_triplet_dp = pd.DataFrame(all_triplet, columns=['t', 'r', 'h'], dtype=np.int32)
+        self.all_triplet_dp = pd.DataFrame(all_triplet, columns=['h', 'r', 't'], dtype=np.int32)
         ###              |<item>  <att entity> | <user>
         ### <item>       |=====================|=======
         ### <att entity> |=====================|+++++++
         ### <user>       |=======|+++++++++++++++++++++
+        print("Overall KG #entities:{}, #triplets:{}".format(self.num_all_entities, self.all_triplet_np.shape[0]) )
 
     def generate_test_g(self):
         g = dgl.DGLGraph()
         g.add_nodes(self.num_all_entities)
-        g.add_edges(self.all_triplet_np[:, 0], self.all_triplet_np[:, 2])
+        ### TODO when adding edges, remember to reverse the direction, e.g., t-->h
+        g.add_edges(self.all_triplet_np[:, 2], self.all_triplet_np[:, 0])
         #print(g)
         all_etype = self.all_triplet_np[:, 1]
         return g, all_etype
@@ -58,6 +60,9 @@ class DataLoader(object):
     @property
     def num_all_relations(self):
         return self._n_KG_relations + 2
+    @property
+    def num_all_triplets(self):
+        return self.all_triplet_np.shape[0]
 
     def _filter_neighbor(self, item_ids, kg_pd):
         new_pd = None
@@ -103,24 +108,24 @@ class DataLoader(object):
         # for h, r, t in self.kg_triples_np:
 
         if batch_size < 0:
-            batch_size = self.num_KG_triples
+            batch_size = self.num_all_triplets
         else:
-            batch_size = min(self.num_KG_triples, batch_size)
+            batch_size = min(self.num_all_triplets, batch_size)
         if sequential:
-            for start in range(0, self.num_KG_triples, batch_size):
-                end = min(start+batch_size, self.num_KG_triples)
-                h = self.kg_triples_np[start: end][:, 0]
-                r = self.kg_triples_np[start: end][:, 1]
-                pos_t = self.kg_triples_np[start: end][:, 2]
-                neg_t = self._rng.choice(self.num_KG_entities, end-start, replace=True).astype(np.int32)
+            for start in range(0, self.num_all_triplets, batch_size):
+                end = min(start+batch_size, self.num_all_triplets)
+                h = self.all_triplet_np[start: end][:, 0]
+                r = self.all_triplet_np[start: end][:, 1]
+                pos_t = self.all_triplet_np[start: end][:, 2]
+                neg_t = self._rng.choice(self.num_all_entities, end-start, replace=True).astype(np.int32)
                 yield h, r, pos_t, neg_t
         else:
             while True:
-                sel = self._rng.choice(self.num_KG_triples, batch_size, replace=False)
-                h = self.kg_triples_np[sel][:, 0]
-                r = self.kg_triples_np[sel][:, 1]
-                pos_t = self.kg_triples_np[sel][:, 2]
-                neg_t = self._rng.choice(self.num_KG_entities, batch_size, replace=True).astype(np.int32)
+                sel = self._rng.choice(self.num_all_triplets, batch_size, replace=False)
+                h = self.all_triplet_np[sel][:, 0]
+                r = self.all_triplet_np[sel][:, 1]
+                pos_t = self.all_triplet_np[sel][:, 2]
+                neg_t = self._rng.choice(self.num_all_entities, batch_size, replace=True).astype(np.int32)
                 yield h, r, pos_t, neg_t
 
     @property
@@ -180,7 +185,7 @@ class DataLoader(object):
             unique_users.size, unique_items.size, self.num_test))
         return (src, dst), test_user_dict
 
-    def CF_sampler(self, batch_size, segment='train', sequential=True):
+    def use_item_pair_sampler(self, batch_size, segment='train', sequential=True):
         if segment == 'train':
             node_pairs = self.train_pairs
             all_num = self.num_train
@@ -239,7 +244,7 @@ class DataLoader(object):
                 src, dst = np.reshape(edges, (2, -1))
                 g = dgl.DGLGraph()
                 g.add_nodes(uniq_v.size)
-                g.add_edges(src, dst)
+                g.add_edges(dst, src)
                 ### map user_ids and items_ids into indicies in the graph
                 node_map = {ele: idx for idx, ele in enumerate(uniq_v)}
                 user_ids = np.array(list(map(node_map.get, user_ids)), dtype=np.int32)
@@ -260,7 +265,7 @@ class DataLoader(object):
                 src, dst = np.reshape(edges, (2, -1))
                 g = dgl.DGLGraph()
                 g.add_nodes(uniq_v.size)
-                g.add_edges(src, dst)
+                g.add_edges(dst, src)
                 ### map user_ids and items_ids into indicies in the graph
                 node_map = {ele: idx for idx, ele in enumerate(uniq_v)}
                 user_ids = np.array(list(map(node_map.get, user_ids)), dtype=np.int32)
