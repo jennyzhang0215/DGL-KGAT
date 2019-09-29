@@ -31,7 +31,6 @@ def ndcg_at_k(r, k):
 
 def one_recall_at_k(r, k, all_pos_num):
     r = np.asfarray(r)[:k]
-    print(r)
     return np.sum(r) / all_pos_num
 def one_dcg_at_k(r, k, method=1):
     """Score is discounted cumulative gain (dcg)
