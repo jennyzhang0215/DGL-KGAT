@@ -59,6 +59,27 @@ def train(args):
     model_state_file = 'model_state.pth'
 
     for epoch in range(1, args.max_epoch+1):
+        ### train kg first
+        kg_sampler = dataset.KG_sampler(batch_size=args.batch_size_kg, sequential=True)
+        iter = 0
+        for h, r, pos_t, neg_t in kg_sampler:
+            iter += 1
+            model.train()
+            h_th = th.LongTensor(h)
+            r_th = th.LongTensor(r)
+            pos_t_th = th.LongTensor(pos_t)
+            neg_t_th = th.LongTensor(neg_t)
+            if use_cuda:
+                h_th, r_th, pos_t_th, neg_t_th = h_th.cuda(), r_th.cuda(), pos_t_th.cuda(), neg_t_th.cuda()
+            loss = model.transR(h_th, r_th, pos_t_th, neg_t_th)
+            # print("loss", loss)
+            loss.backward()
+            # print("start computing gradient ...")
+            optimizer.step()
+            optimizer.zero_grad()
+            if (iter % 100) == 0:
+                print("Epoch {:04d}, Iter {:04d} | Loss {:.4f} ".format(epoch, iter, loss.item()))
+
         ### Then train GNN
         """
         g, all_etype = dataset.generate_whole_g()
@@ -154,32 +175,10 @@ def train(args):
                     item_id_range = th.arange(dataset.num_items)
                 recall, ndcg = utils.calc_recall_ndcg(all_embedding, dataset, item_id_range, K=20, use_cuda=use_cuda)
                 print("Test recall:{}, ndcg:{}".format(recall, ndcg))
-            # save best model
-            # if recall > best_recall:
-            #     best_recall = recall
-            #     th.save({'state_dict': model.state_dict(), 'epoch': epoch}, model_state_file)
+
             if use_cuda:
                 model.cuda()
-        ### train kg first
-        kg_sampler = dataset.KG_sampler(batch_size=args.batch_size_kg, sequential=True)
-        iter = 0
-        for h, r, pos_t, neg_t in kg_sampler:
-            iter += 1
-            model.train()
-            h_th = th.LongTensor(h)
-            r_th = th.LongTensor(r)
-            pos_t_th = th.LongTensor(pos_t)
-            neg_t_th = th.LongTensor(neg_t)
-            if use_cuda:
-                h_th, r_th, pos_t_th, neg_t_th = h_th.cuda(), r_th.cuda(), pos_t_th.cuda(), neg_t_th.cuda()
-            loss = model.transR(h_th, r_th, pos_t_th, neg_t_th)
-            # print("loss", loss)
-            loss.backward()
-            # print("start computing gradient ...")
-            optimizer.step()
-            optimizer.zero_grad()
-            if (iter % 100) == 0:
-                print("Epoch {:04d}, Iter {:04d} | Loss {:.4f} ".format(epoch, iter, loss.item()))
+
 
         if epoch % args.evaluate_every == 0:
             print("Testing ........................................................................")
