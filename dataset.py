@@ -22,6 +22,7 @@ class DataLoader(object):
 
         ## stack user ids after entities
         self.user_mapping = {i: i+self.num_KG_entities for i in range(self.num_users)}
+
         self.train_pairs = ((train_pairs[0] + self.num_KG_entities).astype(np.int32),
                             train_pairs[1].astype(np.int32))
         self.train_user_dict= {self.user_mapping[k]: np.unique(v).astype(np.int32)
@@ -83,26 +84,39 @@ class DataLoader(object):
     def load_kg_filter_neighbor(self, file_name):
         kg_pd = pd.read_csv(file_name, sep=" ", names=['h', "r", "t"], engine='python')
         kg_pd = kg_pd.sort_values(by=['h'])
+        unique_rel = np.unique(kg_pd['h'].values).size
+        entity_ids = np.unique(np.concatenate(kg_pd['h'].values, kg_pd['t'].values))
 
-        entity_ids, new_kg_pd = self._filter_neighbor(self.item_ids, kg_pd)
-        ## construct kg_np by relabelling node ids
-        kg_np = np.zeros((new_kg_pd.shape[0], 3))
-        self.entity_mapping = {old_id: idx for idx, old_id in enumerate(entity_ids)}
-        kg_np[:, 0] = list(map(self.entity_mapping.get, new_kg_pd['h'].values))
-        kg_np[:, 2] = list(map(self.entity_mapping.get, new_kg_pd['t'].values))
-        if new_kg_pd["r"].nunique() != kg_pd['r'].nunique():
-            print("Relation mapping..")
-            relation_mapping = {old_id: idx for idx, old_id in enumerate(np.unique(new_kg_pd["r"].values))}
-            kg_np[:, 1] = list(map(relation_mapping.get, new_kg_pd['r'].values))
-        else:
-            kg_np[:, 1] = new_kg_pd["r"].values
+        print("#KG entities:{}, relations:{}, triplet:{}, #head:{}, #tail:{}".format(
+            entity_ids.size, kg_pd['r'].nunique(), kg_pd.shape[0], kg_pd['h'].nunique(), kg_pd['t'].nunique()))
+
+        ### TODO filter neighbors are not implemented here
+        # entity_ids, new_kg_pd = self._filter_neighbor(self.item_ids, kg_pd)
+        # ## construct kg_np by relabelling node ids
+        # kg_np = np.zeros((new_kg_pd.shape[0], 3))
+        # self.entity_mapping = {old_id: idx for idx, old_id in enumerate(entity_ids)}
+        # kg_np[:, 0] = list(map(self.entity_mapping.get, new_kg_pd['h'].values))
+        # kg_np[:, 2] = list(map(self.entity_mapping.get, new_kg_pd['t'].values))
+        # if new_kg_pd["r"].nunique() != kg_pd['r'].nunique():
+        #     print("Relation mapping..")
+        #     relation_mapping = {old_id: idx for idx, old_id in enumerate(np.unique(new_kg_pd["r"].values))}
+        #     kg_np[:, 1] = list(map(relation_mapping.get, new_kg_pd['r'].values))
+        # else:
+        #     kg_np[:, 1] = new_kg_pd["r"].values
+
+        rev = kg_pd.copy()
+        rev = rev.rename({'h':'t', 't':'h'})
+        rev['r'] += unique_rel
+        new_kg_pd = pd.concat([kg_pd, rev], ignore_index=True)
+
         self._n_KG_relations = new_kg_pd["r"].nunique()
         self._n_KG_entities = entity_ids.size
         self._n_KG_triples = new_kg_pd.shape[0]
         print("#KG entities:{}, relations:{}, triplet:{}, #head:{}, #tail:{}".format(
             self.num_KG_entities, self.num_KG_relations, self.num_KG_triples,
             new_kg_pd['h'].nunique(), new_kg_pd['t'].nunique()))
-        return kg_np
+
+        return new_kg_pd.values
 
     def _get_all_kg_dict(self):
         all_kg_dict = collections.defaultdict(list)
