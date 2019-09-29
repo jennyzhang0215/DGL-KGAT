@@ -46,7 +46,7 @@ class DataLoader(object):
         ### <user>       |=======|+++++++++++++++++++++
         print("Overall KG #entities:{}, #triplets:{}".format(self.num_all_entities, self.all_triplet_np.shape[0]) )
 
-    def generate_test_g(self):
+    def generate_whole_g(self):
         g = dgl.DGLGraph()
         g.add_nodes(self.num_all_entities)
         ### TODO when adding edges, remember to reverse the direction, e.g., t-->h
@@ -259,8 +259,6 @@ class DataLoader(object):
             if neg_i_id not in self.train_user_dict[u] and neg_i_id not in neg_items:
                 neg_items.append(neg_i_id)
         return neg_items
-
-
     def _generate_user_pos_neg_items(self, batch_size):
 
         if batch_size <= self.num_users:
@@ -275,14 +273,14 @@ class DataLoader(object):
 
         return users, pos_items, neg_items
 
-    def CF_all_sampler(self, batch_size):
+    def CF_batchwise_sampler(self, batch_size):
         self.exist_users = self.train_user_dict.keys()
         if batch_size < 0:
             batch_size = self.num_train-1
+            n_batch = 1
         else:
             batch_size = min(batch_size, self.num_train)
-
-        n_batch = self.num_train // batch_size + 1
+            n_batch = self.num_train // batch_size + 1
         i = 0
         while i < n_batch:
             i += 1
@@ -304,6 +302,20 @@ class DataLoader(object):
 
             yield user_ids, item_ids, neg_item_ids, g, uniq_v, etype
 
+    def CF_pair_sampler(self, batch_size):
+        self.exist_users = self.train_user_dict.keys()
+        if batch_size < 0:
+            batch_size = self.num_train
+            n_batch = 1
+        else:
+            batch_size = min(batch_size, self.num_train)
+            n_batch = self.num_train // batch_size + 1
+        i = 0
+        while i < n_batch:
+            i += 1
+            user_ids, item_ids, neg_item_ids = self._generate_user_pos_neg_items(batch_size)
+            yield user_ids, item_ids, neg_item_ids
+
     def old_CF_all_sampler(self, batch_size, segment='train', sequential=True):
         if segment == 'train':
             node_pairs = self.train_pairs
@@ -317,7 +329,7 @@ class DataLoader(object):
         if batch_size == all_num:
             neg_item_ids = self._rng.choice(self.item_ids, batch_size, replace=True).astype(np.int32)
             uniq_v = np.arange(self.num_all_entities)
-            g, etype = self.generate_test_g()
+            g, etype = self.generate_whole_g()
             yield node_pairs[0], node_pairs[1], neg_item_ids, g, uniq_v, etype
         if sequential:
             shuffled_idx = self._rng.permutation(self.num_train)
