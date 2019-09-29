@@ -36,18 +36,17 @@ class DataLoader(object):
         user_item_triplet[:, 1] = np.concatenate(((np.ones(self.num_train)*self.num_KG_relations).astype(np.int32),
                                                   (np.ones(self.num_train)*(self.num_KG_relations+1)).astype(np.int32)))
         user_item_triplet[:, 2] = np.concatenate((self.train_pairs[1], self.train_pairs[0]))
-        ### reverse the (head, relation, tail) direction, because we need tail --> head
-        all_triplet = np.vstack((kg_triples_np,  user_item_triplet)).astype(np.int32)
-        self.all_triplet_np = all_triplet
-        self.all_triplet_dp = pd.DataFrame(all_triplet, columns=['h', 'r', 't'], dtype=np.int32)
-        print("The whole graph: {} entities, {} relations, {} triplets".format(
-            self.num_all_entities, self.num_all_relations, self.num_all_triplets))
-        assert np.max(all_triplet) + 1 == self.num_all_entities
+
         ###              |<item>  <att entity> | <user>
         ### <item>       |=====================|=======
         ### <att entity> |=====================|+++++++
         ### <user>       |=======|+++++++++++++++++++++
-        print("Overall KG #entities:{}, #triplets:{}".format(self.num_all_entities, self.all_triplet_np.shape[0]) )
+        all_triplet = np.vstack((kg_triples_np,  user_item_triplet)).astype(np.int32)
+        self.all_triplet_np = all_triplet
+        self.all_triplet_dp = pd.DataFrame(all_triplet, columns=['h', 'r', 't'], dtype=np.int32)
+        assert np.max(all_triplet) + 1 == self.num_all_entities
+        print("The whole graph: {} entities, {} relations, {} triplets".format(
+            self.num_all_entities, self.num_all_relations, self.num_all_triplets))
 
     def generate_whole_g(self):
         g = dgl.DGLGraph()
@@ -159,7 +158,7 @@ class DataLoader(object):
     def KG_sampler(self, batch_size, sequential=True):
         ### generate negative triplets
         self._get_all_kg_dict()
-        exist_heads = self.all_kg_dict.keys()
+        exist_heads = list(self.all_kg_dict.keys())
         n_batch = self.num_all_triplets // batch_size + 1
         i = 0
         while i < n_batch:
