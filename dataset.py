@@ -56,37 +56,6 @@ class DataLoader(object):
         g.add_edges(self.all_triplet_np[:, 2], self.all_triplet_np[:, 0])
         #print(g)
         all_etype = self.all_triplet_np[:, 1]
-
-        ### compute support
-        def _calc_norm(x):
-            x = x.asnumpy().astype('float32')
-            x[x == 0.] = np.inf
-            x = mx.array(1. / np.sqrt(x))
-            return x.as_in_context(self._ctx).expand_dims(1)
-        user_ci = []
-        user_cj = []
-        movie_ci = []
-        movie_cj = []
-        for r in self.possible_rating_values:
-            r = str(r)
-            user_ci.append(graph['rev-%s' % r].in_degrees())
-            movie_ci.append(graph[r].in_degrees())
-            if self._symm:
-                user_cj.append(graph[r].out_degrees())
-                movie_cj.append(graph['rev-%s' % r].out_degrees())
-            else:
-                user_cj.append(mx.nd.zeros((self.num_user,)))
-                movie_cj.append(mx.nd.zeros((self.num_movie,)))
-        user_ci = _calc_norm(mx.nd.add_n(*user_ci))
-        movie_ci = _calc_norm(mx.nd.add_n(*movie_ci))
-        if self._symm:
-            user_cj = _calc_norm(mx.nd.add_n(*user_cj))
-            movie_cj = _calc_norm(mx.nd.add_n(*movie_cj))
-        else:
-            user_cj = mx.nd.ones((self.num_user,), ctx=self._ctx)
-            movie_cj = mx.nd.ones((self.num_movie,), ctx=self._ctx)
-        graph.nodes['user'].data.update({'ci': user_ci, 'cj': user_cj})
-        graph.nodes['movie'].data.update({'ci': movie_ci, 'cj': movie_cj})
         return g, all_etype
 
     @property
