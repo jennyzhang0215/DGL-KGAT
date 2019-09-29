@@ -85,7 +85,7 @@ class DataLoader(object):
     def load_kg_plus_inverse(self, file_name):
         kg_pd = pd.read_csv(file_name, sep=" ", names=['h', "r", "t"], engine='python')
         kg_pd = kg_pd.sort_values(by=['h'])
-        unique_rel = np.unique(kg_pd['h'].values).size
+        unique_rel = kg_pd['r'].nunique()
         entity_ids = np.unique(np.concatenate((kg_pd['h'].values, kg_pd['t'].values)))
 
         if kg_pd["r"].nunique() != kg_pd["r"].max()+1:
@@ -93,7 +93,7 @@ class DataLoader(object):
             kg_pd['r'] = list(map(relation_mapping.get, kg_pd['r'].values))
 
         print("#KG entities:{}, relations:{}, triplet:{}, #head:{}, #tail:{}".format(
-            entity_ids.size, kg_pd['r'].nunique(), kg_pd.shape[0], kg_pd['h'].nunique(), kg_pd['t'].nunique()))
+            entity_ids.size, unique_rel, kg_pd.shape[0], kg_pd['h'].nunique(), kg_pd['t'].nunique()))
 
         ### TODO filter neighbors are not implemented here
         # entity_ids, new_kg_pd = self._filter_neighbor(self.item_ids, kg_pd)
