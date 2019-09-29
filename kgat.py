@@ -181,7 +181,6 @@ def train(args):
 
 
         if epoch % args.evaluate_every == 0:
-            print("Testing ........................................................................")
             with th.no_grad():
                 model.eval()
                 g, all_etype = dataset.generate_whole_g()
@@ -196,7 +195,7 @@ def train(args):
                 else:
                     item_id_range = th.arange(dataset.num_items)
                 recall, ndcg = utils.calc_recall_ndcg(all_embedding, dataset, item_id_range, K=20, use_cuda=use_cuda)
-                print("Test recall:{}, ndcg:{}".format(recall, ndcg))
+                print("Epoch: {}, Test recall:{}, ndcg:{}".format(epoch, recall, ndcg))
             # save best model
             # if recall > best_recall:
             #     best_recall = recall

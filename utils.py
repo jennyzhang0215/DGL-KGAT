@@ -110,4 +110,4 @@ def calc_recall_ndcg(embedding, dataset, all_item_id_range, K, use_cuda):
     print("Comparision: recall (all v.s. one by one) {} v.s. {}".format(recall, one_by_one_recall))
     print("\tndcg (all v.s. one by one) {} v.s. {}".format(ndcg, one_by_one_ndcg))
 
-    return recall, ndcg
+    return one_by_one_recall, one_by_one_ndcg
