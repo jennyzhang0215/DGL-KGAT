@@ -31,6 +31,7 @@ def ndcg_at_k(r, k):
 
 def one_recall_at_k(r, k, all_pos_num):
     r = np.asfarray(r)[:k]
+    print(r)
     return np.sum(r) / all_pos_num
 def one_dcg_at_k(r, k, method=1):
     """Score is discounted cumulative gain (dcg)
@@ -99,43 +100,7 @@ def calc_recall_ndcg(embedding, dataset, all_item_id_range, K, use_cuda):
     one_by_one_recall = recall_all / len(dataset.test_user_dict)
     ndcg = ndcg_at_k(ranks, K)
     one_by_one_ndcg = ndcg_all / len(dataset.test_user_dict)
-    print("Comparision: recall (all v.s. one by one) {} v.s. {}".format(recall_all, one_by_one_recall))
-    print("\tndcg (all v.s. one by one) {} v.s. {}".format(ndcg_all, one_by_one_ndcg))
+    print("Comparision: recall (all v.s. one by one) {} v.s. {}".format(recall, one_by_one_recall))
+    print("\tndcg (all v.s. one by one) {} v.s. {}".format(ndcg, one_by_one_ndcg))
 
     return recall, ndcg
-
-
-#
-#
-# def recall_at_k(r, k, all_pos_num):
-#     r = np.asfarray(r)[:k]
-#     return np.sum(r) / all_pos_num
-#
-# def dcg_at_k(r, k, method=1):
-#     """Score is discounted cumulative gain (dcg)
-#     Relevance is positive real values.  Can use binary
-#     as the previous methods.
-#     Returns:
-#         Discounted cumulative gain
-#     """
-#     r = np.asfarray(r)[:k]
-#     if r.size:
-#         if method == 0:
-#             return r[0] + np.sum(r[1:] / np.log2(np.arange(2, r.size + 1)))
-#         elif method == 1:
-#             return np.sum(r / np.log2(np.arange(2, r.size + 2)))
-#         else:
-#             raise ValueError('method must be 0 or 1.')
-#     return 0.
-#
-# def ndcg_at_k(r, k, method=1):
-#     """Score is normalized discounted cumulative gain (ndcg)
-#     Relevance is positive real values.  Can use binary
-#     as the previous methods.
-#     Returns:
-#         Normalized discounted cumulative gain
-#     """
-#     dcg_max = dcg_at_k(sorted(r, reverse=True), k, method)
-#     if not dcg_max:
-#         return 0.
-#     return dcg_at_k(r, k, method) / dcg_max
