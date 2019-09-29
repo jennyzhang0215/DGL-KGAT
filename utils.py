@@ -4,8 +4,14 @@ import heapq
 
 
 def recall_at_k(r, k, all_pos_num):
-    r = np.asfarray(r)[:k]
-    return np.sum(r) / all_pos_num
+    ### here r is as two dim
+    r = np.asfarray(r)
+    if r.ndim == 1:
+        r = r[:k]
+        return np.sum(r) / all_pos_num
+    elif r.ndim == 2:
+        r = r[:, :k]
+        return np.sum(r) / all_pos_num
 def dcg_at_k(r, k):
     """Score is discounted cumulative gain (dcg)
     Relevance is positive real values.  Can use binary
@@ -66,11 +72,12 @@ def calc_recall_ndcg(embedding, dataset, all_item_id_range, K, use_cuda):
         # perturb subject
         #print("Test size: {}".format(len(dataset.test_user_dict)))
         ranks = []
-        pos_item_num = []
         recall_all = 0.0
         ndcg_all = 0.0
+        all_pos_item_num = 0
+
         for u_id, pos_item_l in dataset.test_user_dict.items():
-            pos_item_num.append(len(pos_item_l))
+            all_pos_item_num += len(pos_item_l)
             emb_u = embedding[u_id]
             #print("emb_u", emb_u.shape, emb_u)
             emb_all = embedding[all_item_id_range].transpose(0, 1)
@@ -95,6 +102,7 @@ def calc_recall_ndcg(embedding, dataset, all_item_id_range, K, use_cuda):
 
     ranks = np.vstack(ranks)
     ### the output is the sum
+    print("all_pos_item_num v.s. num_test: {} v.s. {}".format(all_pos_item_num, dataset.num_test))
     recall = recall_at_k(ranks, K, dataset.num_test)
     one_by_one_recall = recall_all / len(dataset.test_user_dict)
     ndcg = ndcg_at_k(ranks, K)
