@@ -82,10 +82,12 @@ class KGATConv(nn.Module):
 
 class Model(nn.Module):
     def __init__(self, n_entities, n_relations, entity_dim, relation_dim, num_gnn_layers, n_hidden,
-                 dropout, reg_lambda_kg=0.01, reg_lambda_gnn=0.01, res_type="Bi"):
+                 dropout, use_attention=True,
+                 reg_lambda_kg=0.01, reg_lambda_gnn=0.01, res_type="Bi"):
         super(Model, self).__init__()
         self._n_entities = n_entities
         self._n_relations = n_relations
+        self._use_attention = use_attention
         self._reg_lambda_kg = reg_lambda_kg
         self._reg_lambda_gnn = reg_lambda_gnn
         self.entity_embed = nn.Embedding(n_entities, entity_dim) ### e_h, e_t
@@ -118,9 +120,11 @@ class Model(nn.Module):
         l = (-1.0) * F.logsigmoid(neg_score-pos_score)
         l = th.mean(l)
         ## tf.reduce_sum(tf.square((h_e + r_e - t_e)), 1, keepdims=True)
-        ###
-        reg_loss =_L2_loss_mean(self.relation_embed.weight) + _L2_loss_mean(self.entity_embed.weight) + \
-                  _L2_loss_mean(self.W_R)
+        ### TODO to check whether to use raw embeddings or entities embeddings
+        # reg_loss =_L2_loss_mean(self.relation_embed.weight) + _L2_loss_mean(self.entity_embed.weight) + \
+        #           _L2_loss_mean(self.W_R)
+        reg_loss = _L2_loss_mean(h_vec) + _L2_loss_mean(r_vec) + \
+                   _L2_loss_mean(pos_t_vec) + _L2_loss_mean(neg_t_vec)
         #print("\tkg loss:", l, "reg loss:", reg_loss, "*", self._reg_lambda_kg)
         loss = l + self._reg_lambda_kg * reg_loss
         return loss
@@ -139,17 +143,22 @@ class Model(nn.Module):
         #print("att_w", att_w.shape, att_w)
         return {'att_w': att_w}
 
-    def gnn(self, g, node_ids, rel_ids):
-        h = self.entity_embed(node_ids)
-        self.g = g
-        g.ndata['id'] = node_ids
-        g.edata['type'] = rel_ids
+    def compute_attention(self, g):
         ## compute attention weight and store it on edges
         for i in range(self._n_relations):
             e_idxs = self.g.filter_edges(lambda edges: edges.data['type'] == i)
             self.W_r = self.W_R[i]
             g.apply_edges(self._att_score, e_idxs)
         g.edata['w'] = edge_softmax(g, g.edata.pop('att_w'))
+        return g
+
+    def gnn(self, g, node_ids, rel_ids):
+        h = self.entity_embed(node_ids)
+        self.g = g
+        g.ndata['id'] = node_ids
+        g.edata['type'] = rel_ids
+        if self._use_attention:
+            g  = self.compute_attention(g)
         node_embed_cache = [h]
         for i, layer in enumerate(self.layers):
             h = layer(g, h)
@@ -170,8 +179,10 @@ class Model(nn.Module):
         #print("pos_score", pos_score)
         #print("neg_score", neg_score)
         cf_loss = th.mean(F.logsigmoid(pos_score - neg_score) ) * (-1.0)
-        reg_loss = _L2_loss_mean(self.relation_embed.weight) + _L2_loss_mean(self.entity_embed.weight) +\
-                   _L2_loss_mean(self.W_R)
+        ### TODO to check whether to use the raw embeddings or entity embeddings
+        # reg_loss = _L2_loss_mean(self.relation_embed.weight) + _L2_loss_mean(self.entity_embed.weight) +\
+        #            _L2_loss_mean(self.W_R)
+        reg_loss = _L2_loss_mean(src_vec) + _L2_loss_mean(pos_dst_vec) + _L2_loss_mean(neg_dst_vec)
         #print("\tcf loss:", cf_loss, "reg loss:", reg_loss, "*", self._reg_lambda_gnn)
         return cf_loss + self._reg_lambda_gnn * reg_loss
 
