@@ -85,7 +85,7 @@ class DataLoader(object):
         kg_pd = pd.read_csv(file_name, sep=" ", names=['h', "r", "t"], engine='python')
         kg_pd = kg_pd.sort_values(by=['h'])
         unique_rel = np.unique(kg_pd['h'].values).size
-        entity_ids = np.unique(np.concatenate(kg_pd['h'].values, kg_pd['t'].values))
+        entity_ids = np.unique(np.concatenate((kg_pd['h'].values, kg_pd['t'].values)))
 
         print("#KG entities:{}, relations:{}, triplet:{}, #head:{}, #tail:{}".format(
             entity_ids.size, kg_pd['r'].nunique(), kg_pd.shape[0], kg_pd['h'].nunique(), kg_pd['t'].nunique()))
