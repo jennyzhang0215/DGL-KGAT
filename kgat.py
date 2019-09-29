@@ -63,17 +63,6 @@ def train(args):
         kg_sampler = dataset.KG_sampler(batch_size=args.batch_size_kg)
         iter = 0
         for h, r, pos_t, neg_t in kg_sampler:
-            try:
-                assert max(h) < dataset.num_all_entities
-                assert max(pos_t) < dataset.num_all_entities
-                assert max(neg_t) < dataset.num_all_entities
-                assert max(r) < dataset.num_all_relations
-            except:
-                print("max(h)", max(h))
-                print("max(pos_t)", max(pos_t))
-                print("max(neg_t)", max(neg_t))
-                print("max(r)", max(r))
-
             iter += 1
             model.train()
             h_th = th.LongTensor(h)
@@ -88,8 +77,8 @@ def train(args):
             # print("start computing gradient ...")
             optimizer.step()
             optimizer.zero_grad()
-            if (iter % 100) == 0:
-                print("Epoch {:04d}, Iter {:04d} | Loss {:.4f} ".format(epoch, iter, loss.item()))
+            #if (iter % 100) == 0:
+            #    print("Epoch {:04d}, Iter {:04d} | Loss {:.4f} ".format(epoch, iter, loss.item()))
 
         ### Then train GNN
         """
@@ -166,8 +155,8 @@ def train(args):
             # print("start computing gradient ...")
             optimizer.step()
             optimizer.zero_grad()
-            if (iter % 10) == 0:
-                print("Epoch {:04d}  Iter: {:04d} Loss {:.4f} ".format(epoch, iter, loss.item()))
+            #if (iter % 10) == 0:
+            #    print("Epoch {:04d}  Iter: {:04d} Loss {:.4f} ".format(epoch, iter, loss.item()))
 
         if epoch % args.evaluate_every == 0:
             print("Testing ........................................................................")
