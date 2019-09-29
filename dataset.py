@@ -18,7 +18,7 @@ class DataLoader(object):
         test_file = os.path.join(data_dir, "test.txt")
         test_pairs, test_user_dict = self.load_test_interaction(test_file)
         kg_file = os.path.join(data_dir, "kg_final.txt")
-        kg_triples_np = self.load_kg_filter_neighbor(kg_file)
+        kg_triples_np = self.load_kg_plus_inverse(kg_file)
 
         ## stack user ids after entities
         self.user_mapping = {i: i+self.num_KG_entities for i in range(self.num_users)}
@@ -38,6 +38,8 @@ class DataLoader(object):
         user_item_triplet[:, 2] = np.concatenate((self.train_pairs[1], self.train_pairs[0]))
         ### reverse the (head, relation, tail) direction, because we need tail --> head
         all_triplet = np.vstack((kg_triples_np,  user_item_triplet)).astype(np.int32)
+        print("The whole graph: {} entities, {} relations, {} triplets".format(
+            self.num_all_entities, self.num_all_relations, self.num_all_triplets))
         assert np.max(all_triplet) + 1 == self.num_all_entities
         self.all_triplet_np = all_triplet
         self.all_triplet_dp = pd.DataFrame(all_triplet, columns=['h', 'r', 't'], dtype=np.int32)
@@ -81,11 +83,15 @@ class DataLoader(object):
         #print("Filtered G:\t#entities:{}, #triplets:{}".format(new_entity_ids.size, new_pd.shape[0]))
         return new_entity_ids, new_pd
 
-    def load_kg_filter_neighbor(self, file_name):
+    def load_kg_plus_inverse(self, file_name):
         kg_pd = pd.read_csv(file_name, sep=" ", names=['h', "r", "t"], engine='python')
         kg_pd = kg_pd.sort_values(by=['h'])
         unique_rel = np.unique(kg_pd['h'].values).size
         entity_ids = np.unique(np.concatenate((kg_pd['h'].values, kg_pd['t'].values)))
+
+        if kg_pd["r"].nunique() != kg_pd["r"].max()+1:
+            relation_mapping = {old_id: idx for idx, old_id in enumerate(np.unique(kg_pd["r"].values))}
+            kg_pd['r'] = list(map(relation_mapping.get, kg_pd['r'].values))
 
         print("#KG entities:{}, relations:{}, triplet:{}, #head:{}, #tail:{}".format(
             entity_ids.size, kg_pd['r'].nunique(), kg_pd.shape[0], kg_pd['h'].nunique(), kg_pd['t'].nunique()))
