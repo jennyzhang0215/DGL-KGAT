@@ -161,6 +161,7 @@ class DataLoader(object):
         exist_heads = list(self.all_kg_dict.keys())
         n_batch = self.num_all_triplets // batch_size + 1
         i = 0
+        print("Batch_size:{}, #batches:{}".format(batch_size, n_batch))
         while i < n_batch:
             i += 1
             if batch_size <= len(exist_heads):
@@ -300,6 +301,7 @@ class DataLoader(object):
             batch_size = min(batch_size, self.num_train)
             n_batch = self.num_train // batch_size + 1
         i = 0
+        print("Batch_size:{}, #batches:{}".format(batch_size, n_batch))
         while i < n_batch:
             i += 1
             user_ids, item_ids, neg_item_ids = self._generate_user_pos_neg_items(batch_size)
@@ -322,6 +324,7 @@ class DataLoader(object):
 
     def CF_pair_sampler(self, batch_size):
         self.exist_users = list(self.train_user_dict.keys())
+
         if batch_size < 0:
             batch_size = self.num_train
             n_batch = 1
@@ -329,6 +332,7 @@ class DataLoader(object):
             batch_size = min(batch_size, self.num_train)
             n_batch = self.num_train // batch_size + 1
         i = 0
+        print("Batch_size:{}, #batches:{}".format(batch_size, n_batch))
         while i < n_batch:
             i += 1
             user_ids, item_ids, neg_item_ids = self._generate_user_pos_neg_items(batch_size)
