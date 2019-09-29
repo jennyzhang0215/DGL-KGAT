@@ -263,7 +263,6 @@ class DataLoader(object):
         if batch_size <= self.num_users:
             users = rd.sample(self.exist_users, batch_size)
         else:
-            print("self.exist_users", self.exist_users)
             users = [rd.choice(self.exist_users) for _ in range(batch_size)]
 
         pos_items, neg_items = [], []
@@ -303,7 +302,7 @@ class DataLoader(object):
             yield user_ids, item_ids, neg_item_ids, g, uniq_v, etype
 
     def CF_pair_sampler(self, batch_size):
-        self.exist_users = self.train_user_dict.keys()
+        self.exist_users = list(self.train_user_dict.keys())
         if batch_size < 0:
             batch_size = self.num_train
             n_batch = 1
