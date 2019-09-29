@@ -25,7 +25,7 @@ def parse_args():
     parser.add_argument('--max_epoch', type=int, default=100, help='train xx iterations')
     parser.add_argument("--grad_norm", type=float, default=1.0, help="norm to clip gradient to")
     parser.add_argument('--lr', type=float, default=0.001, help='Learning rate.')
-    parser.add_argument('--batch_size', type=int, default=-1, help='CF batch size.')
+    parser.add_argument('--batch_size', type=int, default=1024, help='CF batch size.')
     parser.add_argument('--batch_size_kg', type=int, default=2048, help='KG batch size.')
     parser.add_argument('--evaluate_every', type=int, default=1, help='the evaluation duration')
     parser.add_argument("--eval_batch_size", type=int, default=-1, help="batch size when evaluating")
@@ -138,6 +138,7 @@ def train(args):
                 print("Epoch {:04d}  Iter: {:04d} Loss {:.4f} ".format(epoch, iter, loss.item()))
 
         if epoch % args.evaluate_every == 0:
+            print("Testing ........................................................................")
             with th.no_grad():
                 model.eval()
                 g, all_etype = dataset.generate_whole_g()
@@ -181,6 +182,7 @@ def train(args):
                 print("Epoch {:04d}, Iter {:04d} | Loss {:.4f} ".format(epoch, iter, loss.item()))
 
         if epoch % args.evaluate_every == 0:
+            print("Testing ........................................................................")
             with th.no_grad():
                 model.eval()
                 g, all_etype = dataset.generate_whole_g()
