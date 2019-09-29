@@ -60,9 +60,20 @@ def train(args):
 
     for epoch in range(1, args.max_epoch+1):
         ### train kg first
-        kg_sampler = dataset.KG_sampler(batch_size=args.batch_size_kg, sequential=True)
+        kg_sampler = dataset.KG_sampler(batch_size=args.batch_size_kg)
         iter = 0
         for h, r, pos_t, neg_t in kg_sampler:
+            try:
+                assert max(h) < dataset.num_all_entities
+                assert max(pos_t) < dataset.num_all_entities
+                assert max(neg_t) < dataset.num_all_entities
+                assert max(r) < dataset.num_all_relations
+            except:
+                print("max(h)", max(h))
+                print("max(pos_t)", max(pos_t))
+                print("max(neg_t)", max(neg_t))
+                print("max(r)", max(r))
+
             iter += 1
             model.train()
             h_th = th.LongTensor(h)

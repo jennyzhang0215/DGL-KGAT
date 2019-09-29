@@ -155,7 +155,7 @@ class DataLoader(object):
                 neg_ts.append(t)
         return neg_ts
 
-    def KG_sampler(self, batch_size, sequential=True):
+    def KG_sampler(self, batch_size):
         ### generate negative triplets
         self._get_all_kg_dict()
         exist_heads = list(self.all_kg_dict.keys())
