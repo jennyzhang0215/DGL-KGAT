@@ -260,10 +260,10 @@ class DataLoader(object):
                 neg_items.append(neg_i_id)
         return neg_items
     def _generate_user_pos_neg_items(self, batch_size):
-
         if batch_size <= self.num_users:
             users = rd.sample(self.exist_users, batch_size)
         else:
+            print("self.exist_users", self.exist_users)
             users = [rd.choice(self.exist_users) for _ in range(batch_size)]
 
         pos_items, neg_items = [], []
