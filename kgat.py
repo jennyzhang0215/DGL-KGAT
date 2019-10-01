@@ -30,6 +30,7 @@ def parse_args():
     parser.add_argument('--evaluate_every', type=int, default=1, help='the evaluation duration')
     parser.add_argument("--eval_batch_size", type=int, default=-1, help="batch size when evaluating")
     args = parser.parse_args()
+    print(args)
     return args
 
 
