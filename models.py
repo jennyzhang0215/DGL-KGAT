@@ -152,8 +152,8 @@ class Model(nn.Module):
 
     def gnn(self, g, node_ids, rel_ids):
         h = self.entity_embed(node_ids)
-        if self._use_attention:
-            g  = self.compute_attention(g, node_ids, rel_ids)
+        # if self._use_attention:
+        #     g  = self.compute_attention(g, node_ids, rel_ids)
         node_embed_cache = [h]
         for i, layer in enumerate(self.layers):
             h = layer(g, h)
