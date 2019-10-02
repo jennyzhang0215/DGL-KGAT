@@ -60,6 +60,7 @@ def train(args):
     model_state_file = 'model_state.pth'
 
     for epoch in range(1, args.max_epoch+1):
+        """
         ### train kg first
         kg_sampler = dataset.KG_sampler(batch_size=args.batch_size_kg)
         iter = 0
@@ -80,7 +81,7 @@ def train(args):
             optimizer.zero_grad()
             if (iter % 100) == 0:
                print("Epoch {:04d}, Iter {:04d} | Loss {:.4f} ".format(epoch, iter, loss.item()))
-
+        """
         ### Then train GNN
         """
         g, all_etype = dataset.generate_whole_g()
@@ -140,6 +141,8 @@ def train(args):
 
         cf_sampler = dataset.CF_pair_sampler(batch_size=args.batch_size)
         iter = 0
+        if use_cuda:
+            nid_th, etype_th = nid_th.cuda(), etype_th.cuda()
         embedding = model.gnn(g, nid_th, etype_th)
         for user_ids, item_pos_ids, item_neg_ids in cf_sampler:
             iter += 1
@@ -147,8 +150,8 @@ def train(args):
             item_pos_ids_th = th.LongTensor(item_pos_ids)
             item_neg_ids_th = th.LongTensor(item_neg_ids)
             if use_cuda:
-                user_ids_th, item_pos_ids_th, item_neg_ids_th, nid_th, etype_th = \
-                    user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda(), nid_th.cuda(), etype_th.cuda()
+                user_ids_th, item_pos_ids_th, item_neg_ids_th = \
+                    user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda()
             model.train()
             loss = model.get_loss(embedding, user_ids_th, item_pos_ids_th, item_neg_ids_th)
             loss.backward()
