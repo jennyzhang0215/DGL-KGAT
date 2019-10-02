@@ -135,10 +135,10 @@ def train(args):
             if (iter % 10) == 0:
                 print("Epoch {:04d}  Iter: {:04d} Loss {:.4f} ".format(epoch, iter, loss.item()))
         """
+        model.train()
         g, all_etype = dataset.generate_whole_g()
         nid_th = th.arange(dataset.num_all_entities)
         etype_th = th.LongTensor(all_etype)
-
         cf_sampler = dataset.CF_pair_sampler(batch_size=args.batch_size)
         iter = 0
         if use_cuda:
@@ -152,7 +152,6 @@ def train(args):
             if use_cuda:
                 user_ids_th, item_pos_ids_th, item_neg_ids_th = \
                     user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda()
-            model.train()
             embedding = model.gnn(g, nid_th, etype_th)
             loss = model.get_loss(embedding, user_ids_th, item_pos_ids_th, item_neg_ids_th)
             loss.backward()
