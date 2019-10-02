@@ -6,10 +6,9 @@ import collections
 import random as rd
 
 class DataLoader(object):
-    def __init__(self, data_name, full_batch=True, num_neighbor_hop=2, seed=1234):
+    def __init__(self, data_name, num_neighbor_hop=3, seed=1234):
         print("\n{}->".format(data_name))
         self._data_name = data_name
-        self._full_batch = full_batch
         self._num_neighbor_hop = num_neighbor_hop
         self._rng = np.random.RandomState(seed=seed)
         data_dir =  os.path.realpath(os.path.join(os.path.abspath(__file__), '..', "datasets", data_name))

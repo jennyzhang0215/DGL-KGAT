@@ -71,7 +71,7 @@ def calc_recall_ndcg(embedding, dataset, all_item_id_range, K, use_cuda):
     with th.no_grad():
         # perturb subject
         #print("Test size: {}".format(len(dataset.test_user_dict)))
-        ranks = []
+        #ranks = []
         recall_all = 0.0
         ndcg_all = 0.0
         all_pos_item_num = 0
@@ -95,19 +95,18 @@ def calc_recall_ndcg(embedding, dataset, all_item_id_range, K, use_cuda):
             for i in range(K):
                 if rank_indices[i] in pos_item_l:
                     binary_rank_K[i] = 1
-            ranks.append(binary_rank_K)
+            #ranks.append(binary_rank_K)
             recall_all += one_recall_at_k(binary_rank_K.tolist(), K, len(pos_item_l))
             ndcg_all += one_ndcg_at_k(binary_rank_K.tolist(), K)
 
 
-    ranks = np.vstack(ranks)
+    #ranks = np.vstack(ranks)
     ### the output is the sum
-    print("all_pos_item_num v.s. num_test: {} v.s. {}".format(all_pos_item_num, dataset.num_test))
-    recall = recall_at_k(ranks, K, dataset.num_test)
+    #recall = recall_at_k(ranks, K, dataset.num_test)
+    #ndcg = ndcg_at_k(ranks, K)
     one_by_one_recall = recall_all / len(dataset.test_user_dict)
-    ndcg = ndcg_at_k(ranks, K)
     one_by_one_ndcg = ndcg_all / len(dataset.test_user_dict)
-    print("Comparision: recall (all v.s. one by one) {} v.s. {}".format(recall, one_by_one_recall))
-    print("\tndcg (all v.s. one by one) {} v.s. {}".format(ndcg, one_by_one_ndcg))
+    #print("Comparision: recall (all v.s. one by one) {} v.s. {}".format(recall, one_by_one_recall))
+    #print("\tndcg (all v.s. one by one) {} v.s. {}".format(ndcg, one_by_one_ndcg))
 
     return one_by_one_recall, one_by_one_ndcg
