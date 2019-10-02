@@ -148,7 +148,7 @@ class Model(nn.Module):
             self.W_r = self.W_R[i]
             g.apply_edges(self._att_score, e_idxs)
         g.edata['w'] = edge_softmax(g, g.edata.pop('att_w'))
-        return g.edata.pop('att_w')
+        return g.edata.pop('w')
 
     def gnn(self, g):
         g = g.local_var()
