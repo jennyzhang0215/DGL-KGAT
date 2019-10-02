@@ -139,11 +139,9 @@ class Model(nn.Module):
         #print("att_w", att_w.shape, att_w)
         return {'att_w': att_w}
 
-    def compute_attention(self, g, node_ids, rel_ids):
+    def compute_attention(self, g):
         ## compute attention weight and store it on edges
-        g=g.local_var()
-        g.ndata['id'] = node_ids
-        g.edata['type'] = rel_ids
+        print("In compute_attention ...", g)
         for i in range(self._n_relations):
             e_idxs = g.filter_edges(lambda edges: edges.data['type'] == i)
             self.W_r = self.W_R[i]
@@ -151,9 +149,9 @@ class Model(nn.Module):
         g.edata['w'] = edge_softmax(g, g.edata.pop('att_w'))
         return g
 
-    def gnn(self, g, node_ids, rel_ids):
-        g = g.local_var()
-        h = self.entity_embed(node_ids)
+    def gnn(self, g):
+        print("In gnn ...", g)
+        h = self.entity_embed(g.ndata['id'])
         # if self._use_attention:
         #     g  = self.compute_attention(g, node_ids, rel_ids)
         node_embed_cache = [h]
