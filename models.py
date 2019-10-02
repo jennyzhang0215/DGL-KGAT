@@ -144,7 +144,7 @@ class Model(nn.Module):
         g.ndata['id'] = node_ids
         g.edata['type'] = rel_ids
         for i in range(self._n_relations):
-            e_idxs = self.g.filter_edges(lambda edges: edges.data['type'] == i)
+            e_idxs = g.filter_edges(lambda edges: edges.data['type'] == i)
             self.W_r = self.W_R[i]
             g.apply_edges(self._att_score, e_idxs)
         g.edata['w'] = edge_softmax(g, g.edata.pop('att_w'))
