@@ -34,7 +34,6 @@ def ndcg_at_k(r, k):
     dcg_max[dcg_max==0] = np.inf
     return np.mean(dcg / dcg_max)
 
-
 def one_recall_at_k(r, k, all_pos_num):
     r = np.asfarray(r)[:k]
     return np.sum(r) / all_pos_num

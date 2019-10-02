@@ -9,10 +9,6 @@ def _L2_loss_mean(x):
     ### ### mean( sum(t ** 2) / 2)
     return th.mean(th.sum(th.pow(x, 2), dim=1, keepdim=False) / 2.)
 
-def _L2_loss_sum(x):
-    ### ### sum( sum(t ** 2) / 2)
-    return th.sum(th.sum(th.pow(x, 2), dim=1, keepdim=False) / 2.)
-
 def bmm_maybe_select(A, B, index):
     """Slice submatrices of B by the given index and perform bmm.
     B is a 3D tensor of shape (N, D1, D2), which can be viewed as a stack of
