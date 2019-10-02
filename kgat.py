@@ -25,8 +25,8 @@ def parse_args():
     parser.add_argument('--max_epoch', type=int, default=100, help='train xx iterations')
     parser.add_argument("--grad_norm", type=float, default=1.0, help="norm to clip gradient to")
     parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate.')
-    parser.add_argument('--batch_size', type=int, default=1024, help='CF batch size.')
-    parser.add_argument('--batch_size_kg', type=int, default=2048, help='KG batch size.')
+    parser.add_argument('--batch_size', type=int, default=10000, help='CF batch size.')
+    parser.add_argument('--batch_size_kg', type=int, default=10000, help='KG batch size.')
     parser.add_argument('--evaluate_every', type=int, default=1, help='the evaluation duration')
     parser.add_argument("--eval_batch_size", type=int, default=-1, help="batch size when evaluating")
     args = parser.parse_args()
@@ -60,7 +60,7 @@ def train(args):
     model_state_file = 'model_state.pth'
 
     for epoch in range(1, args.max_epoch+1):
-        """
+
         ### train kg first
         kg_sampler = dataset.KG_sampler(batch_size=args.batch_size_kg)
         iter = 0
@@ -81,7 +81,7 @@ def train(args):
             optimizer.zero_grad()
             if (iter % 100) == 0:
                print("Epoch {:04d}, Iter {:04d} | Loss {:.4f} ".format(epoch, iter, loss.item()))
-        """
+
         ### Then train GNN
         """
         g, all_etype = dataset.generate_whole_g()
@@ -161,13 +161,13 @@ def train(args):
             loss = model.get_loss(embedding, user_ids_th, item_pos_ids_th, item_neg_ids_th)
             #print("embedding", embedding.shape, embedding)
             #print("Before backward ...", g)
-            print(model.parameters())
+            #print(model.parameters())
             loss.backward()
             # th.nn.utils.clip_grad_norm_(model.parameters(), args.grad_norm)  # clip gradients
             # print("start computing gradient ...")
             optimizer.step()
             optimizer.zero_grad()
-            if (iter % 10) == 0:
+            if (iter % 100) == 0:
                print("Epoch {:04d}  Iter: {:04d} Loss {:.4f} ".format(epoch, iter, loss.item()))
 
         if epoch % args.evaluate_every == 0:
