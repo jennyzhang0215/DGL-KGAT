@@ -145,7 +145,7 @@ def train(args):
             nid_th, etype_th = nid_th.cuda(), etype_th.cuda()
         g.ndata['id'] = nid_th
         g.edata['type'] = etype_th
-        with th.no_grad:
+        with th.no_grad():
             att_w = model.compute_attention(g)
         g.edata['w'] = att_w
         print(g)
