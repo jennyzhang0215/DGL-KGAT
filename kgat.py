@@ -148,7 +148,7 @@ def train(args):
         with th.no_grad():
             att_w = model.compute_attention(g)
         g.edata['w'] = att_w
-        print(g)
+        #print(g)
         for user_ids, item_pos_ids, item_neg_ids in cf_sampler:
             iter += 1
             user_ids_th = th.LongTensor(user_ids)
@@ -159,8 +159,8 @@ def train(args):
                     user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda()
             embedding = model.gnn(g)
             loss = model.get_loss(embedding, user_ids_th, item_pos_ids_th, item_neg_ids_th)
-            print("embedding", embedding.shape, embedding)
-            print("Before backward ...", g)
+            #print("embedding", embedding.shape, embedding)
+            #print("Before backward ...", g)
             print(model.parameters())
             loss.backward()
             # th.nn.utils.clip_grad_norm_(model.parameters(), args.grad_norm)  # clip gradients
