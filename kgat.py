@@ -145,7 +145,9 @@ def train(args):
             nid_th, etype_th = nid_th.cuda(), etype_th.cuda()
         g.ndata['id'] = nid_th
         g.edata['type'] = etype_th
-        g = model.compute_attention(g)
+        with th.no_grad:
+            att_w = model.compute_attention(g)
+        g.edata['w'] = att_w
         print(g)
         for user_ids, item_pos_ids, item_neg_ids in cf_sampler:
             iter += 1
