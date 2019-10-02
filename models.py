@@ -141,6 +141,7 @@ class Model(nn.Module):
 
     def compute_attention(self, g, node_ids, rel_ids):
         ## compute attention weight and store it on edges
+        g=g.local_var()
         g.ndata['id'] = node_ids
         g.edata['type'] = rel_ids
         for i in range(self._n_relations):
@@ -151,6 +152,7 @@ class Model(nn.Module):
         return g
 
     def gnn(self, g, node_ids, rel_ids):
+        g = g.local_var()
         h = self.entity_embed(node_ids)
         # if self._use_attention:
         #     g  = self.compute_attention(g, node_ids, rel_ids)
