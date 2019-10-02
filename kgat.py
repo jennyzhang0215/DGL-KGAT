@@ -157,6 +157,9 @@ def train(args):
                     user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda()
             embedding = model.gnn(g)
             loss = model.get_loss(embedding, user_ids_th, item_pos_ids_th, item_neg_ids_th)
+            print("embedding", embedding.shape, embedding)
+            print("Before backward ...", g)
+            print(model.parameters())
             loss.backward()
             # th.nn.utils.clip_grad_norm_(model.parameters(), args.grad_norm)  # clip gradients
             # print("start computing gradient ...")
