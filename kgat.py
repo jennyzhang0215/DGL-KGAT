@@ -5,6 +5,7 @@ import torch as th
 import torch.optim as optim
 import utils
 import numpy as np
+from time import time
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Reproduce KGAT using DGL")
@@ -26,7 +27,7 @@ def parse_args():
     parser.add_argument("--grad_norm", type=float, default=1.0, help="norm to clip gradient to")
     parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate.')
     parser.add_argument('--batch_size', type=int, default=10000, help='CF batch size.')
-    parser.add_argument('--batch_size_kg', type=int, default=10000, help='KG batch size.')
+    parser.add_argument('--batch_size_kg', type=int, default=2048, help='KG batch size.')
     parser.add_argument('--evaluate_every', type=int, default=1, help='the evaluation duration')
     parser.add_argument("--eval_batch_size", type=int, default=-1, help="batch size when evaluating")
     args = parser.parse_args()
@@ -60,7 +61,7 @@ def train(args):
     model_state_file = 'model_state.pth'
 
     for epoch in range(1, args.max_epoch+1):
-
+        epoch_time = time()
         ### train kg first
         kg_sampler = dataset.KG_sampler(batch_size=args.batch_size_kg)
         iter = 0
@@ -79,7 +80,7 @@ def train(args):
             # print("start computing gradient ...")
             optimizer.step()
             optimizer.zero_grad()
-            if (iter % 100) == 0:
+            if (iter % 10) == 0:
                print("Epoch {:04d}, Iter {:04d} | Loss {:.4f} ".format(epoch, iter, loss.item()))
 
         ### Then train GNN
@@ -185,7 +186,7 @@ def train(args):
                 else:
                     item_id_range = th.arange(dataset.num_items)
                 recall, ndcg = utils.calc_recall_ndcg(all_embedding, dataset, item_id_range, K=20, use_cuda=use_cuda)
-                print("Epoch: {}, Test recall:{:.6%}, ndcg:{:.6%}".format(epoch, recall, ndcg))
+                print("[{:.1f}s]Epoch: {}, Test recall:{:.6%}, ndcg:{:.6%}".format(time()-epoch_time, epoch, recall, ndcg))
             # save best model
             # if recall > best_recall:
             #     best_recall = recall
