@@ -139,8 +139,10 @@ class Model(nn.Module):
         #print("att_w", att_w.shape, att_w)
         return {'att_w': att_w}
 
-    def compute_attention(self, g):
+    def compute_attention(self, g, node_ids, rel_ids):
         ## compute attention weight and store it on edges
+        g.ndata['id'] = node_ids
+        g.edata['type'] = rel_ids
         for i in range(self._n_relations):
             e_idxs = self.g.filter_edges(lambda edges: edges.data['type'] == i)
             self.W_r = self.W_R[i]
@@ -150,11 +152,8 @@ class Model(nn.Module):
 
     def gnn(self, g, node_ids, rel_ids):
         h = self.entity_embed(node_ids)
-        self.g = g
-        g.ndata['id'] = node_ids
-        g.edata['type'] = rel_ids
         if self._use_attention:
-            g  = self.compute_attention(g)
+            g  = self.compute_attention(g, node_ids, rel_ids)
         node_embed_cache = [h]
         for i, layer in enumerate(self.layers):
             h = layer(g, h)
