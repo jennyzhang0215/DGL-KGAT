@@ -370,7 +370,7 @@ class DataLoader(object):
 
     def load_kg_plus_inverse(self, file_name):
         kg_pd = pd.read_csv(file_name, sep=" ", names=['h', "r", "t"], engine='python')
-        kg_pd.drop_duplicates()
+        kg_pd = kg_pd.drop_duplicates()
         kg_pd = kg_pd.sort_values(by=['h'])
         unique_rel = kg_pd['r'].nunique()
         entity_ids = np.unique(np.concatenate((kg_pd['h'].values, kg_pd['t'].values)))
