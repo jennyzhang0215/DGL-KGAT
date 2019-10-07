@@ -12,7 +12,7 @@ def parse_args():
     parser.add_argument('--gpu', type=int, default=0, help='use GPU')
     ### Data parameters
     parser.add_argument('--data_name', nargs='?', default='last-fm',  help='Choose a dataset from {yelp2018, last-fm, amazon-book}')
-    parser.add_argument('--adj_type', nargs='?', default='si', help='Specify the type of the adjacency (laplacian) matrix from {bi, si}.')
+    #parser.add_argument('--adj_type', nargs='?', default='si', help='Specify the type of the adjacency (laplacian) matrix from {bi, si}.')
 
     ### Model parameters
     parser.add_argument('--entity_embed_dim', type=int, default=64, help='CF Embedding size.')
@@ -23,13 +23,15 @@ def parse_args():
     parser.add_argument('--regs', type=float, default=0.00001, help='Regularization for user and item embeddings.')
 
     ### Training parameters
-    parser.add_argument('--max_epoch', type=int, default=100, help='train xx iterations')
+    parser.add_argument('--max_epoch', type=int, default=400, help='train xx iterations')
     parser.add_argument("--grad_norm", type=float, default=1.0, help="norm to clip gradient to")
     parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate.')
-    parser.add_argument('--batch_size', type=int, default=10000, help='CF batch size.')
+    parser.add_argument('--batch_size', type=int, default=1024, help='CF batch size.')
     parser.add_argument('--batch_size_kg', type=int, default=2048, help='KG batch size.')
-    parser.add_argument('--evaluate_every', type=int, default=1, help='the evaluation duration')
-    parser.add_argument("--eval_batch_size", type=int, default=-1, help="batch size when evaluating")
+    parser.add_argument('--evaluate_every', type=int, default=10, help='the evaluation duration')
+    parser.add_argument('--print_kg_every', type=int, default=100, help='the print duration')
+    parser.add_argument('--print_gnn_every', type=int, default=100, help='the print duration')
+    #parser.add_argument("--eval_batch_size", type=int, default=-1, help="batch size when evaluating")
     args = parser.parse_args()
     print(args)
     return args
@@ -80,7 +82,7 @@ def train(args):
             # print("start computing gradient ...")
             optimizer.step()
             optimizer.zero_grad()
-            if (iter % 10) == 0:
+            if (iter % args.print_kg_every) == 0:
                print("Epoch {:04d}, Iter {:04d} | Loss {:.4f} ".format(epoch, iter, loss.item()))
 
         ### Then train GNN
@@ -168,7 +170,7 @@ def train(args):
             # print("start computing gradient ...")
             optimizer.step()
             optimizer.zero_grad()
-            if (iter % 100) == 0:
+            if (iter % args.print_gnn_every) == 0:
                print("Epoch {:04d}  Iter: {:04d} Loss {:.4f} ".format(epoch, iter, loss.item()))
 
         if epoch % args.evaluate_every == 0:
@@ -189,7 +191,7 @@ def train(args):
                 else:
                     item_id_range = th.arange(dataset.num_items)
                 recall, ndcg = utils.calc_recall_ndcg(all_embedding, dataset, item_id_range, K=20, use_cuda=use_cuda)
-                print("[{:.1f}s]Epoch: {}, Test recall:{:.6%}, ndcg:{:.6%}".format(time()-epoch_time, epoch, recall, ndcg))
+                print("[{:.1f}s]Epoch: {}, Test recall:{:.5f}, ndcg:{:.5f}".format(time()-epoch_time, epoch, recall, ndcg))
             # save best model
             # if recall > best_recall:
             #     best_recall = recall
