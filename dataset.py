@@ -427,8 +427,8 @@ class DataLoader(object):
         self._get_all_kg_dict()
         exist_heads = list(self.all_kg_dict.keys())
         n_batch = self.num_all_triplets // batch_size + 1
-        print("#num_all_triplets", self.num_all_triplets, "batch_size", batch_size, "n_batch", n_batch,
-              "#exist_heads", len(exist_heads))
+        #print("#num_all_triplets", self.num_all_triplets, "batch_size", batch_size, "n_batch", n_batch,
+        #      "#exist_heads", len(exist_heads))
 
         i = 0
         while i < n_batch:
@@ -580,7 +580,7 @@ class DataLoader(object):
             n_batch = 1
         else:
             n_batch = self.num_train // batch_size + 1
-        print("#train_pair", self.num_train, "batch_size", batch_size, "n_batch", n_batch, "#exist_user", len(exist_users))
+        #print("#train_pair", self.num_train, "batch_size", batch_size, "n_batch", n_batch, "#exist_user", len(exist_users))
 
         i = 0
         while i < n_batch:
