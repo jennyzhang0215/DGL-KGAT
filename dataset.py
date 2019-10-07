@@ -416,11 +416,12 @@ class DataLoader(object):
     #         yield heads, pos_r_batch, pos_t_batch, neg_t_batch
 
     def _sample_pos_triples_for_h(self, h):
-        pos_triples = self.all_kg_dict[h]
-        n_pos_triples = len(pos_triples)
-        pos_id = np.random.randint(low=0, high=n_pos_triples, size=1)[0]
-        t = pos_triples[pos_id][0]
-        r = pos_triples[pos_id][1]
+        # pos_triples = self.all_kg_dict[h]
+        # n_pos_triples = len(pos_triples)
+        # pos_id = np.random.randint(low=0, high=n_pos_triples, size=1)[0]
+        # t = pos_triples[pos_id][0]
+        # r = pos_triples[pos_id][1]
+        t, r = rd.choice(self.all_kg_dict[h])
         return r, t
     def _sample_neg_triples_for_h(self, h, r):
         while True:
@@ -576,24 +577,10 @@ class DataLoader(object):
             neg_i_id = np.random.randint(low=0, high=self.num_items, size=1)[0]
             if neg_i_id not in self.train_user_dict[u]:
                 return neg_i_id
-    def _generate_user_pos_neg_items(self, batch_size):
-        if batch_size <= self.num_users:
-            ## test1
-            users = rd.sample(self.exist_users, batch_size)
-        else:
-            users = [rd.choice(self.exist_users) for _ in range(batch_size)]
-
-        pos_items, neg_items = [], []
-        for u in users:
-            pos_items += self._sample_pos_items_for_u(u)
-            neg_items += self._sample_neg_items_for_u(u)
-
-        return users, pos_items, neg_items
-
 
     def CF_pair_sampler(self, batch_size):
-        self.exist_users = list(self.train_user_dict.keys())
-        print("exist_user", len(self.exist_users))
+        exist_users = list(self.train_user_dict.keys())
+        print("exist_user", len(exist_users))
         if batch_size < 0:
             batch_size = self.num_train
             n_batch = 1
@@ -607,8 +594,17 @@ class DataLoader(object):
         #print("Batch_size:{}, #batches:{}".format(batch_size, n_batch))
         while i < n_batch:
             i += 1
-            user_ids, item_ids, neg_item_ids = self._generate_user_pos_neg_items(batch_size)
-            yield user_ids, item_ids, neg_item_ids
+            if batch_size <= self.num_users:
+                ## test1
+                users = rd.sample(exist_users, batch_size)
+            else:
+                users = [rd.choice(exist_users) for _ in range(batch_size)]
+
+            pos_items, neg_items = [], []
+            for u in users:
+                pos_items.append(self._sample_pos_items_for_u(u))
+                neg_items.append(self._sample_neg_items_for_u(u))
+            yield users, pos_items, neg_items
 
     # def CF_batchwise_sampler(self, batch_size):
     #     self.exist_users = self.train_user_dict.keys()
