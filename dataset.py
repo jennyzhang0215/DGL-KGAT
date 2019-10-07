@@ -236,7 +236,7 @@ class L_DataLoader(object):
     def _get_relational_lap_list(self, adj_list):
         ### TODO have some problems here
         def _bi_norm_lap(adj):
-            print("adj", adj.toarray())
+            #print("adj", adj.toarray())
             rowsum = np.array(adj.sum(1))
 
             d_inv_sqrt = np.power(rowsum, -0.5).flatten()
