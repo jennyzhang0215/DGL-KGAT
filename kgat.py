@@ -54,7 +54,7 @@ def train(args):
                   num_gnn_layers=args.gnn_num_layer, n_hidden=args.gnn_hidden_size, dropout=args.dropout_rate,
                   reg_lambda_kg=args.regs, reg_lambda_gnn=args.regs)
     if use_cuda:
-        model = model.cuda()
+        model.cuda()
     print(model)
     ### optimizer
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
