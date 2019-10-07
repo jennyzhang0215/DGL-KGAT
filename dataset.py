@@ -448,7 +448,7 @@ class DataLoader(object):
                 pos_rs, pos_ts = self._sample_pos_triples_for_h(h)
                 pos_r_batch.append(pos_rs)
                 pos_t_batch.append(pos_ts)
-                neg_ts = self._sample_neg_triples_for_h(h, pos_rs[0])
+                neg_ts = self._sample_neg_triples_for_h(h, pos_rs)
                 neg_t_batch.append(neg_ts)
             yield heads, pos_r_batch, pos_t_batch, neg_t_batch
 
