@@ -76,6 +76,21 @@ def train(args):
     best_recall = 0.0
     best_ndcg = 0.0
     model_state_file = 'model_state.pth'
+
+    g, all_etype = dataset.generate_whole_g()
+    nid_th = th.arange(dataset.num_all_entities)
+    etype_th = th.LongTensor(all_etype)
+    if use_cuda:
+        nid_th, etype_th = nid_th.cuda(), etype_th.cuda()
+    print("nid_th", nid_th)
+    print("etype_th", etype_th)
+    g.ndata['id'] = nid_th
+    g.edata['type'] = etype_th
+    if use_cuda:
+        item_id_range = th.arange(dataset.num_items).cuda()
+    else:
+        item_id_range = th.arange(dataset.num_items)
+
     for epoch in range(1, args.max_epoch+1):
         ### train kg first
         time1 = time()
@@ -105,14 +120,9 @@ def train(args):
         ### Then train GNN
         time1 = time()
         model.train()
-        g, all_etype = dataset.generate_whole_g()
-        nid_th = th.arange(dataset.num_all_entities)
-        etype_th = th.LongTensor(all_etype)
+
+
         cf_sampler = dataset.CF_pair_sampler(batch_size=args.batch_size)
-        if use_cuda:
-            nid_th, etype_th = nid_th.cuda(), etype_th.cuda()
-        g.ndata['id'] = nid_th
-        g.edata['type'] = etype_th
         with th.no_grad():
             att_w = model.compute_attention(g)
         g.edata['w'] = att_w
@@ -141,20 +151,10 @@ def train(args):
             time1 = time()
             with th.no_grad():
                 model.eval()
-                g, all_etype = dataset.generate_whole_g()
-                nid_th = th.arange(dataset.num_all_entities)
-                etype_th = th.LongTensor(all_etype)
-                if use_cuda:
-                    nid_th, etype_th, = nid_th.cuda(), etype_th.cuda()
-                g.ndata['id'] = nid_th
-                g.edata['type'] = etype_th
                 att_w = model.compute_attention(g)
                 g.edata['w'] = att_w
                 all_embedding = model.gnn(g)
-                if use_cuda:
-                    item_id_range = th.arange(dataset.num_items).cuda()
-                else:
-                    item_id_range = th.arange(dataset.num_items)
+
                 recall, ndcg = metric.calc_recall_ndcg(all_embedding, dataset, item_id_range, K=20, use_cuda=use_cuda)
 
             # save best model

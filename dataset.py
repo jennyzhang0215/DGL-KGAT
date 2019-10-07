@@ -286,22 +286,7 @@ class L_DataLoader(object):
         else:
             lap_list = [_si_norm_lap(adj) for adj in adj_list]
             print('\tgenerate si-normalized adjacency matrix.')
-        print("#lap_list: {}".format(len(lap_list)))
         return lap_list
-
-    # def _get_all_kg_dict(self, lap_list, adj_r_list):
-    #     all_kg_dict = collections.defaultdict(list)
-    #     for l_id, lap in enumerate(lap_list):
-    #         rows = lap.row
-    #         cols = lap.col
-    #
-    #         for i_id in range(len(rows)):
-    #             head = rows[i_id]
-    #             tail = cols[i_id]
-    #             relation = adj_r_list[l_id]
-    #
-    #             all_kg_dict[head].append((tail, relation))
-    #     return all_kg_dict
 
     def _get_all_kg_data(self, lap_list, adj_r_list):
         all_h_list, all_t_list, all_r_list = [], [], []
