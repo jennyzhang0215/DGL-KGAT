@@ -34,8 +34,8 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=10000, help='CF batch size.')
     parser.add_argument('--batch_size_kg', type=int, default=2048, help='KG batch size.')
     parser.add_argument('--evaluate_every', type=int, default=1, help='the evaluation duration')
-    parser.add_argument('--print_kg_every', type=int, default=100, help='the print duration')
-    parser.add_argument('--print_gnn_every', type=int, default=100, help='the print duration')
+    parser.add_argument('--print_kg_every', type=int, default=100, help='the print duration of the kg part')
+    parser.add_argument('--print_gnn_every', type=int, default=100, help='the print duration of the gnn part')
     #parser.add_argument("--eval_batch_size", type=int, default=-1, help="batch size when evaluating")
     args = parser.parse_args()
     save_dir = "{}_d{}_l{}_dp{}_lr{}_bz{}_kgbz{}_seed{}".format(args.data_name, args.entity_embed_dim,
