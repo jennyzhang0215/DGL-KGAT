@@ -470,7 +470,7 @@ class DataLoader(object):
 
     def _get_all_kg_dict(self):
         all_kg_dict = collections.defaultdict(list)
-        for h, r, t in self.all_triplet_np:
+        for h, r, t, v in self.all_triplet_np:
             if h in all_kg_dict.keys():
                 all_kg_dict[h].append((t, r))
             else:
