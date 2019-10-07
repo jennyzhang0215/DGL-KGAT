@@ -50,6 +50,7 @@ class L_DataLoader(object):
         self.all_triplet_np[:, 0] = all_h_list
         self.all_triplet_np[:, 1] = all_r_list
         self.all_triplet_np[:, 2] = all_t_list
+        self.all_triplet_np = self.all_triplet_np.astype(np.int32)
         self.w = all_v_list
 
         self.all_kg_dict = self._get_all_kg_dict()
