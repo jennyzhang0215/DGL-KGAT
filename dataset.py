@@ -6,7 +6,7 @@ import collections
 import random as rd
 from time import time
 import scipy.sparse as sp
-
+import multiprocessing
 
 class L_DataLoader(object):
     def __init__(self, data_name, batch_size=1024, adj_type='bi', num_neighbor_hop=3, seed=1234):
@@ -418,13 +418,13 @@ class DataLoader(object):
     def _sample_pos_triples_for_h(self, h):
         pos_triples = self.all_kg_dict[h]
         n_pos_triples = len(pos_triples)
-        pos_id = rd.randint(0, n_pos_triples-1)
+        pos_id = np.random.randint(low=0, high=n_pos_triples)
         t = pos_triples[pos_id][0]
         r = pos_triples[pos_id][1]
         return r, t
     def _sample_neg_triples_for_h(self, h, r):
         while True:
-            t = rd.randint(0, self.num_all_entities-1)
+            t = np.random.randint(low=0, high=self.num_all_entities)
             if (t, r) in self.all_kg_dict[h]:
                 continue
             else:
@@ -432,6 +432,8 @@ class DataLoader(object):
 
     def KG_sampler(self, batch_size):
         ### generate negative triplets
+        pool = multiprocessing.Pool(multiprocessing.cpu_count() // 2)
+
         self._get_all_kg_dict()
         exist_heads = list(self.all_kg_dict.keys())
         n_batch = self.num_all_triplets // batch_size + 1
@@ -444,6 +446,11 @@ class DataLoader(object):
             else:
                 heads = [rd.choice(exist_heads) for _ in range(batch_size)]
             pos_r_batch, pos_t_batch, neg_t_batch = [], [], []
+            ### generate positive samples
+            pos_r_batch, pos_t_batch = pool.map(self._sample_pos_triples_for_h, heads)
+            print("pos_r_batch", pos_r_batch)
+            print("pos_t_batch", pos_t_batch)
+
             for h in heads:
                 pos_rs, pos_ts = self._sample_pos_triples_for_h(h)
                 pos_r_batch.append(pos_rs)
