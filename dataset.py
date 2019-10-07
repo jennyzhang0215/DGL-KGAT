@@ -447,6 +447,8 @@ class DataLoader(object):
                 heads = [rd.choice(exist_heads) for _ in range(batch_size)]
             pos_r_batch, pos_t_batch, neg_t_batch = [], [], []
             ### generate positive samples
+            print("Heads", heads)
+
             print("Pool mapping .......")
             pos_r_batch, pos_t_batch = pool.map(self._sample_pos_triples_for_h, heads)
             print("pos_r_batch", pos_r_batch)
