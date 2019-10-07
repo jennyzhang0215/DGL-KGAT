@@ -90,12 +90,15 @@ def calc_recall_ndcg(embedding, dataset, all_item_id_range, K, use_cuda):
                 rank_indices = rank_indices.cpu().numpy()
             else:
                 rank_indices = rank_indices.numpy()
-            binary_rank_K = np.zeros(K)
+            binary_rank_K = np.zeros(K, dtype=np.float32)
             for i in range(K):
                 if rank_indices[i] in pos_item_l:
-                    binary_rank_K[i] = 1
+                    binary_rank_K[i] = 1.0
             #ranks.append(binary_rank_K)
-            recall_all += one_recall_at_k(binary_rank_K.tolist(), K, len(pos_item_l))
+            if len(pos_item_l) > 0:
+                recall_all += one_recall_at_k(binary_rank_K.tolist(), K, len(pos_item_l))
+            else:
+                print("Nan user dict:", u_id, dataset.test_user_dict[u_id])
             ndcg_all += one_ndcg_at_k(binary_rank_K.tolist(), K)
 
 
