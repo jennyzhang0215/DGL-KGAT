@@ -367,36 +367,74 @@ class DataLoader(object):
                 all_kg_dict[h] = [(t, r)]
         self.all_kg_dict = all_kg_dict
 
-    def _sample_pos_triples_for_h(self, h, num):
+    # def _sample_pos_triples_for_h(self, h, num):
+    #     pos_triples = self.all_kg_dict[h]
+    #     n_pos_triples = len(pos_triples)
+    #     pos_rs, pos_ts = [], []
+    #     while True:
+    #         if len(pos_rs) == num: break
+    #         pos_id = np.random.randint(low=0, high=n_pos_triples, size=1)[0]
+    #         t = pos_triples[pos_id][0]
+    #         r = pos_triples[pos_id][1]
+    #         if r not in pos_rs and t not in pos_ts:
+    #             pos_rs.append(r)
+    #             pos_ts.append(t)
+    #     return pos_rs, pos_ts
+
+
+    # def _sample_neg_triples_for_h(self, h, r, num):
+    #     neg_ts = []
+    #     while True:
+    #         if len(neg_ts) == num: break
+    #         t = np.random.randint(low=0, high=self.num_all_entities, size=1)[0]
+    #         if (t, r) not in self.all_kg_dict[h] and t not in neg_ts:
+    #             neg_ts.append(t)
+    #     return neg_ts
+    #
+    # def KG_sampler(self, batch_size):
+    #     ### generate negative triplets
+    #     self._get_all_kg_dict()
+    #     exist_heads = list(self.all_kg_dict.keys())
+    #     print("len(exist_heads)", len(exist_heads))
+    #     n_batch = self.num_all_triplets // batch_size + 1
+    #     print("num_all_triplets", self.num_all_triplets, "batch_size", batch_size, "n_batch", n_batch)
+    #     i = 0
+    #     #print("Batch_size:{}, #batches:{}".format(batch_size, n_batch))
+    #     while i < n_batch:
+    #         i += 1
+    #         if batch_size <= len(exist_heads):
+    #             heads = rd.sample(exist_heads, batch_size)
+    #         else:
+    #             heads = [rd.choice(exist_heads) for _ in range(batch_size)]
+    #         pos_r_batch, pos_t_batch, neg_t_batch = [], [], []
+    #         for h in heads:
+    #             pos_rs, pos_ts = self._sample_pos_triples_for_h(h, 1)
+    #             pos_r_batch += pos_rs
+    #             pos_t_batch += pos_ts
+    #             neg_ts = self._sample_neg_triples_for_h(h, pos_rs[0], 1)
+    #             neg_t_batch += neg_ts
+    #         yield heads, pos_r_batch, pos_t_batch, neg_t_batch
+
+    def _sample_pos_triples_for_h(self, h):
         pos_triples = self.all_kg_dict[h]
         n_pos_triples = len(pos_triples)
-        pos_rs, pos_ts = [], []
+        pos_id = rd.randint(0, n_pos_triples-1)
+        t = pos_triples[pos_id][0]
+        r = pos_triples[pos_id][1]
+        return r, t
+    def _sample_neg_triples_for_h(self, h, r):
         while True:
-            if len(pos_rs) == num: break
-            pos_id = np.random.randint(low=0, high=n_pos_triples, size=1)[0]
-            t = pos_triples[pos_id][0]
-            r = pos_triples[pos_id][1]
-            if r not in pos_rs and t not in pos_ts:
-                pos_rs.append(r)
-                pos_ts.append(t)
-        return pos_rs, pos_ts
-
-    def _sample_neg_triples_for_h(self, h, r, num):
-        neg_ts = []
-        while True:
-            if len(neg_ts) == num: break
-            t = np.random.randint(low=0, high=self.num_all_entities, size=1)[0]
-            if (t, r) not in self.all_kg_dict[h] and t not in neg_ts:
-                neg_ts.append(t)
-        return neg_ts
+            t = rd.randint(0, self.num_all_entities-1)
+            if (t, r) in self.all_kg_dict[h]:
+                continue
+            else:
+                return t
 
     def KG_sampler(self, batch_size):
         ### generate negative triplets
         self._get_all_kg_dict()
         exist_heads = list(self.all_kg_dict.keys())
-        print("len(exist_heads)", len(exist_heads))
         n_batch = self.num_all_triplets // batch_size + 1
-        print("num_all_triplets", self.num_all_triplets, "batch_size", batch_size, "n_batch", n_batch)
         i = 0
         #print("Batch_size:{}, #batches:{}".format(batch_size, n_batch))
         while i < n_batch:
@@ -407,13 +445,12 @@ class DataLoader(object):
                 heads = [rd.choice(exist_heads) for _ in range(batch_size)]
             pos_r_batch, pos_t_batch, neg_t_batch = [], [], []
             for h in heads:
-                pos_rs, pos_ts = self._sample_pos_triples_for_h(h, 1)
-                pos_r_batch += pos_rs
-                pos_t_batch += pos_ts
-                neg_ts = self._sample_neg_triples_for_h(h, pos_rs[0], 1)
-                neg_t_batch += neg_ts
+                pos_rs, pos_ts = self._sample_pos_triples_for_h(h)
+                pos_r_batch.append(pos_rs)
+                pos_t_batch.append(pos_ts)
+                neg_ts = self._sample_neg_triples_for_h(h, pos_rs[0])
+                neg_t_batch.append(neg_ts)
             yield heads, pos_r_batch, pos_t_batch, neg_t_batch
-
 
     def KG_sampler2(self, batch_size, sequential=True):
         if batch_size < 0:
