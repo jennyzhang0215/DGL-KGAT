@@ -150,8 +150,6 @@ def train(args):
             att_w = model.compute_attention(g)
         g.edata['w'] = att_w
         #print(g)
-        embedding = model.gnn(g)
-
         for user_ids, item_pos_ids, item_neg_ids in cf_sampler:
             iter += 1
             user_ids_th = th.LongTensor(user_ids)
@@ -160,6 +158,7 @@ def train(args):
             if use_cuda:
                 user_ids_th, item_pos_ids_th, item_neg_ids_th = \
                     user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda()
+            embedding = model.gnn(g)
             loss = model.get_loss(embedding, user_ids_th, item_pos_ids_th, item_neg_ids_th)
             #print("embedding", embedding.shape, embedding)
             #print("Before backward ...", g)
@@ -168,9 +167,9 @@ def train(args):
             # th.nn.utils.clip_grad_norm_(model.parameters(), args.grad_norm)  # clip gradients
             # print("start computing gradient ...")
             optimizer.step()
+            optimizer.zero_grad()
             if (iter % 100) == 0:
                print("Epoch {:04d}  Iter: {:04d} Loss {:.4f} ".format(epoch, iter, loss.item()))
-        optimizer.zero_grad()
 
         if epoch % args.evaluate_every == 0:
             with th.no_grad():
