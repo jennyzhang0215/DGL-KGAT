@@ -47,7 +47,7 @@ def parse_args():
 
 
 def train(args):
-    logging_config(folder=args.save_dir, name='log{:d}'.format(args.save_id), no_console=args.silent)
+    logging_config(folder=args.save_dir, name='log{:d}'.format(args.save_id), no_console=False)
 
     ### check context
     use_cuda = args.gpu >= 0 and th.cuda.is_available()
