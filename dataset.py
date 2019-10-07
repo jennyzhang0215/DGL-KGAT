@@ -35,6 +35,8 @@ class L_DataLoader(object):
         self.exist_users = list(train_user_dict.values())
         train_data[:, 0] = train_data[:, 0] + self.num_KG_entities
         test_data[:, 0] = test_data[:, 0] + self.num_KG_entities
+        print("train_data", train_data)
+        print("test_data", test_data)
 
         self.train_user_dict = {}
         for k,v in train_user_dict.items():
@@ -47,10 +49,13 @@ class L_DataLoader(object):
         adj_list, adj_r_list = self._get_relational_adj_list(train_data, relation_dict)
         self.num_all_relations = len(adj_r_list)
         lap_list = self._get_relational_lap_list(adj_list)
+        print("lap_list", lap_list)
         # all_kg_dict = self._get_all_kg_dict(lap_list, adj_r_list)
         all_h_list, all_r_list, all_t_list, all_v_list = self._get_all_kg_data(lap_list, adj_r_list)
+        print("all_h_list", len(all_h_list), all_h_list)
         self.num_all_entities = self.num_KG_entities + self.num_users
         self.num_all_triplets = len(all_h_list)
+        print("num_all_triplets", self.num_all_triplets)
 
         self.all_triplet_np = np.zeros((self.num_all_triplets, 3))
         self.all_triplet_np[:, 0] = all_h_list
