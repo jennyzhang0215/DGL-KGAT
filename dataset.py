@@ -421,14 +421,14 @@ class DataLoader(object):
         pos_id = np.random.randint(low=0, high=n_pos_triples)
         t = pos_triples[pos_id][0]
         r = pos_triples[pos_id][1]
-        return r, t
+        return [r], [t]
     def _sample_neg_triples_for_h(self, h, r):
         while True:
             t = np.random.randint(low=0, high=self.num_all_entities)
             if (t, r) in self.all_kg_dict[h]:
                 continue
             else:
-                return t
+                return [t]
 
     def KG_sampler(self, batch_size):
         ### generate negative triplets
@@ -455,11 +455,11 @@ class DataLoader(object):
             # print("pos_t_batch", pos_t_batch)
             for h in heads:
                 pos_rs, pos_ts = self._sample_pos_triples_for_h(h)
-                pos_r_batch.append(pos_rs)
-                pos_t_batch.append(pos_ts)
-                neg_ts = self._sample_neg_triples_for_h(h, pos_rs)
-                neg_t_batch.append(neg_ts)
-            print("Time:{}s".format(time() - time1))
+                pos_r_batch += pos_rs
+                pos_t_batch += pos_ts
+                neg_ts = self._sample_neg_triples_for_h(h, pos_rs[0])
+                neg_t_batch += neg_ts
+            #print("Time:{}s".format(time() - time1))
             yield heads, pos_r_batch, pos_t_batch, neg_t_batch
 
     def KG_sampler2(self, batch_size, sequential=True):
