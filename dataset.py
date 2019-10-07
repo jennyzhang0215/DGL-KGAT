@@ -8,7 +8,7 @@ from time import time
 import scipy.sparse as sp
 
 class L_DataLoader(object):
-    def __init__(self, data_name, num_neighbor_hop=3, adj_type='bi', seed=1234):
+    def __init__(self, data_name, num_neighbor_hop=3, adj_type='si', seed=1234):
         self._adj_type = adj_type
         data_dir =  os.path.realpath(os.path.join(os.path.abspath(__file__), '..', "datasets", data_name))
         train_file = os.path.join(data_dir, "train.txt")
@@ -370,6 +370,7 @@ class DataLoader(object):
 
     def load_kg_plus_inverse(self, file_name):
         kg_pd = pd.read_csv(file_name, sep=" ", names=['h', "r", "t"], engine='python')
+        kg_pd.drop_duplicates()
         kg_pd = kg_pd.sort_values(by=['h'])
         unique_rel = kg_pd['r'].nunique()
         entity_ids = np.unique(np.concatenate((kg_pd['h'].values, kg_pd['t'].values)))
