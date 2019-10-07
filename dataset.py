@@ -51,11 +51,11 @@ class L_DataLoader(object):
         self.num_all_entities = self.num_KG_entities + self.num_users
         self.num_all_triplets = len(all_h_list)
 
-        self.all_triplet_np = np.zeros((self.num_all_triplets, 4))
+        self.all_triplet_np = np.zeros((self.num_all_triplets, 3))
         self.all_triplet_np[:, 0] = all_h_list
         self.all_triplet_np[:, 1] = all_r_list
         self.all_triplet_np[:, 2] = all_t_list
-        self.all_triplet_np[:, 3] = all_v_list
+        self.w = all_v_list
 
         self.all_kg_dict = self._get_all_kg_dict()
         print("The whole graph: {} entities, {} relations, {} triplets".format(
@@ -72,9 +72,6 @@ class L_DataLoader(object):
         all_etype = self.all_triplet_np[:, 1]
 
         return g, all_etype
-
-    def generate_w(self):
-        return self.all_triplet_np[:, 3]
 
     def _get_all_kg_dict(self):
         all_kg_dict = collections.defaultdict(list)
@@ -470,7 +467,7 @@ class DataLoader(object):
 
     def _get_all_kg_dict(self):
         all_kg_dict = collections.defaultdict(list)
-        for h, r, t, v in self.all_triplet_np:
+        for h, r, t in self.all_triplet_np:
             if h in all_kg_dict.keys():
                 all_kg_dict[h].append((t, r))
             else:
