@@ -432,7 +432,6 @@ class DataLoader(object):
 
     def KG_sampler(self, batch_size):
         ### generate negative triplets
-        pool = multiprocessing.Pool(multiprocessing.cpu_count() // 2)
         print("#Core", multiprocessing.cpu_count() // 2)
         self._get_all_kg_dict()
         exist_heads = list(self.all_kg_dict.keys())
@@ -440,6 +439,7 @@ class DataLoader(object):
         i = 0
         #print("Batch_size:{}, #batches:{}".format(batch_size, n_batch))
         while i < n_batch:
+            pool = multiprocessing.Pool(multiprocessing.cpu_count() // 2)
             i += 1
             if batch_size <= len(exist_heads):
                 heads = rd.sample(exist_heads, batch_size)
@@ -447,6 +447,7 @@ class DataLoader(object):
                 heads = [rd.choice(exist_heads) for _ in range(batch_size)]
             pos_r_batch, pos_t_batch, neg_t_batch = [], [], []
             ### generate positive samples
+            print("Pool mapping .......")
             pos_r_batch, pos_t_batch = pool.map(self._sample_pos_triples_for_h, heads)
             print("pos_r_batch", pos_r_batch)
             print("pos_t_batch", pos_t_batch)
