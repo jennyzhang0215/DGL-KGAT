@@ -168,9 +168,9 @@ def train(args):
             # th.nn.utils.clip_grad_norm_(model.parameters(), args.grad_norm)  # clip gradients
             # print("start computing gradient ...")
             optimizer.step()
-            optimizer.zero_grad()
             if (iter % 100) == 0:
                print("Epoch {:04d}  Iter: {:04d} Loss {:.4f} ".format(epoch, iter, loss.item()))
+        optimizer.zero_grad()
 
         if epoch % args.evaluate_every == 0:
             with th.no_grad():
