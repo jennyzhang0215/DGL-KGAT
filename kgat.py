@@ -83,7 +83,7 @@ def train(args):
             optimizer.step()
             optimizer.zero_grad()
             if (iter % args.print_kg_every) == 0:
-               print("Epoch {:04d}, Iter {:04d} | Loss {:.4f} ".format(epoch, iter, loss.item()))
+               print("Epoch {:04d} Iter {:04d} | Loss {:.4f} ".format(epoch, iter, loss.item()))
 
         ### Then train GNN
         """
@@ -171,7 +171,7 @@ def train(args):
             optimizer.step()
             optimizer.zero_grad()
             if (iter % args.print_gnn_every) == 0:
-               print("Epoch {:04d}  Iter: {:04d} Loss {:.4f} ".format(epoch, iter, loss.item()))
+               print("Epoch {:04d} Iter {:04d} | Loss {:.4f} ".format(epoch, iter, loss.item()))
 
         if epoch % args.evaluate_every == 0:
             with th.no_grad():
