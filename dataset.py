@@ -36,10 +36,10 @@ class L_DataLoader(object):
 
         self.train_user_dict = {}
         for k,v in train_user_dict.items():
-            self.train_user_dict[k+self.num_KG_entities] = v
-        self.test_uer_dict = {}
+            self.train_user_dict[k+self.num_KG_entities] = np.unique(v)
+        self.test_user_dict = {}
         for k,v in test_user_dict.items():
-            self.test_uer_dict[k+self.num_KG_entities] = v
+            self.test_user_dict[k+self.num_KG_entities] = np.unique(v)
 
         ## merge KG and UI-pairs
         adj_list, adj_r_list = self._get_relational_adj_list(train_data, relation_dict)
