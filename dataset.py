@@ -277,11 +277,6 @@ class L_DataLoader(object):
     #     return all_kg_dict
 
     def _get_all_kg_data(self, lap_list, adj_r_list):
-        def _reorder_list(org_list, order):
-            new_list = np.array(org_list)
-            new_list = new_list[order]
-            return new_list
-
         all_h_list, all_t_list, all_r_list = [], [], []
         all_v_list = []
 
@@ -290,58 +285,7 @@ class L_DataLoader(object):
             all_t_list += list(lap.col)
             all_v_list += list(lap.data)
             all_r_list += [adj_r_list[l_id]] * len(lap.row)
-
-        assert len(all_h_list) == sum([len(lap.data) for lap in lap_list])
-
-        # resort the all_h/t/r/v_list,
-        # ... since tensorflow.sparse.softmax requires indices sorted in the canonical lexicographic order
-        print('\treordering indices...')
-        org_h_dict = dict()
-
-        for idx, h in enumerate(all_h_list):
-            if h not in org_h_dict.keys():
-                org_h_dict[h] = [[],[],[]]
-
-            org_h_dict[h][0].append(all_t_list[idx])
-            org_h_dict[h][1].append(all_r_list[idx])
-            org_h_dict[h][2].append(all_v_list[idx])
-        print('\treorganize all kg data done.')
-
-        sorted_h_dict = dict()
-        for h in org_h_dict.keys():
-            org_t_list, org_r_list, org_v_list = org_h_dict[h]
-            sort_t_list = np.array(org_t_list)
-            sort_order = np.argsort(sort_t_list)
-
-            sort_t_list = _reorder_list(org_t_list, sort_order)
-            sort_r_list = _reorder_list(org_r_list, sort_order)
-            sort_v_list = _reorder_list(org_v_list, sort_order)
-
-            sorted_h_dict[h] = [sort_t_list, sort_r_list, sort_v_list]
-        print('\tsort meta-data done.')
-
-        od = collections.OrderedDict(sorted(sorted_h_dict.items()))
-        new_h_list, new_t_list, new_r_list, new_v_list = [], [], [], []
-
-        for h, vals in od.items():
-            new_h_list += [h] * len(vals[0])
-            new_t_list += list(vals[0])
-            new_r_list += list(vals[1])
-            new_v_list += list(vals[2])
-
-
-        assert sum(new_h_list) == sum(all_h_list)
-        assert sum(new_t_list) == sum(all_t_list)
-        assert sum(new_r_list) == sum(all_r_list)
-        # try:
-        #     assert sum(new_v_list) == sum(all_v_list)
-        # except Exception:
-        #     print(sum(new_v_list), '\n')
-        #     print(sum(all_v_list), '\n')
-        print('\tsort all data done.')
-
-
-        return new_h_list, new_r_list, new_t_list, new_v_list
+        return all_h_list, all_r_list, all_t_list, all_v_list
 
 
 class DataLoader(object):
