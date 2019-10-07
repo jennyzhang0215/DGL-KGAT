@@ -416,11 +416,6 @@ class DataLoader(object):
     #         yield heads, pos_r_batch, pos_t_batch, neg_t_batch
 
     def _sample_pos_triples_for_h(self, h):
-        # pos_triples = self.all_kg_dict[h]
-        # n_pos_triples = len(pos_triples)
-        # pos_id = np.random.randint(low=0, high=n_pos_triples, size=1)[0]
-        # t = pos_triples[pos_id][0]
-        # r = pos_triples[pos_id][1]
         t, r = rd.choice(self.all_kg_dict[h])
         return r, t
     def _sample_neg_triples_for_h(self, h, r):
@@ -429,15 +424,14 @@ class DataLoader(object):
             if (t, r) not in self.all_kg_dict[h]:
                 return t
     def KG_sampler(self, batch_size):
-        ### generate negative triplets
-        #print("#Core", multiprocessing.cpu_count() // 4)
         self._get_all_kg_dict()
         exist_heads = list(self.all_kg_dict.keys())
         n_batch = self.num_all_triplets // batch_size + 1
+        print("#num_all_triplets", self.num_all_triplets, "batch_size", batch_size, "n_batch", n_batch,
+              "#exist_heads", len(exist_heads))
+
         i = 0
-        #print("Batch_size:{}, #batches:{}".format(batch_size, n_batch))
         while i < n_batch:
-            #time1 = time()
             i += 1
             if batch_size <= len(exist_heads):
                 heads = rd.sample(exist_heads, batch_size)
@@ -450,7 +444,6 @@ class DataLoader(object):
                 pos_t_batch.append(pos_ts)
                 neg_ts = self._sample_neg_triples_for_h(h, pos_rs)
                 neg_t_batch.append(neg_ts)
-            # print("Time:{}s".format(time() - time1))
 
             yield heads, pos_r_batch, pos_t_batch, neg_t_batch
 
@@ -577,10 +570,8 @@ class DataLoader(object):
             neg_i_id = np.random.randint(low=0, high=self.num_items, size=1)[0]
             if neg_i_id not in self.train_user_dict[u]:
                 return neg_i_id
-
     def CF_pair_sampler(self, batch_size):
         exist_users = list(self.train_user_dict.keys())
-        print("exist_user", len(exist_users))
         if batch_size < 0:
             batch_size = self.num_train
             n_batch = 1
@@ -589,9 +580,9 @@ class DataLoader(object):
             n_batch = 1
         else:
             n_batch = self.num_train // batch_size + 1
-        print("num_train", self.num_train, "batch_size", batch_size, "n_batch", n_batch)
+        print("#train_pair", self.num_train, "batch_size", batch_size, "n_batch", n_batch, "#exist_user", len(exist_users))
+
         i = 0
-        #print("Batch_size:{}, #batches:{}".format(batch_size, n_batch))
         while i < n_batch:
             i += 1
             if batch_size <= self.num_users:

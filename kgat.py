@@ -30,7 +30,7 @@ def parse_args():
     ### Training parameters
     parser.add_argument('--max_epoch', type=int, default=400, help='train xx iterations')
     parser.add_argument("--grad_norm", type=float, default=1.0, help="norm to clip gradient to")
-    parser.add_argument('--lr', type=float, default=0.001, help='Learning rate.')
+    parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate.')
     parser.add_argument('--batch_size', type=int, default=1024, help='CF batch size.')
     parser.add_argument('--batch_size_kg', type=int, default=2048, help='KG batch size.')
     parser.add_argument('--evaluate_every', type=int, default=1, help='the evaluation duration')
@@ -151,14 +151,14 @@ def train(args):
                 else:
                     item_id_range = th.arange(dataset.num_items)
                 recall, ndcg = metric.calc_recall_ndcg(all_embedding, dataset, item_id_range, K=20, use_cuda=use_cuda)
-                logging.info("[{:.1f}s]Epoch: {}, Test recall:{:.5f}, ndcg:{:.5f}".format(time()-time1, epoch, recall, ndcg))
+                logging.info("[{:.1f}s]Epoch: {}, Test recall:{:.5f}, ndcg:{:.5f}\n".format(time()-time1, epoch, recall, ndcg))
                 test_metric_logger.log(epoch=epoch, recall=recall, ndcg=ndcg)
             # save best model
             # if recall > best_recall:
             #     best_recall = recall
             #     th.save({'state_dict': model.state_dict(), 'epoch': epoch}, model_state_file)
-            if use_cuda:
-                model.cuda()
+            # if use_cuda:
+            #     model.cuda()
 
 if __name__ == '__main__':
     args = parse_args()
