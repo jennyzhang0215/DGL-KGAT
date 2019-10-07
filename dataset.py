@@ -433,7 +433,7 @@ class DataLoader(object):
     def KG_sampler(self, batch_size):
         ### generate negative triplets
         pool = multiprocessing.Pool(multiprocessing.cpu_count() // 2)
-
+        print("#Core", multiprocessing.cpu_count() // 2)
         self._get_all_kg_dict()
         exist_heads = list(self.all_kg_dict.keys())
         n_batch = self.num_all_triplets // batch_size + 1
