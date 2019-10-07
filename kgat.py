@@ -101,7 +101,7 @@ def train(args):
             optimizer.zero_grad()
             total_loss += loss.item()
             if (iter % args.print_kg_every) == 0:
-               logging.info("Epoch {:04d} Iter {:04d} | Loss {:.4f} ".format(epoch, iter, total_loss/iter))
+               logging.info("Epoch {:03d} Iter {:04d} | Loss {:.4f} ".format(epoch, iter, total_loss/iter))
         logging.info(['Time for KGE: {:.1f}s'.format(time() - time1)])
 
         ### Then train GNN
@@ -136,7 +136,7 @@ def train(args):
             optimizer.zero_grad()
             total_loss += loss.item()
             if (iter % args.print_gnn_every) == 0:
-               logging.info("Epoch {:04d} Iter {:04d} | Loss {:.4f} ".format(epoch, iter, total_loss/iter))
+               logging.info("Epoch {:03d} Iter {:04d} | Loss {:.4f} ".format(epoch, iter, total_loss/iter))
         logging.info(['Time for GNN: {:.1f}s'.format(time() - time1)])
 
         if epoch % args.evaluate_every == 0:
@@ -158,7 +158,6 @@ def train(args):
                 else:
                     item_id_range = th.arange(dataset.num_items)
                 recall, ndcg = metric.calc_recall_ndcg(all_embedding, dataset, item_id_range, K=20, use_cuda=use_cuda)
-
 
             # save best model
             if recall > best_recall:
