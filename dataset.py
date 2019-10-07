@@ -58,6 +58,10 @@ class L_DataLoader(object):
         self.all_triplet_np[:, 3] = all_v_list
 
         self.all_kg_dict = self._get_all_kg_dict()
+        print("The whole graph: {} entities, {} relations, {} triplets".format(
+            self.num_all_entities, self.num_all_relations, self.num_all_triplets))
+        print("The user-item pairs: {} users, {} items, {} train pairs, {} test pairs".format(
+            self.num_users, self.num_items, self.num_train, self.num_test))
 
     def generate_whole_g(self):
         g = dgl.DGLGraph()
@@ -384,6 +388,8 @@ class DataLoader(object):
         assert np.max(all_triplet) + 1 == self.num_all_entities
         print("The whole graph: {} entities, {} relations, {} triplets".format(
             self.num_all_entities, self.num_all_relations, self.num_all_triplets))
+        print("The user-item pairs: {} users, {} items, {} train pairs, {} test pairs".format(
+            self.num_users, self.num_items, self.num_train, self.num_test))
 
         self.all_kg_dict = self._get_all_kg_dict()
 
