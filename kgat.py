@@ -34,8 +34,8 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=1024, help='CF batch size.')
     parser.add_argument('--batch_size_kg', type=int, default=2048, help='KG batch size.')
     parser.add_argument('--evaluate_every', type=int, default=1, help='the evaluation duration')
-    parser.add_argument('--print_kg_every', type=int, default=100, help='the print duration of the kg part')
-    parser.add_argument('--print_gnn_every', type=int, default=100, help='the print duration of the gnn part')
+    parser.add_argument('--print_kg_every', type=int, default=200, help='the print duration of the kg part')
+    parser.add_argument('--print_gnn_every', type=int, default=200, help='the print duration of the gnn part')
     #parser.add_argument("--eval_batch_size", type=int, default=-1, help="batch size when evaluating")
     args = parser.parse_args()
     save_dir = "{}_d{}_l{}_dp{}_lr{}_bz{}_kgbz{}_seed{}".format(args.data_name, args.entity_embed_dim,
@@ -77,11 +77,11 @@ def train(args):
     test_metric_logger = MetricLogger(['epoch', 'recall', 'ndcg'], ['%d', '%.5f', '%.5f'],
                                       os.path.join(args.save_dir, 'test{:d}.csv'.format(args.save_id)))
     for epoch in range(1, args.max_epoch+1):
-
         ### train kg first
         time1 = time()
         kg_sampler = dataset.KG_sampler(batch_size=args.batch_size_kg)
         iter = 0
+        total_loss = 0.0
         for h, r, pos_t, neg_t in kg_sampler:
             iter += 1
             model.train()
@@ -97,9 +97,11 @@ def train(args):
             # print("start computing gradient ...")
             optimizer.step()
             optimizer.zero_grad()
+            total_loss += loss.item()
             if (iter % args.print_kg_every) == 0:
-               logging.info("Epoch {:04d} Iter {:04d} | Loss {:.4f} ".format(epoch, iter, loss.item()))
-        print(['Time: {}s'.format(time() - time1)])
+               logging.info("Epoch {:04d} Iter {:04d} | Loss {:.4f} ".format(epoch, iter, total_loss/iter))
+        logging.info(['Time for KGE: {:.1f}s'.format(time() - time1)])
+
         ### Then train GNN
         time1 = time()
         model.train()
@@ -107,7 +109,6 @@ def train(args):
         nid_th = th.arange(dataset.num_all_entities)
         etype_th = th.LongTensor(all_etype)
         cf_sampler = dataset.CF_pair_sampler(batch_size=args.batch_size)
-        iter = 0
         if use_cuda:
             nid_th, etype_th = nid_th.cuda(), etype_th.cuda()
         g.ndata['id'] = nid_th
@@ -115,6 +116,8 @@ def train(args):
         with th.no_grad():
             att_w = model.compute_attention(g)
         g.edata['w'] = att_w
+        iter = 0
+        total_loss = 0.0
         for user_ids, item_pos_ids, item_neg_ids in cf_sampler:
             iter += 1
             user_ids_th = th.LongTensor(user_ids)
@@ -129,9 +132,11 @@ def train(args):
             # th.nn.utils.clip_grad_norm_(model.parameters(), args.grad_norm)  # clip gradients
             optimizer.step()
             optimizer.zero_grad()
+            total_loss += loss.item()
             if (iter % args.print_gnn_every) == 0:
-               logging.info("Epoch {:04d} Iter {:04d} | Loss {:.4f} ".format(epoch, iter, loss.item()))
-        print(['Time: {}s'.format(time() - time1)])
+               logging.info("Epoch {:04d} Iter {:04d} | Loss {:.4f} ".format(epoch, iter, total_loss/iter))
+        logging.info(['Time for GNN: {:.1f}s'.format(time() - time1)])
+
         if epoch % args.evaluate_every == 0:
             time1 = time()
             with th.no_grad():
