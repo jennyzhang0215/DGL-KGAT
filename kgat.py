@@ -14,21 +14,19 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Reproduce KGAT using DGL")
     parser.add_argument('--gpu', type=int, default=0, help='use GPU')
     parser.add_argument('--seed', type=int, default=1234, help='the random seed')
-
     ### Data parameters
     parser.add_argument('--data_name', nargs='?', default='last-fm',  help='Choose a dataset from {yelp2018, last-fm, amazon-book}')
     #parser.add_argument('--adj_type', nargs='?', default='si', help='Specify the type of the adjacency (laplacian) matrix from {bi, si}.')
-
     ### Model parameters
     parser.add_argument('--entity_embed_dim', type=int, default=64, help='CF Embedding size.')
     parser.add_argument('--relation_embed_dim', type=int, default=64, help='CF Embedding size.')
     parser.add_argument('--gnn_num_layer', type=int, default=3, help='the number of layers')
     parser.add_argument('--gnn_hidden_size', type=int, default=64, help='Output sizes of every layer')
     parser.add_argument('--dropout_rate', type=float, default=0.1, help='Keep probability w.r.t. node dropout (i.e., 1-dropout_ratio) for each deep layer. 1: no dropout.')
-    parser.add_argument('--regs', type=float, default=0.00001, help='Regularization for user and item embeddings.')
+    parser.add_argument('--regs', type=float, default=0.0001, help='Regularization for user and item embeddings.')
 
     ### Training parameters
-    parser.add_argument('--max_epoch', type=int, default=400, help='train xx iterations')
+    parser.add_argument('--max_epoch', type=int, default=1000, help='train xx iterations')
     parser.add_argument("--grad_norm", type=float, default=1.0, help="norm to clip gradient to")
     parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate.')
     parser.add_argument('--batch_size', type=int, default=1024, help='CF batch size.')
@@ -102,7 +100,7 @@ def train(args):
             total_loss += loss.item()
             if (iter % args.print_kg_every) == 0:
                logging.info("Epoch {:03d} Iter {:04d} | Loss {:.4f} ".format(epoch, iter, total_loss/iter))
-        logging.info(['Time for KGE: {:.1f}s'.format(time() - time1)])
+        logging.info(['Time for KGE: {:.1f}s, loss {:.4f}'.format(time() - time1, total_loss/iter)])
 
         ### Then train GNN
         time1 = time()
@@ -137,7 +135,7 @@ def train(args):
             total_loss += loss.item()
             if (iter % args.print_gnn_every) == 0:
                logging.info("Epoch {:03d} Iter {:04d} | Loss {:.4f} ".format(epoch, iter, total_loss/iter))
-        logging.info(['Time for GNN: {:.1f}s'.format(time() - time1)])
+        logging.info(['Time for GNN: {:.1f}s, loss {:.4f}'.format(time() - time1, total_loss/iter)])
 
         if epoch % args.evaluate_every == 0:
             time1 = time()
