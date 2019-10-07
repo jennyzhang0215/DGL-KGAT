@@ -78,8 +78,7 @@ def train(args):
     model_state_file = 'model_state.pth'
 
     g, all_etype = dataset.generate_whole_g()
-    nid_th = th.arange(dataset.num_all_entities)
-    nid_th = th.LongTensor(nid_th)
+    nid_th = th.arange(dataset.num_all_entities, dtype=th.long)
     etype_th = th.LongTensor(all_etype)
     if use_cuda:
         nid_th, etype_th = nid_th.cuda(), etype_th.cuda()
