@@ -25,6 +25,7 @@ class L_DataLoader(object):
         self.num_test = len(test_data)
 
         kg_np, kg_dict, relation_dict = self._load_kg(kg_file)
+        print("kg_np", kg_np.shape, kg_np)
         self.num_KG_relations = max(kg_np[:, 1]) + 1
         self.num_KG_entities = max(max(kg_np[:, 0]), max(kg_np[:, 2])) + 1
         self.num_KG_triples = len(kg_np)
