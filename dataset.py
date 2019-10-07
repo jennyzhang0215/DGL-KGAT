@@ -426,8 +426,7 @@ class DataLoader(object):
         while True:
             t = np.random.randint(low=0, high=self.num_all_entities, size=1)[0]
             if (t, r) not in self.all_kg_dict[h]:
-                break
-        return t
+                return t
     def KG_sampler(self, batch_size):
         ### generate negative triplets
         #print("#Core", multiprocessing.cpu_count() // 4)

@@ -45,7 +45,7 @@ def parse_args():
         os.makedirs('log')
     if not os.path.isdir(args.save_dir):
         os.makedirs(args.save_dir)
-    args.save_id = creat_log_id(save_dir)
+    args.save_id = creat_log_id(args.save_dir)
     logging.info(args)
     return args
 
