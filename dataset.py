@@ -394,6 +394,7 @@ class DataLoader(object):
         ### generate negative triplets
         self._get_all_kg_dict()
         exist_heads = list(self.all_kg_dict.keys())
+        print("len(exist_heads)", len(exist_heads))
         n_batch = self.num_all_triplets // batch_size + 1
         print("num_all_triplets", self.num_all_triplets, "batch_size", batch_size, "n_batch", n_batch)
         i = 0
@@ -502,7 +503,7 @@ class DataLoader(object):
         pos_batch = []
         while True:
             if len(pos_batch) == num: break
-            pos_id = np.random.randint(low=0, high=n_pos_items, size=1)[0]
+            pos_id = np.random.randint(low=0, high=n_pos_items)
             pos_i_id = pos_items[pos_id]
 
             if pos_i_id not in pos_batch:
@@ -512,12 +513,13 @@ class DataLoader(object):
         neg_items = []
         while True:
             if len(neg_items) == num: break
-            neg_i_id = np.random.randint(low=0, high=self.num_items, size=1)[0]
+            neg_i_id = np.random.randint(low=0, high=self.num_items)
             if neg_i_id not in self.train_user_dict[u] and neg_i_id not in neg_items:
                 neg_items.append(neg_i_id)
         return neg_items
     def _generate_user_pos_neg_items(self, batch_size):
         if batch_size <= self.num_users:
+            ## test1
             users = rd.sample(self.exist_users, batch_size)
         else:
             users = [rd.choice(self.exist_users) for _ in range(batch_size)]
@@ -562,7 +564,7 @@ class DataLoader(object):
 
     def CF_pair_sampler(self, batch_size):
         self.exist_users = list(self.train_user_dict.keys())
-
+        print("exist_user", self.exist_users)
         if batch_size < 0:
             batch_size = self.num_train
             n_batch = 1
