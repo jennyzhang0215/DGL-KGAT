@@ -458,12 +458,13 @@ class DataLoader(object):
         for l in lines:
             tmps = l.strip()
             inters = [int(i) for i in tmps.split(' ')]
-            user_id, item_ids = inters[0], inters[1:]
-            item_ids = list(set(item_ids))
-            for i_id in item_ids:
-                src.append(user_id)
-                dst.append(i_id)
-            user_dict[user_id] = item_ids
+            if len(inters) > 1:
+                user_id, item_ids = inters[0], inters[1:]
+                item_ids = list(set(item_ids))
+                for i_id in item_ids:
+                    src.append(user_id)
+                    dst.append(i_id)
+                user_dict[user_id] = item_ids
         return np.array(src, dtype=np.int32), np.array(dst, dtype=np.int32), user_dict
 
     def load_train_interaction(self, file_name):
