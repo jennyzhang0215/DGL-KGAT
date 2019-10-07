@@ -57,7 +57,7 @@ class L_DataLoader(object):
             self.num_all_entities, self.num_all_relations, self.num_all_triplets))
         print("The KG: #entities {}, #relations {}, #triplets {}".format(
             self.num_KG_entities, self.num_KG_relations, self.num_KG_triples))
-        print("The user-item pairs: {} users, {} items, {} train pairs, {} test pairs".format(
+        print("The user-item pairs: #users {}, #items {}, #train pairs {}, #test pairs {}".format(
             self.num_users, self.num_items, self.num_train, self.num_test))
 
     @property
@@ -97,7 +97,6 @@ class L_DataLoader(object):
         g.add_nodes(self.num_all_entities)
         g.add_edges(self.all_triplet_np[:, 2], self.all_triplet_np[:, 0])
         all_etype = self.all_triplet_np[:, 1]
-
         return g, all_etype
 
     def _get_all_kg_dict(self):
