@@ -17,26 +17,22 @@ class L_DataLoader(object):
 
         train_data, train_user_dict = self._load_ratings(train_file)
         test_data, test_user_dict = self._load_ratings(test_file)
-        self.num_users = max(max(train_data[:, 0]), max(test_data[:, 0])) + 1
-        assert self.num_users == np.unique(np.concatenate((train_data[:, 0], test_data[:, 0]))).size
-        self.num_items = max(max(train_data[:, 1]), max(test_data[:, 1])) + 1
-        assert self.num_items ==  np.unique(np.concatenate((train_data[:, 1], test_data[:, 1]))).size
-        self.num_train = len(train_data)
-        self.num_test = len(test_data)
+        self._n_users = max(max(train_data[:, 0]), max(test_data[:, 0])) + 1
+        assert self._n_users == np.unique(np.concatenate((train_data[:, 0], test_data[:, 0]))).size
+        self._n_items = max(max(train_data[:, 1]), max(test_data[:, 1])) + 1
+        assert self._n_items ==  np.unique(np.concatenate((train_data[:, 1], test_data[:, 1]))).size
+        self._n_train = len(train_data)
+        self._n_test = len(test_data)
 
         kg_np, kg_dict, relation_dict = self._load_kg(kg_file)
-        print("kg_np", kg_np.shape, kg_np)
-        self.num_KG_relations = max(kg_np[:, 1]) + 1
-        self.num_KG_entities = max(max(kg_np[:, 0]), max(kg_np[:, 2])) + 1
-        self.num_KG_triples = len(kg_np)
+        self._n_KG_relations = max(kg_np[:, 1]) + 1
+        self._n_KG_entities = max(max(kg_np[:, 0]), max(kg_np[:, 2])) + 1
+        self._n_KG_triples = len(kg_np)
 
         ## remapping user ids to new ids which is after entity ids
         self.user_mapping = {i: i+self.num_KG_entities for i in range(self.num_users)}
-        self.exist_users = list(train_user_dict.values())
         train_data[:, 0] = train_data[:, 0] + self.num_KG_entities
         test_data[:, 0] = test_data[:, 0] + self.num_KG_entities
-        print("train_data", train_data)
-        print("test_data", test_data)
 
         self.train_user_dict = {}
         for k,v in train_user_dict.items():
@@ -47,24 +43,54 @@ class L_DataLoader(object):
 
         ## merge KG and UI-pairs
         adj_list, adj_r_list = self._get_relational_adj_list(train_data, relation_dict)
-        self.num_all_relations = len(adj_r_list)
         lap_list = self._get_relational_lap_list(adj_list)
         all_h_list, all_r_list, all_t_list, all_v_list = self._get_all_kg_data(lap_list, adj_r_list)
-        self.num_all_entities = self.num_KG_entities + self.num_users
-        self.num_all_triplets = len(all_h_list)
 
-        self.all_triplet_np = np.zeros((self.num_all_triplets, 3), dtype=np.int32)
+        self.all_triplet_np = np.zeros((len(all_h_list), 3), dtype=np.int32)
         self.all_triplet_np[:, 0] = all_h_list
         self.all_triplet_np[:, 1] = all_r_list
         self.all_triplet_np[:, 2] = all_t_list
-        print("self.all_triplet_np", self.all_triplet_np)
         self.w = all_v_list
 
         self.all_kg_dict = self._get_all_kg_dict()
         print("The whole graph: #entities {}, #relations {}, #triplets {}".format(
             self.num_all_entities, self.num_all_relations, self.num_all_triplets))
+        print("The KG: #entities {}, #relations {}, #triplets {}".format(
+            self.num_KG_entities, self.num_KG_relations, self.num_KG_triples))
         print("The user-item pairs: {} users, {} items, {} train pairs, {} test pairs".format(
             self.num_users, self.num_items, self.num_train, self.num_test))
+
+    @property
+    def num_all_entities(self):
+        return self._n_KG_entities + self._n_users
+    @property
+    def num_all_relations(self):
+        return (self._n_KG_relations+1) * 2
+    @property
+    def num_all_triplets(self):
+        return self.all_triplet_np.shape[0]
+    @property
+    def num_KG_entities(self):
+        return self._n_KG_entities
+    @property
+    def num_KG_relations(self):
+        return self._n_KG_relations
+    @property
+    def num_KG_triples(self):
+        return self._n_KG_triples
+    @property
+    def num_train(self):
+        return self._n_train
+    @property
+    def num_test(self):
+        return self._n_test
+    @property
+    def num_users(self):
+        return self._n_users
+    @property
+    def num_items(self):
+        return self._n_items
+
 
     def generate_whole_g(self):
         g = dgl.DGLGraph()
