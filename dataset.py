@@ -431,32 +431,33 @@ class DataLoader(object):
         ### generate negative triplets
         #print("#Core", multiprocessing.cpu_count() // 4)
         self._get_all_kg_dict()
-        exist_heads = list(self.all_kg_dict.keys())
+        #exist_heads = list(self.all_kg_dict.keys())
         n_batch = self.num_all_triplets // batch_size + 1
         i = 0
         #print("Batch_size:{}, #batches:{}".format(batch_size, n_batch))
         while i < n_batch:
-            #pool = multiprocessing.Pool(multiprocessing.cpu_count() // 2)
             #time1 = time()
             i += 1
-            if batch_size <= len(exist_heads):
-                heads = rd.sample(exist_heads, batch_size)
-            else:
-                heads = [rd.choice(exist_heads) for _ in range(batch_size)]
-            pos_r_batch, pos_t_batch, neg_t_batch = [], [], []
-            ### generate positive samples
-            # print("Heads", heads)
-            # print("Pool mapping .......")
-            # pos_r_batch, pos_t_batch = pool.map(self._sample_pos_triples_for_h, heads)
-            # print("pos_r_batch", pos_r_batch)
-            # print("pos_t_batch", pos_t_batch)
-            for h in heads:
-                pos_rs, pos_ts = self._sample_pos_triples_for_h(h)
-                pos_r_batch.append(pos_rs)
-                pos_t_batch.append(pos_ts)
-                neg_ts = self._sample_neg_triples_for_h(h, pos_rs)
-                neg_t_batch.append(neg_ts)
+            # if batch_size <= len(exist_heads):
+            #     heads = rd.sample(exist_heads, batch_size)
+            # else:
+            #     heads = [rd.choice(exist_heads) for _ in range(batch_size)]
+            # pos_r_batch, pos_t_batch, neg_t_batch = [], [], []
+            # for h in heads:
+            #     pos_rs, pos_ts = self._sample_pos_triples_for_h(h)
+            #     pos_r_batch.append(pos_rs)
+            #     pos_t_batch.append(pos_ts)
+            #     neg_ts = self._sample_neg_triples_for_h(h, pos_rs)
+            #     neg_t_batch.append(neg_ts)
             #print("Time:{}s".format(time() - time1))
+            sel = self._rng.choice(self.num_all_triplets, batch_size, replace=False)
+            heads = self.all_triplet_np[sel][:, 0]
+            pos_r_batch = self.all_triplet_np[sel][:, 1]
+            pos_t_batch = self.all_triplet_np[sel][:, 2]
+            neg_t_batch = []
+            for idx, h in enumerate(heads):
+                neg_ts = self._sample_neg_triples_for_h(h, pos_r_batch[idx])
+                neg_t_batch.append(neg_ts)
             yield heads, pos_r_batch, pos_t_batch, neg_t_batch
 
     def KG_sampler2(self, batch_size, sequential=True):
