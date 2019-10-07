@@ -77,8 +77,9 @@ def train(args):
     test_metric_logger = MetricLogger(['epoch', 'recall', 'ndcg'], ['%d', '%.5f', '%.5f'],
                                       os.path.join(args.save_dir, 'test{:d}.csv'.format(args.save_id)))
     for epoch in range(1, args.max_epoch+1):
-        epoch_time = time()
+
         ### train kg first
+        time1 = time()
         kg_sampler = dataset.KG_sampler(batch_size=args.batch_size_kg)
         iter = 0
         for h, r, pos_t, neg_t in kg_sampler:
@@ -98,8 +99,9 @@ def train(args):
             optimizer.zero_grad()
             if (iter % args.print_kg_every) == 0:
                logging.info("Epoch {:04d} Iter {:04d} | Loss {:.4f} ".format(epoch, iter, loss.item()))
-
+        print(['Time: {}s'.format(time() - time1)])
         ### Then train GNN
+        time1 = time()
         model.train()
         g, all_etype = dataset.generate_whole_g()
         nid_th = th.arange(dataset.num_all_entities)
@@ -129,8 +131,9 @@ def train(args):
             optimizer.zero_grad()
             if (iter % args.print_gnn_every) == 0:
                logging.info("Epoch {:04d} Iter {:04d} | Loss {:.4f} ".format(epoch, iter, loss.item()))
-
+        print(['Time: {}s'.format(time() - time1)])
         if epoch % args.evaluate_every == 0:
+            time1 = time()
             with th.no_grad():
                 model.eval()
                 g, all_etype = dataset.generate_whole_g()
@@ -148,7 +151,7 @@ def train(args):
                 else:
                     item_id_range = th.arange(dataset.num_items)
                 recall, ndcg = metric.calc_recall_ndcg(all_embedding, dataset, item_id_range, K=20, use_cuda=use_cuda)
-                logging.info("[{:.1f}s]Epoch: {}, Test recall:{:.5f}, ndcg:{:.5f}".format(time()-epoch_time, epoch, recall, ndcg))
+                logging.info("[{:.1f}s]Epoch: {}, Test recall:{:.5f}, ndcg:{:.5f}".format(time()-time1, epoch, recall, ndcg))
                 test_metric_logger.log(epoch=epoch, recall=recall, ndcg=ndcg)
             # save best model
             # if recall > best_recall:
