@@ -49,17 +49,15 @@ class L_DataLoader(object):
         adj_list, adj_r_list = self._get_relational_adj_list(train_data, relation_dict)
         self.num_all_relations = len(adj_r_list)
         lap_list = self._get_relational_lap_list(adj_list)
-        print("lap_list", lap_list)
-        # all_kg_dict = self._get_all_kg_dict(lap_list, adj_r_list)
         all_h_list, all_r_list, all_t_list, all_v_list = self._get_all_kg_data(lap_list, adj_r_list)
         self.num_all_entities = self.num_KG_entities + self.num_users
         self.num_all_triplets = len(all_h_list)
-        print("num_all_triplets", self.num_all_triplets)
 
-        self.all_triplet_np = np.zeros((self.num_all_triplets, 3))
+        self.all_triplet_np = np.zeros((self.num_all_triplets, 3), dtype=np.int32)
         self.all_triplet_np[:, 0] = all_h_list
         self.all_triplet_np[:, 1] = all_r_list
         self.all_triplet_np[:, 2] = all_t_list
+        print("self.all_triplet_np", self.all_triplet_np)
         self.w = all_v_list
 
         self.all_kg_dict = self._get_all_kg_dict()
@@ -71,9 +69,7 @@ class L_DataLoader(object):
     def generate_whole_g(self):
         g = dgl.DGLGraph()
         g.add_nodes(self.num_all_entities)
-        ### TODO when adding edges, remember to reverse the direction, e.g., t-->h
         g.add_edges(self.all_triplet_np[:, 2], self.all_triplet_np[:, 0])
-        # print(g)
         all_etype = self.all_triplet_np[:, 1]
 
         return g, all_etype
