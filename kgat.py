@@ -4,7 +4,7 @@ from models import Model
 import torch as th
 import torch.optim as optim
 import metric
-from utils import creat_log_id, logging_config
+from utils import creat_log_id, logging_config, MetricLogger
 import numpy as np
 from time import time
 import os
@@ -70,6 +70,8 @@ def train(args):
 
     best_recall = 0.0
     model_state_file = 'model_state.pth'
+    test_metric_logger = MetricLogger(['epoch', 'recall', 'ndcg'], ['%d', '%.5f', '%.5f'],
+                                      os.path.join(args.save_dir, 'test{:d}.csv'.format(args.save_id)))
     for epoch in range(1, args.max_epoch+1):
         epoch_time = time()
         ### train kg first
@@ -142,7 +144,8 @@ def train(args):
                 else:
                     item_id_range = th.arange(dataset.num_items)
                 recall, ndcg = metric.calc_recall_ndcg(all_embedding, dataset, item_id_range, K=20, use_cuda=use_cuda)
-                logging.info("[{:.1f}s]Epoch: {}, Test recall:{:.5%}, ndcg:{:.5%}".format(time()-epoch_time, epoch, recall, ndcg))
+                logging.info("[{:.1f}s]Epoch: {}, Test recall:{:.5f}, ndcg:{:.5f}".format(time()-epoch_time, epoch, recall, ndcg))
+                test_metric_logger.log(epoch=epoch, recall=recall, ndcg=ndcg)
             # save best model
             # if recall > best_recall:
             #     best_recall = recall
