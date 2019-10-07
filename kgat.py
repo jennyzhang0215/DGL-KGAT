@@ -34,8 +34,8 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=1024, help='CF batch size.')
     parser.add_argument('--batch_size_kg', type=int, default=2048, help='KG batch size.')
     parser.add_argument('--evaluate_every', type=int, default=1, help='the evaluation duration')
-    parser.add_argument('--print_kg_every', type=int, default=200, help='the print duration of the kg part')
-    parser.add_argument('--print_gnn_every', type=int, default=200, help='the print duration of the gnn part')
+    parser.add_argument('--print_kg_every', type=int, default=500, help='the print duration of the kg part')
+    parser.add_argument('--print_gnn_every', type=int, default=500, help='the print duration of the gnn part')
     #parser.add_argument("--eval_batch_size", type=int, default=-1, help="batch size when evaluating")
     args = parser.parse_args()
     save_dir = "{}_d{}_l{}_dp{}_lr{}_bz{}_kgbz{}_seed{}".format(args.data_name, args.entity_embed_dim,
@@ -72,10 +72,12 @@ def train(args):
     ### optimizer
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
-    best_recall = 0.0
-    model_state_file = 'model_state.pth'
     test_metric_logger = MetricLogger(['epoch', 'recall', 'ndcg'], ['%d', '%.5f', '%.5f'],
                                       os.path.join(args.save_dir, 'test{:d}.csv'.format(args.save_id)))
+    best_epoch = -1
+    best_recall = 0.0
+    best_ndcg = 0.0
+    model_state_file = 'model_state.pth'
     for epoch in range(1, args.max_epoch+1):
         ### train kg first
         time1 = time()
@@ -156,14 +158,18 @@ def train(args):
                 else:
                     item_id_range = th.arange(dataset.num_items)
                 recall, ndcg = metric.calc_recall_ndcg(all_embedding, dataset, item_id_range, K=20, use_cuda=use_cuda)
-                logging.info("[{:.1f}s]Epoch: {}, Test recall:{:.5f}, ndcg:{:.5f}\n".format(time()-time1, epoch, recall, ndcg))
-                test_metric_logger.log(epoch=epoch, recall=recall, ndcg=ndcg)
+
+
             # save best model
-            # if recall > best_recall:
-            #     best_recall = recall
-            #     th.save({'state_dict': model.state_dict(), 'epoch': epoch}, model_state_file)
-            # if use_cuda:
-            #     model.cuda()
+            if recall > best_recall:
+                best_recall = recall
+                best_ndcg = ndcg
+                best_epoch = epoch
+                #th.save({'state_dict': model.state_dict(), 'epoch': epoch}, model_state_file)
+            logging.info(
+                "[{:.1f}s]Epoch: {}, test recall:{:.5f}, ndcg:{:.5f}, best({}) recall:{:.5f}, ndcg:{:.5f}\n".format(
+                    time() - time1, epoch, recall, ndcg, best_epoch, best_recall, best_ndcg))
+            test_metric_logger.log(epoch=epoch, recall=recall, ndcg=ndcg)
 
 if __name__ == '__main__':
     args = parse_args()
