@@ -28,10 +28,10 @@ def parse_args():
     parser.add_argument('--regs', type=float, default=0.00001, help='Regularization for user and item embeddings.')
 
     ### Training parameters
-    parser.add_argument('--max_epoch', type=int, default=400, help='train xx iterations')
+    parser.add_argument('--max_epoch', type=int, default=100, help='train xx iterations')
     parser.add_argument("--grad_norm", type=float, default=1.0, help="norm to clip gradient to")
     parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate.')
-    parser.add_argument('--batch_size', type=int, default=10000, help='CF batch size.')
+    parser.add_argument('--batch_size', type=int, default=1024, help='CF batch size.')
     parser.add_argument('--batch_size_kg', type=int, default=2048, help='KG batch size.')
     parser.add_argument('--evaluate_every', type=int, default=1, help='the evaluation duration')
     parser.add_argument('--print_kg_every', type=int, default=100, help='the print duration')
@@ -142,7 +142,7 @@ def train(args):
                 else:
                     item_id_range = th.arange(dataset.num_items)
                 recall, ndcg = metric.calc_recall_ndcg(all_embedding, dataset, item_id_range, K=20, use_cuda=use_cuda)
-                logging.info("[{:.1f}s]Epoch: {}, Test recall:{:.5f}, ndcg:{:.5f}".format(time()-epoch_time, epoch, recall, ndcg))
+                logging.info("[{:.1f}s]Epoch: {}, Test recall:{:.5%}, ndcg:{:.5%}".format(time()-epoch_time, epoch, recall, ndcg))
             # save best model
             # if recall > best_recall:
             #     best_recall = recall
