@@ -431,33 +431,26 @@ class DataLoader(object):
         ### generate negative triplets
         #print("#Core", multiprocessing.cpu_count() // 4)
         self._get_all_kg_dict()
-        #exist_heads = list(self.all_kg_dict.keys())
+        exist_heads = list(self.all_kg_dict.keys())
         n_batch = self.num_all_triplets // batch_size + 1
         i = 0
         #print("Batch_size:{}, #batches:{}".format(batch_size, n_batch))
         while i < n_batch:
             #time1 = time()
             i += 1
-            # if batch_size <= len(exist_heads):
-            #     heads = rd.sample(exist_heads, batch_size)
-            # else:
-            #     heads = [rd.choice(exist_heads) for _ in range(batch_size)]
-            # pos_r_batch, pos_t_batch, neg_t_batch = [], [], []
-            # for h in heads:
-            #     pos_rs, pos_ts = self._sample_pos_triples_for_h(h)
-            #     pos_r_batch.append(pos_rs)
-            #     pos_t_batch.append(pos_ts)
-            #     neg_ts = self._sample_neg_triples_for_h(h, pos_rs)
-            #     neg_t_batch.append(neg_ts)
-            #print("Time:{}s".format(time() - time1))
-            sel = self._rng.choice(self.num_all_triplets, batch_size, replace=False)
-            heads = self.all_triplet_np[sel][:, 0]
-            pos_r_batch = self.all_triplet_np[sel][:, 1]
-            pos_t_batch = self.all_triplet_np[sel][:, 2]
-            neg_t_batch = []
-            for idx, h in enumerate(heads):
-                neg_ts = self._sample_neg_triples_for_h(h, pos_r_batch[idx])
+            if batch_size <= len(exist_heads):
+                heads = rd.sample(exist_heads, batch_size)
+            else:
+                heads = [rd.choice(exist_heads) for _ in range(batch_size)]
+            pos_r_batch, pos_t_batch, neg_t_batch = [], [], []
+            for h in heads:
+                pos_rs, pos_ts = self._sample_pos_triples_for_h(h)
+                pos_r_batch.append(pos_rs)
+                pos_t_batch.append(pos_ts)
+                neg_ts = self._sample_neg_triples_for_h(h, pos_rs)
                 neg_t_batch.append(neg_ts)
+            # print("Time:{}s".format(time() - time1))
+
             yield heads, pos_r_batch, pos_t_batch, neg_t_batch
 
     def KG_sampler2(self, batch_size, sequential=True):
@@ -542,26 +535,47 @@ class DataLoader(object):
             unique_users.size, unique_items.size, self.num_test))
         return (src, dst), test_user_dict
 
-    def _sample_pos_items_for_u(self, u, num):
-        pos_items = self.train_user_dict[u]
-        n_pos_items = len(pos_items)
-        pos_batch = []
-        while True:
-            if len(pos_batch) == num: break
-            pos_id = np.random.randint(low=0, high=n_pos_items, size=1)[0]
-            pos_i_id = pos_items[pos_id]
+    # def _sample_pos_items_for_u(self, u, num):
+    #     pos_items = self.train_user_dict[u]
+    #     n_pos_items = len(pos_items)
+    #     pos_batch = []
+    #     while True:
+    #         if len(pos_batch) == num: break
+    #         pos_id = np.random.randint(low=0, high=n_pos_items, size=1)[0]
+    #         pos_i_id = pos_items[pos_id]
+    #
+    #         if pos_i_id not in pos_batch:
+    #             pos_batch.append(pos_i_id)
+    #     return pos_batch
+    # def _sample_neg_items_for_u(self, u, num):
+    #     neg_items = []
+    #     while True:
+    #         if len(neg_items) == num: break
+    #         neg_i_id = np.random.randint(low=0, high=self.num_items, size=1)[0]
+    #         if neg_i_id not in self.train_user_dict[u] and neg_i_id not in neg_items:
+    #             neg_items.append(neg_i_id)
+    #     return neg_items
+    # def _generate_user_pos_neg_items(self, batch_size):
+    #     if batch_size <= self.num_users:
+    #         ## test1
+    #         users = rd.sample(self.exist_users, batch_size)
+    #     else:
+    #         users = [rd.choice(self.exist_users) for _ in range(batch_size)]
+    #
+    #     pos_items, neg_items = [], []
+    #     for u in users:
+    #         pos_items += self._sample_pos_items_for_u(u, 1)
+    #         neg_items += self._sample_neg_items_for_u(u, 1)
+    #
+    #     return users, pos_items, neg_items
 
-            if pos_i_id not in pos_batch:
-                pos_batch.append(pos_i_id)
-        return pos_batch
-    def _sample_neg_items_for_u(self, u, num):
-        neg_items = []
+    def _sample_pos_items_for_u(self, u):
+        return rd.choice(self.train_user_dict[u])
+    def _sample_neg_items_for_u(self, u):
         while True:
-            if len(neg_items) == num: break
             neg_i_id = np.random.randint(low=0, high=self.num_items, size=1)[0]
-            if neg_i_id not in self.train_user_dict[u] and neg_i_id not in neg_items:
-                neg_items.append(neg_i_id)
-        return neg_items
+            if neg_i_id not in self.train_user_dict[u]:
+                return neg_i_id
     def _generate_user_pos_neg_items(self, batch_size):
         if batch_size <= self.num_users:
             ## test1
@@ -571,8 +585,8 @@ class DataLoader(object):
 
         pos_items, neg_items = [], []
         for u in users:
-            pos_items += self._sample_pos_items_for_u(u, 1)
-            neg_items += self._sample_neg_items_for_u(u, 1)
+            pos_items += self._sample_pos_items_for_u(u)
+            neg_items += self._sample_neg_items_for_u(u)
 
         return users, pos_items, neg_items
 
