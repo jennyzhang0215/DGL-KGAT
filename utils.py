@@ -22,10 +22,10 @@ class MetricLogger(object):
 
 def creat_log_id(dir_path):
     log_count = 0
-    file_path = os.path.join(dir_path, 'log{:d}'.format(log_count))
+    file_path = os.path.join(dir_path, 'log{:d}.log'.format(log_count))
     while os.path.exists(file_path):
         log_count += 1
-        file_path = os.path.join(dir_path, 'log{:d}'.format(log_count))
+        file_path = os.path.join(dir_path, 'log{:d}.log'.format(log_count))
     return log_count
 
 def logging_config(folder=None, name=None,
