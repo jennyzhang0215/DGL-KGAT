@@ -439,7 +439,8 @@ class DataLoader(object):
         i = 0
         #print("Batch_size:{}, #batches:{}".format(batch_size, n_batch))
         while i < n_batch:
-            pool = multiprocessing.Pool(multiprocessing.cpu_count() // 2)
+            #pool = multiprocessing.Pool(multiprocessing.cpu_count() // 2)
+            time1 = time()
             i += 1
             if batch_size <= len(exist_heads):
                 heads = rd.sample(exist_heads, batch_size)
@@ -453,11 +454,16 @@ class DataLoader(object):
             # print("pos_r_batch", pos_r_batch)
             # print("pos_t_batch", pos_t_batch)
             for h in heads:
+                time_pos = time()
                 pos_rs, pos_ts = self._sample_pos_triples_for_h(h)
+                print("pos time: {}s".format(time() - time_pos))
                 pos_r_batch.append(pos_rs)
                 pos_t_batch.append(pos_ts)
+                time_neg = time()
                 neg_ts = self._sample_neg_triples_for_h(h, pos_rs)
+                print("neg time: {}s".format(time() - time_neg))
                 neg_t_batch.append(neg_ts)
+            print("Time:{}s".format(time() - time1))
             yield heads, pos_r_batch, pos_t_batch, neg_t_batch
 
     def KG_sampler2(self, batch_size, sequential=True):
