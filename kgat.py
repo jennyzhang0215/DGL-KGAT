@@ -150,6 +150,8 @@ def train(args):
             att_w = model.compute_attention(g)
         g.edata['w'] = att_w
         #print(g)
+        embedding = model.gnn(g)
+
         for user_ids, item_pos_ids, item_neg_ids in cf_sampler:
             iter += 1
             user_ids_th = th.LongTensor(user_ids)
@@ -158,7 +160,6 @@ def train(args):
             if use_cuda:
                 user_ids_th, item_pos_ids_th, item_neg_ids_th = \
                     user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda()
-            embedding = model.gnn(g)
             loss = model.get_loss(embedding, user_ids_th, item_pos_ids_th, item_neg_ids_th)
             #print("embedding", embedding.shape, embedding)
             #print("Before backward ...", g)
@@ -179,8 +180,11 @@ def train(args):
                 etype_th = th.LongTensor(all_etype)
                 if use_cuda:
                     nid_th, etype_th, = nid_th.cuda(), etype_th.cuda()
-
-                all_embedding = model.gnn(g, nid_th, etype_th)
+                g.ndata['id'] = nid_th
+                g.edata['type'] = etype_th
+                att_w = model.compute_attention(g)
+                g.edata['w'] = att_w
+                all_embedding = model.gnn(g)
                 if use_cuda:
                     item_id_range = th.arange(dataset.num_items).cuda()
                 else:
