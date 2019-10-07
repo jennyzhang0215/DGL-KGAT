@@ -537,7 +537,6 @@ class DataLoader(object):
         else:
             batch_size = min(batch_size, self.num_train)
             n_batch = self.num_train // batch_size + 1
-        print("num_train", self.num_train, "batch_size", batch_size, "n_batch", n_batch)
 
         i = 0
         #print("Batch_size:{}, #batches:{}".format(batch_size, n_batch))
@@ -567,9 +566,12 @@ class DataLoader(object):
         if batch_size < 0:
             batch_size = self.num_train
             n_batch = 1
-        else:
+        elif batch_size > self.num_train:
             batch_size = min(batch_size, self.num_train)
+            n_batch = 1
+        else:
             n_batch = self.num_train // batch_size + 1
+        print("num_train", self.num_train, "batch_size", batch_size, "n_batch", n_batch)
         i = 0
         #print("Batch_size:{}, #batches:{}".format(batch_size, n_batch))
         while i < n_batch:
