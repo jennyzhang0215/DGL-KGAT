@@ -6,44 +6,150 @@ import collections
 import random as rd
 from time import time
 import scipy.sparse as sp
-import multiprocessing
 
 class L_DataLoader(object):
-    def __init__(self, data_name, batch_size=1024, adj_type='bi', num_neighbor_hop=3, seed=1234):
-        self._batch_size = batch_size
+    def __init__(self, data_name, adj_type='bi', seed=1234):
         self._adj_type = adj_type
         data_dir =  os.path.realpath(os.path.join(os.path.abspath(__file__), '..', "datasets", data_name))
         train_file = os.path.join(data_dir, "train.txt")
         test_file = os.path.join(data_dir, "test.txt")
         kg_file = os.path.join(data_dir, "kg_final.txt")
-        self.n_train, self.n_test = 0, 0
-        self.n_users, self.n_items = 0, 0
 
-        self.train_data, self.train_user_dict = self._load_ratings(train_file)
-        self.test_data, self.test_user_dict = self._load_ratings(test_file)
-        self.exist_users = self.train_user_dict.keys()
-        self.n_users = max(max(self.train_data[:, 0]), max(self.test_data[:, 0])) + 1
-        self.n_items = max(max(self.train_data[:, 1]), max(self.test_data[:, 1])) + 1
-        self.n_train = len(self.train_data)
-        self.n_test = len(self.test_data)
+        train_data, train_user_dict = self._load_ratings(train_file)
+        test_data, test_user_dict = self._load_ratings(test_file)
+        self.num_users = max(max(train_data[:, 0]), max(test_data[:, 0])) + 1
+        assert self.num_users == np.unique(np.concatenate((train_data[:, 0], test_data[:, 0]))).size
+        self.num_items = max(max(train_data[:, 1]), max(test_data[:, 1])) + 1
+        assert self.num_items ==  np.unique(np.concatenate((train_data[:, 1], test_data[:, 1]))).size
+        self.num_train = len(train_data)
+        self.num_test = len(test_data)
 
-        self.n_relations, self.n_entities, self.n_triples = 0, 0, 0
-        self.kg_data, self.kg_dict, self.relation_dict = self._load_kg(kg_file)
+        kg_np, kg_dict, relation_dict = self._load_kg(kg_file)
+        self.num_KG_relations = max(kg_np[:, 1]) + 1
+        self.num_KG_entities = max(max(kg_np[:, 0]), max(kg_np[:, 2])) + 1
+        self.num_KG_triples = len(kg_np)
 
-        self.batch_size_kg = self.n_triples // (self.n_train // self._batch_size)
-        print('[n_users, n_items]=[%d, %d]' % (self.n_users, self.n_items))
-        print('[n_train, n_test]=[%d, %d]' % (self.n_train, self.n_test))
-        print('[n_entities, n_relations, n_triples]=[%d, %d, %d]' % (self.n_entities, self.n_relations, self.n_triples))
-        print('[batch_size, batch_size_kg]=[%d, %d]' % (self._batch_size, self.batch_size_kg))
+        ## remapping user ids to new ids which is after entity ids
+        self.user_mapping = {i: i+self.num_KG_entities for i in range(self.num_users)}
+        self.exist_users = list(train_user_dict.values())
+        train_data[:, 0] = train_data[:, 0] + self.num_KG_entities
+        test_data[:, 0] = test_data[:, 0] + self.num_KG_entities
 
-        self.adj_list, self.adj_r_list = self._get_relational_adj_list()
-        self.lap_list = self._get_relational_lap_list()
+        self.train_user_dict = {}
+        for k,v in train_user_dict.items():
+            self.train_user_dict[k+self.num_KG_entities] = v
+        self.test_uer_dict = {}
+        for k,v in test_user_dict.items():
+            self.test_uer_dict[k+self.num_KG_entities] = v
+
+        ## merge KG and UI-pairs
+        adj_list, adj_r_list = self._get_relational_adj_list(train_data, relation_dict)
+        self.num_all_relations = len(adj_r_list)
+        lap_list = self._get_relational_lap_list(adj_list)
+        # all_kg_dict = self._get_all_kg_dict(lap_list, adj_r_list)
+        all_h_list, all_r_list, all_t_list, all_v_list = self._get_all_kg_data(lap_list, adj_r_list)
+        self.num_all_entities = self.num_KG_entities + self.num_users
+        self.num_all_triplets = len(all_h_list)
+
+        self.all_triplet_np = np.zeros((self.num_all_triplets, 4))
+        self.all_triplet_np[:, 0] = all_h_list
+        self.all_triplet_np[:, 1] = all_r_list
+        self.all_triplet_np[:, 2] = all_t_list
+        self.all_triplet_np[:, 3] = all_v_list
+
         self.all_kg_dict = self._get_all_kg_dict()
-        self.all_h_list, self.all_r_list, self.all_t_list, self.all_v_list = self._get_all_kg_data()
 
+    def generate_whole_g(self):
+        g = dgl.DGLGraph()
+        g.add_nodes(self.num_all_entities)
+        ### TODO when adding edges, remember to reverse the direction, e.g., t-->h
+        g.add_edges(self.all_triplet_np[:, 2], self.all_triplet_np[:, 0])
+        # print(g)
+        all_etype = self.all_triplet_np[:, 1]
+        w = self.all_triplet_np[:, 3]
+        return g, all_etype, w
 
+    def _get_all_kg_dict(self):
+        all_kg_dict = collections.defaultdict(list)
+        for h, r, t in self.all_triplet_np:
+            if h in all_kg_dict.keys():
+                all_kg_dict[h].append((t, r))
+            else:
+                all_kg_dict[h] = [(t, r)]
+        return all_kg_dict
 
-    # reading train & test interaction data.
+    
+    ### KG sampler
+    def _sample_pos_triples_for_h(self, h):
+        t, r = rd.choice(self.all_kg_dict[h])
+        return r, t
+
+    def _sample_neg_triples_for_h(self, h, r):
+        while True:
+            t = np.random.randint(low=0, high=self.num_all_entities, size=1)[0]
+            if (t, r) not in self.all_kg_dict[h]:
+                return t
+
+    def KG_sampler(self, batch_size):
+        exist_heads = list(self.all_kg_dict.keys())
+        n_batch = self.num_all_triplets // batch_size + 1
+        # print("#num_all_triplets", self.num_all_triplets, "batch_size", batch_size, "n_batch", n_batch,
+        #      "#exist_heads", len(exist_heads))
+        i = 0
+        while i < n_batch:
+            i += 1
+            if batch_size <= len(exist_heads):
+                heads = rd.sample(exist_heads, batch_size)
+            else:
+                heads = [rd.choice(exist_heads) for _ in range(batch_size)]
+            pos_r_batch, pos_t_batch, neg_t_batch = [], [], []
+            for h in heads:
+                pos_rs, pos_ts = self._sample_pos_triples_for_h(h)
+                pos_r_batch.append(pos_rs)
+                pos_t_batch.append(pos_ts)
+                neg_ts = self._sample_neg_triples_for_h(h, pos_rs)
+                neg_t_batch.append(neg_ts)
+
+            yield heads, pos_r_batch, pos_t_batch, neg_t_batch
+
+    ### for GNN sampler
+    def _sample_pos_items_for_u(self, u):
+        return rd.choice(self.train_user_dict[u])
+
+    def _sample_neg_items_for_u(self, u):
+        while True:
+            neg_i_id = np.random.randint(low=0, high=self.num_items, size=1)[0]
+            if neg_i_id not in self.train_user_dict[u]:
+                return neg_i_id
+
+    def CF_pair_sampler(self, batch_size):
+        exist_users = list(self.train_user_dict.keys())
+        if batch_size < 0:
+            batch_size = self.num_train
+            n_batch = 1
+        elif batch_size > self.num_train:
+            batch_size = min(batch_size, self.num_train)
+            n_batch = 1
+        else:
+            n_batch = self.num_train // batch_size + 1
+        # print("#train_pair", self.num_train, "batch_size", batch_size, "n_batch", n_batch, "#exist_user", len(exist_users))
+
+        i = 0
+        while i < n_batch:
+            i += 1
+            if batch_size <= self.num_users:
+                ## test1
+                users = rd.sample(exist_users, batch_size)
+            else:
+                users = [rd.choice(exist_users) for _ in range(batch_size)]
+
+            pos_items, neg_items = [], []
+            for u in users:
+                pos_items.append(self._sample_pos_items_for_u(u))
+                neg_items.append(self._sample_neg_items_for_u(u))
+            yield users, pos_items, neg_items
+
+        # reading train & test interaction data.
     def _load_ratings(self, file_name):
         user_dict = dict()
         inter_mat = list()
@@ -76,21 +182,17 @@ class L_DataLoader(object):
         kg_np = np.loadtxt(file_name, dtype=np.int32)
         kg_np = np.unique(kg_np, axis=0)
 
-        self.n_relations = max(kg_np[:, 1]) + 1
-        self.n_entities = max(max(kg_np[:, 0]), max(kg_np[:, 2])) + 1
-        self.n_triples = len(kg_np)
-
         kg_dict, relation_dict = _construct_kg(kg_np)
 
         return kg_np, kg_dict, relation_dict
 
-    def _get_relational_adj_list(self):
+    def _get_relational_adj_list(self, train_data, relation_dict):
         t1 = time()
         adj_mat_list = []
         adj_r_list = []
 
         def _np_mat2sp_adj(np_mat, row_pre, col_pre):
-            n_all = self.n_users + self.n_entities
+            n_all = self.num_users + self.num_KG_entities
             # single-direction
             a_rows = np_mat[:, 0] + row_pre
             a_cols = np_mat[:, 1] + col_pre
@@ -104,30 +206,28 @@ class L_DataLoader(object):
             b_adj = sp.coo_matrix((b_vals, (b_rows, b_cols)), shape=(n_all, n_all))
 
             return a_adj, b_adj
-
-        R, R_inv = _np_mat2sp_adj(self.train_data, row_pre=0, col_pre=self.n_users)
+        R, R_inv = _np_mat2sp_adj(train_data, row_pre=0, col_pre=0)
         adj_mat_list.append(R)
         adj_r_list.append(0)
 
         adj_mat_list.append(R_inv)
-        adj_r_list.append(self.n_relations + 1)
+        adj_r_list.append(self.num_KG_relations + 1)
         print('\tconvert ratings into adj mat done.')
 
-        for r_id in self.relation_dict.keys():
-            K, K_inv = _np_mat2sp_adj(np.array(self.relation_dict[r_id]), row_pre=self.n_users, col_pre=self.n_users)
+        for r_id in relation_dict.keys():
+            K, K_inv = _np_mat2sp_adj(np.array(relation_dict[r_id]), row_pre=0, col_pre=0)
             adj_mat_list.append(K)
             adj_r_list.append(r_id + 1)
 
             adj_mat_list.append(K_inv)
-            adj_r_list.append(r_id + 2 + self.n_relations)
+            adj_r_list.append(r_id + 2 + self.num_KG_relations)
         print('\tconvert %d relational triples into adj mat done. @%.4fs' %(len(adj_mat_list), time()-t1))
 
-        self.n_relations = len(adj_r_list)
         # print('\tadj relation list is', adj_r_list)
-
         return adj_mat_list, adj_r_list
 
-    def _get_relational_lap_list(self):
+    def _get_relational_lap_list(self, adj_list):
+        ### TODO have some problems here
         def _bi_norm_lap(adj):
             print("adj", adj.toarray())
             rowsum = np.array(adj.sum(1))
@@ -150,30 +250,29 @@ class L_DataLoader(object):
             return norm_adj.tocoo()
 
         if self._adj_type == 'bi':
-            lap_list = [_bi_norm_lap(adj) for adj in self.adj_list]
+            lap_list = [_bi_norm_lap(adj) for adj in adj_list]
             print('\tgenerate bi-normalized adjacency matrix.')
         else:
-            lap_list = [_si_norm_lap(adj) for adj in self.adj_list]
+            lap_list = [_si_norm_lap(adj) for adj in adj_list]
             print('\tgenerate si-normalized adjacency matrix.')
         print("#lap_list: {}".format(len(lap_list)))
         return lap_list
 
-    def _get_all_kg_dict(self):
-        all_kg_dict = collections.defaultdict(list)
-        for l_id, lap in enumerate(self.lap_list):
+    # def _get_all_kg_dict(self, lap_list, adj_r_list):
+    #     all_kg_dict = collections.defaultdict(list)
+    #     for l_id, lap in enumerate(lap_list):
+    #         rows = lap.row
+    #         cols = lap.col
+    #
+    #         for i_id in range(len(rows)):
+    #             head = rows[i_id]
+    #             tail = cols[i_id]
+    #             relation = adj_r_list[l_id]
+    #
+    #             all_kg_dict[head].append((tail, relation))
+    #     return all_kg_dict
 
-            rows = lap.row
-            cols = lap.col
-
-            for i_id in range(len(rows)):
-                head = rows[i_id]
-                tail = cols[i_id]
-                relation = self.adj_r_list[l_id]
-
-                all_kg_dict[head].append((tail, relation))
-        return all_kg_dict
-
-    def _get_all_kg_data(self):
+    def _get_all_kg_data(self, lap_list, adj_r_list):
         def _reorder_list(org_list, order):
             new_list = np.array(org_list)
             new_list = new_list[order]
@@ -182,13 +281,13 @@ class L_DataLoader(object):
         all_h_list, all_t_list, all_r_list = [], [], []
         all_v_list = []
 
-        for l_id, lap in enumerate(self.lap_list):
+        for l_id, lap in enumerate(lap_list):
             all_h_list += list(lap.row)
             all_t_list += list(lap.col)
             all_v_list += list(lap.data)
-            all_r_list += [self.adj_r_list[l_id]] * len(lap.row)
+            all_r_list += [adj_r_list[l_id]] * len(lap.row)
 
-        assert len(all_h_list) == sum([len(lap.data) for lap in self.lap_list])
+        assert len(all_h_list) == sum([len(lap.data) for lap in lap_list])
 
         # resort the all_h/t/r/v_list,
         # ... since tensorflow.sparse.softmax requires indices sorted in the canonical lexicographic order
@@ -283,6 +382,8 @@ class DataLoader(object):
         print("The whole graph: {} entities, {} relations, {} triplets".format(
             self.num_all_entities, self.num_all_relations, self.num_all_triplets))
 
+        self.all_kg_dict = self._get_all_kg_dict()
+
     def generate_whole_g(self):
         g = dgl.DGLGraph()
         g.add_nodes(self.num_all_entities)
@@ -365,7 +466,7 @@ class DataLoader(object):
                 all_kg_dict[h].append((t, r))
             else:
                 all_kg_dict[h] = [(t, r)]
-        self.all_kg_dict = all_kg_dict
+        return all_kg_dict
 
     # def _sample_pos_triples_for_h(self, h, num):
     #     pos_triples = self.all_kg_dict[h]
@@ -424,7 +525,6 @@ class DataLoader(object):
             if (t, r) not in self.all_kg_dict[h]:
                 return t
     def KG_sampler(self, batch_size):
-        self._get_all_kg_dict()
         exist_heads = list(self.all_kg_dict.keys())
         n_batch = self.num_all_triplets // batch_size + 1
         #print("#num_all_triplets", self.num_all_triplets, "batch_size", batch_size, "n_batch", n_batch,
