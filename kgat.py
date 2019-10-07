@@ -40,7 +40,11 @@ def parse_args():
     args = parser.parse_args()
     save_dir = "{}_d{}_l{}_dp{}_lr{}_bz{}_kgbz{}_seed{}".format(args.data_name, args.entity_embed_dim,
                 args.gnn_num_layer, args.dropout_rate, args.lr, args.batch_size, args.batch_size_kg, args.seed)
-    args.save_dir = save_dir
+    args.save_dir = os.path.join('log', save_dir)
+    if not os.path.isdir('log'):
+        os.makedirs('log')
+    if not os.path.isdir(args.save_dir):
+        os.makedirs(args.save_dir)
     args.save_id = creat_log_id(save_dir)
     logging.info(args)
     return args
