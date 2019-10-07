@@ -459,7 +459,7 @@ class DataLoader(object):
                 pos_t_batch += pos_ts
                 neg_ts = self._sample_neg_triples_for_h(h, pos_rs[0])
                 neg_t_batch += neg_ts
-            #print("Time:{}s".format(time() - time1))
+            print("Time:{}s".format(time() - time1))
             yield heads, pos_r_batch, pos_t_batch, neg_t_batch
 
     def KG_sampler2(self, batch_size, sequential=True):
