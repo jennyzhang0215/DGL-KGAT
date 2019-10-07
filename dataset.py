@@ -8,7 +8,7 @@ from time import time
 import scipy.sparse as sp
 
 class L_DataLoader(object):
-    def __init__(self, data_name, adj_type='bi', seed=1234):
+    def __init__(self, data_name, num_neighbor_hop=3, adj_type='bi', seed=1234):
         self._adj_type = adj_type
         data_dir =  os.path.realpath(os.path.join(os.path.abspath(__file__), '..', "datasets", data_name))
         train_file = os.path.join(data_dir, "train.txt")
@@ -66,8 +66,11 @@ class L_DataLoader(object):
         g.add_edges(self.all_triplet_np[:, 2], self.all_triplet_np[:, 0])
         # print(g)
         all_etype = self.all_triplet_np[:, 1]
-        w = self.all_triplet_np[:, 3]
-        return g, all_etype, w
+
+        return g, all_etype
+
+    def generate_w(self):
+        return self.all_triplet_np[:, 3]
 
     def _get_all_kg_dict(self):
         all_kg_dict = collections.defaultdict(list)
@@ -78,7 +81,7 @@ class L_DataLoader(object):
                 all_kg_dict[h] = [(t, r)]
         return all_kg_dict
 
-    
+
     ### KG sampler
     def _sample_pos_triples_for_h(self, h):
         t, r = rd.choice(self.all_kg_dict[h])
