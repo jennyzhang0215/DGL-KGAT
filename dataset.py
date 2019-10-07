@@ -564,7 +564,7 @@ class DataLoader(object):
 
     def CF_pair_sampler(self, batch_size):
         self.exist_users = list(self.train_user_dict.keys())
-        print("exist_user", self.exist_users)
+        print("exist_user", len(self.exist_users))
         if batch_size < 0:
             batch_size = self.num_train
             n_batch = 1
