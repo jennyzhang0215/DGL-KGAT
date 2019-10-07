@@ -52,7 +52,6 @@ class L_DataLoader(object):
         print("lap_list", lap_list)
         # all_kg_dict = self._get_all_kg_dict(lap_list, adj_r_list)
         all_h_list, all_r_list, all_t_list, all_v_list = self._get_all_kg_data(lap_list, adj_r_list)
-        print("all_h_list", len(all_h_list), all_h_list)
         self.num_all_entities = self.num_KG_entities + self.num_users
         self.num_all_triplets = len(all_h_list)
         print("num_all_triplets", self.num_all_triplets)
@@ -64,7 +63,7 @@ class L_DataLoader(object):
         self.w = all_v_list
 
         self.all_kg_dict = self._get_all_kg_dict()
-        print("The whole graph: {} entities, {} relations, {} triplets".format(
+        print("The whole graph: #entities {}, #relations {}, #triplets {}".format(
             self.num_all_entities, self.num_all_relations, self.num_all_triplets))
         print("The user-item pairs: {} users, {} items, {} train pairs, {} test pairs".format(
             self.num_users, self.num_items, self.num_train, self.num_test))
