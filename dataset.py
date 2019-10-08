@@ -339,12 +339,15 @@ class DataLoader(object):
         self.all_triplet_np = all_triplet
         self.all_triplet_dp = pd.DataFrame(all_triplet, columns=['h', 'r', 't'], dtype=np.int32)
         assert np.max(all_triplet) + 1 == self.num_all_entities
-        print("The whole graph: {} entities, {} relations, {} triplets".format(
+        self.all_kg_dict = self._get_all_kg_dict()
+
+        print("The whole graph: #entities {}, #relations {}, #triplets {}".format(
             self.num_all_entities, self.num_all_relations, self.num_all_triplets))
-        print("The user-item pairs: {} users, {} items, {} train pairs, {} test pairs".format(
+        print("The KG: #entities {}, #relations {}, #triplets {}".format(
+            self.num_KG_entities, self.num_KG_relations, self.num_KG_triples))
+        print("The user-item pairs: #users {}, #items {}, #train pairs {}, #test pairs {}".format(
             self.num_users, self.num_items, self.num_train, self.num_test))
 
-        self.all_kg_dict = self._get_all_kg_dict()
 
     def generate_whole_g(self):
         g = dgl.DGLGraph()
