@@ -492,7 +492,6 @@ class DataLoader(object):
         n_batch = self.num_all_triplets // batch_size + 1
         #print("#num_all_triplets", self.num_all_triplets, "batch_size", batch_size, "n_batch", n_batch,
         #      "#exist_heads", len(exist_heads))
-
         i = 0
         while i < n_batch:
             i += 1
