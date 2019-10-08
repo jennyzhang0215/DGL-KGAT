@@ -82,8 +82,6 @@ def train(args):
     etype_th = th.LongTensor(all_etype)
     if use_cuda:
         nid_th, etype_th = nid_th.cuda(), etype_th.cuda()
-    #print("nid_th", nid_th)
-    #print("etype_th", etype_th)
     g.ndata['id'] = nid_th
     g.edata['type'] = etype_th
     if use_cuda:
@@ -97,7 +95,6 @@ def train(args):
     # g.edata['w'] = A_w
 
     for epoch in range(1, args.max_epoch+1):
-
         ### train kg
         time1 = time()
         kg_sampler = dataset.KG_sampler(batch_size=args.batch_size_kg)
@@ -113,9 +110,7 @@ def train(args):
             if use_cuda:
                 h_th, r_th, pos_t_th, neg_t_th = h_th.cuda(), r_th.cuda(), pos_t_th.cuda(), neg_t_th.cuda()
             loss = model.transR(h_th, r_th, pos_t_th, neg_t_th)
-            # print("loss", loss)
             loss.backward()
-            # print("start computing gradient ...")
             optimizer.step()
             optimizer.zero_grad()
             total_loss += loss.item()
@@ -151,13 +146,10 @@ def train(args):
                 logging.info("Epoch {:03d} Iter {:04d} | Loss {:.4f} ".format(epoch, iter, total_loss / iter))
         logging.info(['Time for GNN: {:.1f}s, loss {:.4f}'.format(time() - time1, total_loss / iter)])
 
-
         with th.no_grad():
             A_w = model.compute_attention(g)
         g.edata['w'] = A_w
 
-
-        #print(A_w)
         if epoch % args.evaluate_every == 0:
             time1 = time()
             with th.no_grad():
