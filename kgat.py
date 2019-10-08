@@ -23,12 +23,12 @@ def parse_args():
     parser.add_argument('--gnn_num_layer', type=int, default=3, help='the number of layers')
     parser.add_argument('--gnn_hidden_size', type=int, default=64, help='Output sizes of every layer')
     parser.add_argument('--dropout_rate', type=float, default=0.1, help='Keep probability w.r.t. node dropout (i.e., 1-dropout_ratio) for each deep layer. 1: no dropout.')
-    parser.add_argument('--regs', type=float, default=0.0001, help='Regularization for user and item embeddings.')
+    parser.add_argument('--regs', type=float, default=0.00001, help='Regularization for user and item embeddings.')
 
     ### Training parameters
     parser.add_argument('--max_epoch', type=int, default=1000, help='train xx iterations')
     parser.add_argument("--grad_norm", type=float, default=1.0, help="norm to clip gradient to")
-    parser.add_argument('--lr', type=float, default=0.001, help='Learning rate.')
+    parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate.')
     parser.add_argument('--batch_size', type=int, default=1024, help='CF batch size.')
     parser.add_argument('--batch_size_kg', type=int, default=2048, help='KG batch size.')
     parser.add_argument('--evaluate_every', type=int, default=1, help='the evaluation duration')
@@ -98,6 +98,7 @@ def train(args):
         A_w = th.tensor(dataset.w)
         if use_cuda:
             A_w = A_w.cuda()
+        print(A_w)
         g.edata['w'] = A_w
         cf_sampler = dataset.CF_pair_sampler(batch_size=args.batch_size)
         iter = 0
