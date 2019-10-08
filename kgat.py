@@ -82,14 +82,14 @@ def train(args):
     etype_th = th.LongTensor(all_etype)
     if use_cuda:
         nid_th, etype_th = nid_th.cuda(), etype_th.cuda()
-    print("nid_th", nid_th)
-    print("etype_th", etype_th)
+    #print("nid_th", nid_th)
+    #print("etype_th", etype_th)
     g.ndata['id'] = nid_th
     g.edata['type'] = etype_th
     if use_cuda:
-        item_id_range = th.arange(dataset.num_items).cuda()
+        item_id_range = th.arange(dataset.num_items, dtype=th.long).cuda()
     else:
-        item_id_range = th.arange(dataset.num_items)
+        item_id_range = th.arange(dataset.num_items, dtype=th.long)
 
     for epoch in range(1, args.max_epoch+1):
         ### train kg first
