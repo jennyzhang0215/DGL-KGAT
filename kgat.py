@@ -90,7 +90,7 @@ def train(args):
         item_id_range = th.arange(dataset.num_items, dtype=th.long).cuda()
     else:
         item_id_range = th.arange(dataset.num_items, dtype=th.long)
-    A_w = th.tensor(dataset.w)
+    A_w = th.tensor(dataset.w).view(-1, 1)
     if use_cuda:
         A_w = A_w.cuda()
     print(A_w)
@@ -151,7 +151,7 @@ def train(args):
         with th.no_grad():
             A_w = model.compute_attention(g)
         g.edata['w'] = A_w
-        print(A_w)
+        #print(A_w)
         if epoch % args.evaluate_every == 0:
             time1 = time()
             with th.no_grad():
