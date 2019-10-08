@@ -254,8 +254,9 @@ class L_DataLoader(object):
             adj_r_list.append(r_id + 2 + self.num_KG_relations)
         print('\tconvert %d relational triples into adj mat done. @%.4fs' %(len(adj_mat_list), time()-t1))
 
-        # print('\tadj relation list is', adj_r_list)
+        print('\tadj relation list is', adj_r_list, np.unique(adj_r_list))
         return adj_mat_list, adj_r_list
+
 
     def _get_relational_lap_list(self, adj_list):
         ### TODO have some problems here

@@ -57,7 +57,7 @@ def train(args):
         th.cuda.set_device(args.gpu)
 
     ### load data
-    dataset = DataLoader(args.data_name, num_neighbor_hop=args.gnn_num_layer, seed=args.seed)
+    dataset = L_DataLoader(args.data_name, num_neighbor_hop=args.gnn_num_layer, seed=args.seed)
 
     ### model
     model = Model(n_entities=dataset.num_all_entities, n_relations=dataset.num_all_relations,
