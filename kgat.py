@@ -23,7 +23,7 @@ def parse_args():
     parser.add_argument('--gnn_num_layer', type=int, default=3, help='the number of layers')
     parser.add_argument('--gnn_hidden_size', type=int, default=64, help='Output sizes of every layer')
     parser.add_argument('--dropout_rate', type=float, default=0.1, help='Keep probability w.r.t. node dropout (i.e., 1-dropout_ratio) for each deep layer. 1: no dropout.')
-    parser.add_argument('--regs', type=float, default=0.00001, help='Regularization for user and item embeddings.')
+    parser.add_argument('--regs', type=float, default=0.0001, help='Regularization for user and item embeddings.')
 
     ### Training parameters
     parser.add_argument('--max_epoch', type=int, default=10000, help='train xx iterations')
