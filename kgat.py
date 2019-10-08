@@ -57,7 +57,7 @@ def train(args):
         th.cuda.set_device(args.gpu)
 
     ### load data
-    dataset = L_DataLoader(args.data_name, num_neighbor_hop=args.gnn_num_layer, seed=args.seed)
+    dataset = DataLoader(args.data_name, num_neighbor_hop=args.gnn_num_layer, seed=args.seed)
 
     ### model
     model = Model(n_entities=dataset.num_all_entities, n_relations=dataset.num_all_relations,
@@ -90,37 +90,13 @@ def train(args):
         item_id_range = th.arange(dataset.num_items, dtype=th.long).cuda()
     else:
         item_id_range = th.arange(dataset.num_items, dtype=th.long)
-    A_w = th.tensor(dataset.w).view(-1, 1)
-    if use_cuda:
-        A_w = A_w.cuda()
-    print(A_w)
-    g.edata['w'] = A_w
+    # A_w = th.tensor(dataset.w).view(-1, 1)
+    # if use_cuda:
+    #     A_w = A_w.cuda()
+    # print(A_w)
+    # g.edata['w'] = A_w
 
     for epoch in range(1, args.max_epoch+1):
-        ### train GNN
-        time1 = time()
-        model.train()
-        cf_sampler = dataset.CF_pair_sampler(batch_size=args.batch_size)
-        iter = 0
-        total_loss = 0.0
-        for user_ids, item_pos_ids, item_neg_ids in cf_sampler:
-            iter += 1
-            user_ids_th = th.LongTensor(user_ids)
-            item_pos_ids_th = th.LongTensor(item_pos_ids)
-            item_neg_ids_th = th.LongTensor(item_neg_ids)
-            if use_cuda:
-                user_ids_th, item_pos_ids_th, item_neg_ids_th = \
-                    user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda()
-            embedding = model.gnn(g)
-            loss = model.get_loss(embedding, user_ids_th, item_pos_ids_th, item_neg_ids_th)
-            loss.backward()
-            # th.nn.utils.clip_grad_norm_(model.parameters(), args.grad_norm)  # clip gradients
-            optimizer.step()
-            optimizer.zero_grad()
-            total_loss += loss.item()
-            if (iter % args.print_gnn_every) == 0:
-                logging.info("Epoch {:03d} Iter {:04d} | Loss {:.4f} ".format(epoch, iter, total_loss / iter))
-        logging.info(['Time for GNN: {:.1f}s, loss {:.4f}'.format(time() - time1, total_loss / iter)])
 
         ### train kg
         time1 = time()
@@ -147,10 +123,40 @@ def train(args):
                logging.info("Epoch {:03d} Iter {:04d} | Loss {:.4f} ".format(epoch, iter, total_loss/iter))
         logging.info(['Time for KGE: {:.1f}s, loss {:.4f}'.format(time() - time1, total_loss/iter)])
 
+        ### train GNN
+        time1 = time()
+        model.train()
+        cf_sampler = dataset.CF_pair_sampler(batch_size=args.batch_size)
+        iter = 0
+        total_loss = 0.0
+        with th.no_grad():
+            A_w = model.compute_attention(g)
+        g.edata['w'] = A_w
+        for user_ids, item_pos_ids, item_neg_ids in cf_sampler:
+            iter += 1
+            user_ids_th = th.LongTensor(user_ids)
+            item_pos_ids_th = th.LongTensor(item_pos_ids)
+            item_neg_ids_th = th.LongTensor(item_neg_ids)
+            if use_cuda:
+                user_ids_th, item_pos_ids_th, item_neg_ids_th = \
+                    user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda()
+            embedding = model.gnn(g)
+            loss = model.get_loss(embedding, user_ids_th, item_pos_ids_th, item_neg_ids_th)
+            loss.backward()
+            # th.nn.utils.clip_grad_norm_(model.parameters(), args.grad_norm)  # clip gradients
+            optimizer.step()
+            optimizer.zero_grad()
+            total_loss += loss.item()
+            if (iter % args.print_gnn_every) == 0:
+                logging.info("Epoch {:03d} Iter {:04d} | Loss {:.4f} ".format(epoch, iter, total_loss / iter))
+        logging.info(['Time for GNN: {:.1f}s, loss {:.4f}'.format(time() - time1, total_loss / iter)])
+
 
         with th.no_grad():
             A_w = model.compute_attention(g)
         g.edata['w'] = A_w
+
+
         #print(A_w)
         if epoch % args.evaluate_every == 0:
             time1 = time()
