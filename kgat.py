@@ -26,7 +26,7 @@ def parse_args():
     parser.add_argument('--regs', type=float, default=0.00001, help='Regularization for user and item embeddings.')
 
     ### Training parameters
-    parser.add_argument('--max_epoch', type=int, default=1000, help='train xx iterations')
+    parser.add_argument('--max_epoch', type=int, default=10000, help='train xx iterations')
     parser.add_argument("--grad_norm", type=float, default=1.0, help="norm to clip gradient to")
     parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate.')
     parser.add_argument('--batch_size', type=int, default=1024, help='CF batch size.')
@@ -90,16 +90,16 @@ def train(args):
         item_id_range = th.arange(dataset.num_items, dtype=th.long).cuda()
     else:
         item_id_range = th.arange(dataset.num_items, dtype=th.long)
+    A_w = th.tensor(dataset.w)
+    if use_cuda:
+        A_w = A_w.cuda()
+    print(A_w)
+    g.edata['w'] = A_w
 
     for epoch in range(1, args.max_epoch+1):
         ### train GNN
         time1 = time()
         model.train()
-        A_w = th.tensor(dataset.w)
-        if use_cuda:
-            A_w = A_w.cuda()
-        print(A_w)
-        g.edata['w'] = A_w
         cf_sampler = dataset.CF_pair_sampler(batch_size=args.batch_size)
         iter = 0
         total_loss = 0.0
@@ -151,15 +151,12 @@ def train(args):
         with th.no_grad():
             A_w = model.compute_attention(g)
         g.edata['w'] = A_w
-
+        print(A_w)
         if epoch % args.evaluate_every == 0:
             time1 = time()
             with th.no_grad():
                 model.eval()
-                att_w = model.compute_attention(g)
-                g.edata['w'] = att_w
                 all_embedding = model.gnn(g)
-
                 recall, ndcg = metric.calc_recall_ndcg(all_embedding, dataset, item_id_range, K=20, use_cuda=use_cuda)
 
             # save best model
