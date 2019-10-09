@@ -513,29 +513,24 @@ class DataLoader(object):
 
             yield heads, pos_r_batch, pos_t_batch, neg_t_batch
 
-    def KG_sampler_uniform(self, batch_size, sequential=False):
+    def KG_sampler_uniform(self, batch_size):
         if batch_size < 0:
             batch_size = self.num_all_triplets
+            n_batch = 1
+        elif batch_size > self.num_all_triplets:
+            batch_size = min(batch_size, self.num_all_triplets)
+            n_batch = 1
         else:
-            batch_size = min(self.num_all_triplets, batch_size)
-        if sequential:
-            shuffled_idx = self._rng.permutation(self.num_all_triplets)
-            all_triplet_np = self.all_triplet_np[shuffled_idx, :]
-            for start in range(0, self.num_all_triplets, batch_size):
-                end = min(start+batch_size, self.num_all_triplets)
-                h = all_triplet_np[start: end][:, 0]
-                r = all_triplet_np[start: end][:, 1]
-                pos_t = all_triplet_np[start: end][:, 2]
-                neg_t = self._rng.choice(self.num_all_entities, end-start, replace=True).astype(np.int32)
-                yield h, r, pos_t, neg_t
-        else:
-            while True:
-                sel = self._rng.choice(self.num_all_triplets, batch_size, replace=False)
-                h = self.all_triplet_np[sel][:, 0]
-                r = self.all_triplet_np[sel][:, 1]
-                pos_t = self.all_triplet_np[sel][:, 2]
-                neg_t = self._rng.choice(self.num_all_entities, batch_size, replace=True).astype(np.int32)
-                yield h, r, pos_t, neg_t
+            n_batch = self.num_train // batch_size + 1
+
+        while i < n_batch:
+            i += 1
+            sel = self._rng.choice(self.num_all_triplets, batch_size, replace=False)
+            h = self.all_triplet_np[sel][:, 0]
+            r = self.all_triplet_np[sel][:, 1]
+            pos_t = self.all_triplet_np[sel][:, 2]
+            neg_t = self._rng.choice(self.num_all_entities, batch_size, replace=True).astype(np.int32)
+            yield h, r, pos_t, neg_t
 
     @property
     def num_KG_entities(self):
