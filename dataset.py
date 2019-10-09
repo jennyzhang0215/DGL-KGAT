@@ -513,7 +513,7 @@ class DataLoader(object):
 
             yield heads, pos_r_batch, pos_t_batch, neg_t_batch
 
-    def KG_sampler2(self, batch_size, sequential=True):
+    def KG_sampler_uniform(self, batch_size, sequential=False):
         if batch_size < 0:
             batch_size = self.num_all_triplets
         else:
@@ -661,6 +661,26 @@ class DataLoader(object):
             for u in users:
                 pos_items.append(self._sample_pos_items_for_u(u))
                 neg_items.append(self._sample_neg_items_for_u(u))
+            yield users, pos_items, neg_items
+
+    def CF_pair_uniform_sampler(self, batch_size):
+        if batch_size < 0:
+            batch_size = self.num_train
+            n_batch = 1
+        elif batch_size > self.num_train:
+            batch_size = min(batch_size, self.num_train)
+            n_batch = 1
+        else:
+            n_batch = self.num_train // batch_size + 1
+        #print("#train_pair", self.num_train, "batch_size", batch_size, "n_batch", n_batch, "#exist_user", len(exist_users))
+
+        i = 0
+        while i < n_batch:
+            i += 1
+            sel = self._rng.choice(self.num_train, batch_size, replace=False)
+            users = self.train_pairs[0][sel]
+            pos_items = self.train_pairs[1][sel]
+            neg_items = self._rng.choice(self.num_items, batch_size, replace=True).astype(np.int32)
             yield users, pos_items, neg_items
 
     # def CF_batchwise_sampler(self, batch_size):
