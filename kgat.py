@@ -37,8 +37,9 @@ def parse_args():
     parser.add_argument('--print_gnn_every', type=int, default=500, help='the print duration of the gnn part')
     #parser.add_argument("--eval_batch_size", type=int, default=-1, help="batch size when evaluating")
     args = parser.parse_args()
-    save_dir = "{}_d{}_l{}_dp{}_lr{}_bz{}_kgbz{}_seed{}".format(args.data_name, args.entity_embed_dim,
-                args.gnn_num_layer, args.dropout_rate, args.lr, args.batch_size, args.batch_size_kg, args.seed)
+    save_dir = "{}_d{}_l{}_dp{}_lr{}_bz{}_kgbz{}_att{}_seed{}".format(args.data_name, args.entity_embed_dim,
+                args.gnn_num_layer, args.dropout_rate, args.lr, args.batch_size, args.batch_size_kg,
+                                                                      int(args.use_attention),args.seed)
     args.save_dir = os.path.join('log', save_dir)
     if not os.path.isdir('log'):
         os.makedirs('log')

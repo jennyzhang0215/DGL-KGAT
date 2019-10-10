@@ -1,0 +1,3 @@
+ """
+        nid_th = th.arange(dataset.num_all_entities)
+        if use_cuda:
