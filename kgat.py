@@ -23,7 +23,7 @@ def parse_args():
     parser.add_argument('--gnn_num_layer', type=int, default=3, help='the number of layers')
     parser.add_argument('--gnn_hidden_size', type=int, default=64, help='Output sizes of every layer')
     parser.add_argument('--dropout_rate', type=float, default=0.1, help='Keep probability w.r.t. node dropout (i.e., 1-dropout_ratio) for each deep layer. 1: no dropout.')
-    parser.add_argument('--use_attention', type=bool, default=True, help='Whether to use attention to update adj')
+    parser.add_argument('--use_attention', type=bool, default=False, help='Whether to use attention to update adj')
     parser.add_argument('--regs', type=float, default=0.0001, help='Regularization for user and item embeddings.')
 
     ### Training parameters
@@ -39,7 +39,7 @@ def parse_args():
     args = parser.parse_args()
     save_dir = "{}_d{}_l{}_dp{}_lr{}_bz{}_kgbz{}_att{}_seed{}".format(args.data_name, args.entity_embed_dim,
                 args.gnn_num_layer, args.dropout_rate, args.lr, args.batch_size, args.batch_size_kg,
-                                                                      args.use_attention, args.seed)
+                                                                      int(args.use_attention), args.seed)
     args.save_dir = os.path.join('log', save_dir)
     if not os.path.isdir('log'):
         os.makedirs('log')
