@@ -39,7 +39,7 @@ def parse_args():
     args = parser.parse_args()
     save_dir = "{}_d{}_l{}_dp{}_lr{}_bz{}_kgbz{}_att{}_seed{}".format(args.data_name, args.entity_embed_dim,
                 args.gnn_num_layer, args.dropout_rate, args.lr, args.batch_size, args.batch_size_kg,
-                                                                      int(args.use_attention),args.seed)
+                                                                      args.use_attention, args.seed)
     args.save_dir = os.path.join('log', save_dir)
     if not os.path.isdir('log'):
         os.makedirs('log')
@@ -51,6 +51,7 @@ def parse_args():
 
 
 def train(args):
+    print("Use_attention", args.use_attention)
     logging_config(folder=args.save_dir, name='log{:d}'.format(args.save_id), no_console=False)
 
     ### check context
