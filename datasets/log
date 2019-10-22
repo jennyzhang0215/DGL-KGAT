@@ -8,7 +8,7 @@ amazon-book
 Original--> #user: 70679, #item: 24915 #pairs: 652514
 Current --> #user: 70679, #item: 24915, #pairs: 552778
 Valid --> #user: 70668, #item: 19832, #pairs: 99736
-Test --> #user: 70591, #item: 21832, #pairs: 19392
+Test --> #user: 70591, #item: 21832, #pairs: 193920
 
 yelp2018
 Original--> #user: 45919, #item: 45538 #pairs: 930032

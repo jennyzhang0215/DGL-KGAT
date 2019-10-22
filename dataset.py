@@ -7,6 +7,7 @@ import random as rd
 from time import time
 import scipy.sparse as sp
 import json
+import torch as th
 
 class L_DataLoader(object):
     def __init__(self, data_name, num_neighbor_hop=3, adj_type='si', seed=1234):
@@ -302,10 +303,9 @@ class L_DataLoader(object):
         return all_h_list, all_r_list, all_t_list, all_v_list
 
 class DataLoader(object):
-    def __init__(self, data_name, num_neighbor_hop=3, seed=1234):
+    def __init__(self, data_name, seed=1234):
         print("\n{}->".format(data_name))
         self._data_name = data_name
-        self._num_neighbor_hop = num_neighbor_hop
         self._rng = np.random.RandomState(seed=seed)
         data_dir = os.path.realpath(os.path.join(os.path.abspath(__file__), '..', "datasets", data_name))
 
@@ -358,11 +358,11 @@ class DataLoader(object):
         ### <user>       |=======|+++++++++++++++++++++
 
         self.all_train_triplet_np = all_train_triplet
-        self.all_train_triplet_dp = pd.DataFrame(all_train_triplet, columns=['h', 'r', 't'], dtype=np.int32)
+        #self.all_train_triplet_dp = pd.DataFrame(all_train_triplet, columns=['h', 'r', 't'], dtype=np.int32)
         assert np.max(all_train_triplet) + 1 == self.num_all_entities
 
         self.all_test_triplet_np = all_test_triplet
-        self.all_test_triplet_dp = pd.DataFrame(all_test_triplet, columns=['h', 'r', 't'], dtype=np.int32)
+        #self.all_test_triplet_dp = pd.DataFrame(all_test_triplet, columns=['h', 'r', 't'], dtype=np.int32)
 
         self.all_train_kg_dict = self._get_all_train_kg_dict()
 
@@ -374,22 +374,25 @@ class DataLoader(object):
             self.num_KG_entities, self.num_KG_relations, self.num_KG_triples))
         print("The user-item pairs: #users {}, #items {}, #train pairs {}, #valid pairs {}, #test pairs {}".format(
             self.num_users, self.num_items, self.num_train, self.num_valid, self.num_test))
-
-    def generate_train_g(self):
+    @property
+    def train_g(self):
         g = dgl.DGLGraph()
         g.add_nodes(self.num_all_entities)
         g.add_edges(self.all_train_triplet_np[:, 2], self.all_train_triplet_np[:, 0])
-        #print(g)
-        all_etype = self.all_train_triplet_np[:, 1]
-        return g, all_etype
+        g.readonly()
+        g.ndata['id'] = np.arange(self.num_all_entities, dtype=np.int32)
+        g.edata['type'] = self.all_train_triplet_np[:, 1]
+        return g
 
-    def generate_test_g(self):
+    @property
+    def test_g(self):
         g = dgl.DGLGraph()
         g.add_nodes(self.num_all_entities)
         g.add_edges(self.all_test_triplet_np[:, 2], self.all_test_triplet_np[:, 0])
-        #print(g)
-        all_etype = self.all_test_triplet_np[:, 1]
-        return g, all_etype
+        g.readonly()
+        g.ndata['id'] = th.arange(self.num_all_entities, dtype=th.long)
+        g.edata['type'] = th.LongTensor(self.all_test_triplet_np[:, 1])
+        return g
 
     @property
     def num_all_entities(self):
@@ -538,6 +541,45 @@ class DataLoader(object):
             neg_t = self._rng.choice(self.num_all_entities, batch_size, replace=True).astype(np.int32)
             yield h, r, pos_t, neg_t
 
+    def create_sampler(self, batch_size, num_workers=16, shuffle=True, exclude_positive=False):
+        EdgeSampler = getattr(dgl.contrib.sampling, 'EdgeSampler')
+        g = dgl.DGLGraph()
+        g.add_nodes(self.num_all_entities)
+        g.add_edges(self.all_train_triplet_np[:, 2], self.all_train_triplet_np[:, 0])
+        g.readonly()
+        g.ndata['id'] = th.arange(self.num_all_entities, dtype=th.long)
+        g.edata['type'] = th.LongTensor(self.all_train_triplet_np[:, 1])
+        return EdgeSampler(g,
+                           batch_size=batch_size,
+                           neg_sample_size=batch_size,
+                           negative_mode="PBG-tail",
+                           num_workers=num_workers,
+                           shuffle=shuffle,
+                           exclude_positive=exclude_positive,
+                           return_false_neg=False)
+    def KG_sampler_DGL(self, batch_size):
+        if batch_size < 0:
+            batch_size = self.num_all_train_triplets
+            n_batch = 1
+        elif batch_size > self.num_all_train_triplets:
+            batch_size = min(batch_size, self.num_all_train_triplets)
+            n_batch = 1
+        else:
+            n_batch = self.num_train // batch_size + 1
+        i = 0
+        while i < n_batch:
+            i += 1
+            for pos_g, neg_g in self.create_sampler(batch_size):
+                pos_g.copy_from_parent()
+                neg_g.copy_from_parent()
+                print(pos_g.head_nid, pos_g.tail_nid)
+                print(pos_g.ndata['id'])
+                print(pos_g.edata['type'])
+                print(neg_g.head_nid, neg_g.tail_nid)
+                # h, r, pos_t, neg_t
+                yield pos_g.head_nid, pos_g.edata['type'], pos_g.tail_nid, neg_g.tail_nid
+
+
     @property
     def num_KG_entities(self):
         return self._n_KG_entities
@@ -643,7 +685,6 @@ class DataLoader(object):
         else:
             n_batch = self.num_train // batch_size + 1
         #print("#train_pair", self.num_train, "batch_size", batch_size, "n_batch", n_batch, "#exist_user", len(exist_users))
-
         i = 0
         while i < n_batch:
             i += 1
@@ -729,7 +770,29 @@ class DataLoader(object):
 
 
 if __name__ == '__main__':
-    DataLoader("yelp2018")
+    batch_size = 10
+    d_loader = DataLoader("yelp2018")
+    ## convert positive triplets to sets
+    pos_pool = []
+    for i in range(d_loader.num_all_train_triplets):
+        pos_pool.append(d_loader.all_train_triplet_np[i, :].tolist())
+    print(pos_pool)
+    kg_sampler = d_loader.KG_sampler_DGL(batch_size)
+    for h, r, pos_t, neg_t in kg_sampler:
+        for j in range(batch_size):
+            pos_l = [h[j], r[j], pos_t[j]]
+            neg_l = [h[j], r[j], neg_t[j]]
+            try:
+                assert pos_l in pos_pool
+            except:
+                print("pos_l", pos_l, "not in the true positive triplets!!!!~~~~")
+
+            try:
+                assert neg_l not in pos_pool
+            except:
+                print("neg_l", neg_l, "not in the true negative triplets!")
+        #print(h, r, pos_t, neg_t)
+
     DataLoader("last-fm")
     DataLoader("amazon-book")
 
