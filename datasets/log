@@ -1,0 +1,17 @@
+last-fm
+Original--> #user: 23566, #item: 48123 #pairs: 1289003
+Current --> #user: 23566, #item: 48123, #pairs: 1149767
+Valid --> #user: 23518, #item: 36975, #pairs: 139236
+Test --> #user: 23566, #item: 46720, #pairs: 423635
+
+amazon-book
+Original--> #user: 70679, #item: 24915 #pairs: 652514
+Current --> #user: 70679, #item: 24915, #pairs: 552778
+Valid --> #user: 70668, #item: 19832, #pairs: 99736
+Test --> #user: 70591, #item: 21832, #pairs: 19392
+
+yelp2018
+Original--> #user: 45919, #item: 45538 #pairs: 930032
+Current --> #user: 45919, #item: 45538, #pairs: 819310
+Valid --> #user: 45907, #item: 31006, #pairs: 110722
+Test --> #user: 45918, #item: 39469, #pairs: 253578
