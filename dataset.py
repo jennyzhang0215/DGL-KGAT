@@ -776,7 +776,7 @@ if __name__ == '__main__':
     pos_pool = []
     for i in range(d_loader.num_all_train_triplets):
         pos_pool.append(d_loader.all_train_triplet_np[i, :].tolist())
-    print(pos_pool)
+    #print(pos_pool)
     kg_sampler = d_loader.KG_sampler_DGL(batch_size)
     for h, r, pos_t, neg_t in kg_sampler:
         for j in range(batch_size):
