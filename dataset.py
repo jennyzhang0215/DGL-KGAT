@@ -6,6 +6,7 @@ import collections
 import random as rd
 from time import time
 import scipy.sparse as sp
+import json
 
 class L_DataLoader(object):
     def __init__(self, data_name, num_neighbor_hop=3, adj_type='si', seed=1234):
@@ -300,63 +301,94 @@ class L_DataLoader(object):
             all_r_list += [adj_r_list[l_id]] * len(lap.row)
         return all_h_list, all_r_list, all_t_list, all_v_list
 
-
 class DataLoader(object):
     def __init__(self, data_name, num_neighbor_hop=3, seed=1234):
         print("\n{}->".format(data_name))
         self._data_name = data_name
         self._num_neighbor_hop = num_neighbor_hop
         self._rng = np.random.RandomState(seed=seed)
-        data_dir =  os.path.realpath(os.path.join(os.path.abspath(__file__), '..', "datasets", data_name))
-        train_file = os.path.join(data_dir, "train.txt")
+        data_dir = os.path.realpath(os.path.join(os.path.abspath(__file__), '..', "datasets", data_name))
+
+        train_file = os.path.join(data_dir, "train1.txt")
         train_pairs, train_user_dict = self.load_train_interaction(train_file)
+        valid_file = os.path.join(data_dir, "valid1.txt")
+        valid_pairs, valid_user_dict = self.load_test_interaction(valid_file)
+        self._n_valid = valid_pairs[0].size
+        print("Valid data: #pairs:{}".format(self.num_valid))
         test_file = os.path.join(data_dir, "test.txt")
         test_pairs, test_user_dict = self.load_test_interaction(test_file)
+        self._n_test = test_pairs[0].size
+        print("Test data: #pairs:{}".format(self.num_test))
+
         kg_file = os.path.join(data_dir, "kg_final.txt")
         kg_triples_np = self.load_kg_plus_inverse(kg_file)
 
         ## stack user ids after entities
         self.user_mapping = {i: i+self.num_KG_entities for i in range(self.num_users)}
 
+        ## Keep item and entity ids unchanged and remap user ids
         self.train_pairs = ((train_pairs[0] + self.num_KG_entities).astype(np.int32),
                             train_pairs[1].astype(np.int32))
-        self.train_user_dict= {self.user_mapping[k]: np.unique(v).astype(np.int32)
-                               for k,v in train_user_dict.items()}
+        self.train_user_dict= {self.user_mapping[k]: np.unique(v).astype(np.int32) for k,v in train_user_dict.items()}
+        self.valid_pairs = ((valid_pairs[0] + self.num_KG_entities).astype(np.int32),
+                           valid_pairs[1].astype(np.int32))
+        self.valid_user_dict = {self.user_mapping[k]: np.unique(v).astype(np.int32) for k, v in valid_user_dict.items()}
         self.test_pairs = ((test_pairs[0] + self.num_KG_entities).astype(np.int32),
                            test_pairs[1].astype(np.int32))
-        self.test_user_dict= {self.user_mapping[k]: np.unique(v).astype(np.int32)
-                              for k,v in test_user_dict.items()}
-        user_item_triplet = np.zeros((self.num_train*2, 3), dtype=np.int32)
-        user_item_triplet[:, 0] = np.concatenate((self.train_pairs[0], self.train_pairs[1]))
-        user_item_triplet[:, 1] = np.concatenate(((np.ones(self.num_train)*self.num_KG_relations).astype(np.int32),
-                                                  (np.ones(self.num_train)*(self.num_KG_relations+1)).astype(np.int32)))
-        user_item_triplet[:, 2] = np.concatenate((self.train_pairs[1], self.train_pairs[0]))
+        self.test_user_dict= {self.user_mapping[k]: np.unique(v).astype(np.int32) for k,v in test_user_dict.items()}
+        train_user_item_triplet = np.zeros((self.num_train*2, 3), dtype=np.int32)
+        train_user_item_triplet[:, 0] = np.concatenate((self.train_pairs[0], self.train_pairs[1]))
+        train_user_item_triplet[:, 1] = np.concatenate((
+            (np.ones(self.num_train)*self.num_KG_relations).astype(np.int32),
+            (np.ones(self.num_train)*(self.num_KG_relations+1)).astype(np.int32)))
+        train_user_item_triplet[:, 2] = np.concatenate((self.train_pairs[1], self.train_pairs[0]))
+        all_train_triplet = np.vstack((kg_triples_np, train_user_item_triplet)).astype(np.int32)
+
+        valid_user_item_triplet = np.zeros((self.num_valid*2, 3), dtype=np.int32)
+        valid_user_item_triplet[:, 0] = np.concatenate((self.valid_pairs[0], self.valid_pairs[1]))
+        valid_user_item_triplet[:, 1] = np.concatenate((
+            (np.ones(self.num_valid) * self.num_KG_relations).astype(np.int32),
+            (np.ones(self.num_valid) * (self.num_KG_relations+1)).astype(np.int32)))
+        valid_user_item_triplet[:, 2] = np.concatenate((self.valid_pairs[1], self.valid_pairs[0]))
+        all_test_triplet = np.vstack((kg_triples_np, train_user_item_triplet, valid_user_item_triplet)).astype(np.int32)
 
         ###              |<item>  <att entity> | <user>
         ### <item>       |=====================|=======
         ### <att entity> |=====================|+++++++
         ### <user>       |=======|+++++++++++++++++++++
-        all_triplet = np.vstack((kg_triples_np,  user_item_triplet)).astype(np.int32)
-        self.all_triplet_np = all_triplet
-        self.all_triplet_dp = pd.DataFrame(all_triplet, columns=['h', 'r', 't'], dtype=np.int32)
-        assert np.max(all_triplet) + 1 == self.num_all_entities
-        self.all_kg_dict = self._get_all_kg_dict()
 
-        print("The whole graph: #entities {}, #relations {}, #triplets {}".format(
-            self.num_all_entities, self.num_all_relations, self.num_all_triplets))
+        self.all_train_triplet_np = all_train_triplet
+        self.all_train_triplet_dp = pd.DataFrame(all_train_triplet, columns=['h', 'r', 't'], dtype=np.int32)
+        assert np.max(all_train_triplet) + 1 == self.num_all_entities
+
+        self.all_test_triplet_np = all_test_triplet
+        self.all_test_triplet_dp = pd.DataFrame(all_test_triplet, columns=['h', 'r', 't'], dtype=np.int32)
+
+        self.all_train_kg_dict = self._get_all_train_kg_dict()
+
+        print("The train graph: #entities {}, #relations {}, #triplets {}".format(
+            self.num_all_entities, self.num_all_relations, self.num_all_train_triplets))
+        print("The test graph: #entities {}, #relations {}, #triplets {}".format(
+            self.num_all_entities, self.num_all_relations, self.num_all_test_triplets))
         print("The KG: #entities {}, #relations {}, #triplets {}".format(
             self.num_KG_entities, self.num_KG_relations, self.num_KG_triples))
-        print("The user-item pairs: #users {}, #items {}, #train pairs {}, #test pairs {}".format(
-            self.num_users, self.num_items, self.num_train, self.num_test))
+        print("The user-item pairs: #users {}, #items {}, #train pairs {}, #valid pairs {}, #test pairs {}".format(
+            self.num_users, self.num_items, self.num_train, self.num_valid, self.num_test))
 
-
-    def generate_whole_g(self):
+    def generate_train_g(self):
         g = dgl.DGLGraph()
         g.add_nodes(self.num_all_entities)
-        ### TODO when adding edges, remember to reverse the direction, e.g., t-->h
-        g.add_edges(self.all_triplet_np[:, 2], self.all_triplet_np[:, 0])
+        g.add_edges(self.all_train_triplet_np[:, 2], self.all_train_triplet_np[:, 0])
         #print(g)
-        all_etype = self.all_triplet_np[:, 1]
+        all_etype = self.all_train_triplet_np[:, 1]
+        return g, all_etype
+
+    def generate_test_g(self):
+        g = dgl.DGLGraph()
+        g.add_nodes(self.num_all_entities)
+        g.add_edges(self.all_test_triplet_np[:, 2], self.all_test_triplet_np[:, 0])
+        #print(g)
+        all_etype = self.all_test_triplet_np[:, 1]
         return g, all_etype
 
     @property
@@ -366,23 +398,11 @@ class DataLoader(object):
     def num_all_relations(self):
         return self._n_KG_relations + 2
     @property
-    def num_all_triplets(self):
-        return self.all_triplet_np.shape[0]
-
-    def _filter_neighbor(self, item_ids, kg_pd):
-        new_pd = None
-        item_ids = np.unique(item_ids)
-        #print("original:\t#triplets:{}, #entities:{}".format(kg_pd.shape[0], item_ids.size))
-        for i in range(self._num_neighbor_hop):
-            new_pd = kg_pd[kg_pd.h.isin(item_ids)]
-            item_ids = np.unique(np.concatenate((new_pd['h'].values, new_pd['t'].values)))
-            #print("{}-> new #triplets:{}, #entities:{}".format(i+1, new_pd.shape[0], item_ids.size))
-        new_entity_ids = item_ids
-        #print("original:\t#h:{}, #r:{}, #t:{}".format(kg_pd['h'].nunique(), kg_pd['r'].nunique(), kg_pd['t'].nunique()))
-        #print("filtered:\t#h:{}, #r:{}, #t:{}".format(new_pd["h"].nunique(), new_pd["r"].nunique(),
-        #                                              new_pd["t"].nunique()))
-        #print("Filtered G:\t#entities:{}, #triplets:{}".format(new_entity_ids.size, new_pd.shape[0]))
-        return new_entity_ids, new_pd
+    def num_all_train_triplets(self):
+        return self.all_train_triplet_np.shape[0]
+    @property
+    def num_all_test_triplets(self):
+        return self.all_test_triplet_np.shape[0]
 
     def load_kg_plus_inverse(self, file_name):
         kg_pd = pd.read_csv(file_name, sep=" ", names=['h', "r", "t"], engine='python')
@@ -398,20 +418,6 @@ class DataLoader(object):
         print("#KG entities:{}, relations:{}, triplet:{}, #head:{}, #tail:{}".format(
             entity_ids.size, unique_rel, kg_pd.shape[0], kg_pd['h'].nunique(), kg_pd['t'].nunique()))
 
-        ### TODO filter neighbors are not implemented here
-        # entity_ids, new_kg_pd = self._filter_neighbor(self.item_ids, kg_pd)
-        # ## construct kg_np by relabelling node ids
-        # kg_np = np.zeros((new_kg_pd.shape[0], 3))
-        # self.entity_mapping = {old_id: idx for idx, old_id in enumerate(entity_ids)}
-        # kg_np[:, 0] = list(map(self.entity_mapping.get, new_kg_pd['h'].values))
-        # kg_np[:, 2] = list(map(self.entity_mapping.get, new_kg_pd['t'].values))
-        # if new_kg_pd["r"].nunique() != kg_pd['r'].nunique():
-        #     print("Relation mapping..")
-        #     relation_mapping = {old_id: idx for idx, old_id in enumerate(np.unique(new_kg_pd["r"].values))}
-        #     kg_np[:, 1] = list(map(relation_mapping.get, new_kg_pd['r'].values))
-        # else:
-        #     kg_np[:, 1] = new_kg_pd["r"].values
-
         rev = kg_pd.copy()
         rev = rev.rename({'h':'t', 't':'h'})
         rev['r'] += unique_rel
@@ -426,9 +432,10 @@ class DataLoader(object):
 
         return new_kg_pd.values
 
-    def _get_all_kg_dict(self):
+    def _get_all_train_kg_dict(self):
+        ### generate all_kg_dict for sampling
         all_kg_dict = collections.defaultdict(list)
-        for h, r, t in self.all_triplet_np:
+        for h, r, t in self.all_train_triplet_np:
             if h in all_kg_dict.keys():
                 all_kg_dict[h].append((t, r))
             else:
@@ -484,16 +491,16 @@ class DataLoader(object):
     #         yield heads, pos_r_batch, pos_t_batch, neg_t_batch
 
     def _sample_pos_triples_for_h(self, h):
-        t, r = rd.choice(self.all_kg_dict[h])
+        t, r = rd.choice(self.all_train_kg_dict[h])
         return r, t
     def _sample_neg_triples_for_h(self, h, r):
         while True:
             t = np.random.randint(low=0, high=self.num_all_entities, size=1)[0]
-            if (t, r) not in self.all_kg_dict[h]:
+            if (t, r) not in self.all_train_kg_dict[h]:
                 return t
     def KG_sampler(self, batch_size):
-        exist_heads = list(self.all_kg_dict.keys())
-        n_batch = self.num_all_triplets // batch_size + 1
+        exist_heads = list(self.all_train_kg_dict.keys())
+        n_batch = self.num_all_train_triplets // batch_size + 1
         #print("#num_all_triplets", self.num_all_triplets, "batch_size", batch_size, "n_batch", n_batch,
         #      "#exist_heads", len(exist_heads))
         i = 0
@@ -510,36 +517,33 @@ class DataLoader(object):
                 pos_t_batch.append(pos_ts)
                 neg_ts = self._sample_neg_triples_for_h(h, pos_rs)
                 neg_t_batch.append(neg_ts)
-
             yield heads, pos_r_batch, pos_t_batch, neg_t_batch
 
     def KG_sampler_uniform(self, batch_size):
         if batch_size < 0:
-            batch_size = self.num_all_triplets
+            batch_size = self.num_all_train_triplets
             n_batch = 1
-        elif batch_size > self.num_all_triplets:
-            batch_size = min(batch_size, self.num_all_triplets)
+        elif batch_size > self.num_all_train_triplets:
+            batch_size = min(batch_size, self.num_all_train_triplets)
             n_batch = 1
         else:
             n_batch = self.num_train // batch_size + 1
         i = 0
         while i < n_batch:
             i += 1
-            sel = self._rng.choice(self.num_all_triplets, batch_size, replace=False)
-            h = self.all_triplet_np[sel][:, 0]
-            r = self.all_triplet_np[sel][:, 1]
-            pos_t = self.all_triplet_np[sel][:, 2]
+            sel = self._rng.choice(self.num_all_train_triplets, batch_size, replace=False)
+            h = self.all_train_triplet_np[sel][:, 0]
+            r = self.all_train_triplet_np[sel][:, 1]
+            pos_t = self.all_train_triplet_np[sel][:, 2]
             neg_t = self._rng.choice(self.num_all_entities, batch_size, replace=True).astype(np.int32)
             yield h, r, pos_t, neg_t
 
     @property
     def num_KG_entities(self):
         return self._n_KG_entities
-
     @property
     def num_KG_relations(self):
         return self._n_KG_relations
-
     @property
     def num_KG_triples(self):
         return self._n_KG_triples
@@ -585,9 +589,6 @@ class DataLoader(object):
             assert ele in self.train_user_ids
         for ele in unique_items:
             assert ele in self.item_ids
-        self._n_test = src.size
-        print("Test data: #user:{}, #item:{}, #pairs:{}".format(
-            unique_users.size, unique_items.size, self.num_test))
         return (src, dst), test_user_dict
 
     # def _sample_pos_items_for_u(self, u, num):
@@ -709,71 +710,13 @@ class DataLoader(object):
     #
     #         yield user_ids, item_ids, neg_item_ids, g, uniq_v, etype
 
-    def old_CF_all_sampler(self, batch_size, segment='train', sequential=True):
-        if segment == 'train':
-            node_pairs = self.train_pairs
-            all_num = self.num_train
-        else:
-            raise NotImplementedError
-        if batch_size < 0:
-            batch_size = all_num
-        else:
-            batch_size = min(batch_size, all_num)
-        if batch_size == all_num:
-            neg_item_ids = self._rng.choice(self.item_ids, batch_size, replace=True).astype(np.int32)
-            uniq_v = np.arange(self.num_all_entities)
-            g, etype = self.generate_whole_g()
-            yield node_pairs[0], node_pairs[1], neg_item_ids, g, uniq_v, etype
-        if sequential:
-            shuffled_idx = self._rng.permutation(self.num_train)
-            all_user_ids = node_pairs[0][shuffled_idx]
-            all_item_idx = node_pairs[1][shuffled_idx]
-            for start in range(0, all_num, batch_size):
-                ## choose user item pairs
-                end = min(start+batch_size, all_num)
-                user_ids = all_user_ids[start: end]
-                item_ids = all_item_idx[start: end]
-                ## obtain k-hop neighbors
-                new_entity_ids, new_pd = self._filter_neighbor(np.concatenate((user_ids, item_ids)),
-                                                               self.all_triplet_dp)
-                etype = new_pd['r'].values
-                ### relabel nodes to have consecutive node ids
-                uniq_v, edges = np.unique((new_pd['h'].values, new_pd['t'].values), return_inverse=True)
-                src, dst = np.reshape(edges, (2, -1))
-                g = dgl.DGLGraph()
-                g.add_nodes(uniq_v.size)
-                g.add_edges(dst, src)
-                ### map user_ids and items_ids into indicies in the graph
-                node_map = {ele: idx for idx, ele in enumerate(uniq_v)}
-                user_ids = np.array(list(map(node_map.get, user_ids)), dtype=np.int32)
-                item_ids = np.array(list(map(node_map.get, item_ids)), dtype=np.int32)
-                neg_item_ids = self._rng.choice(item_ids, end-start, replace=True).astype(np.int32)
-
-                yield user_ids, item_ids, neg_item_ids, g, uniq_v, etype
-        else:
-            while True:
-                sel = self._rng.choice(all_num, batch_size, replace=False)
-                user_ids = node_pairs[0][sel]
-                item_ids = node_pairs[1][sel]
-                new_entity_ids, new_pd = self._filter_neighbor(np.concatenate((user_ids, item_ids)),
-                                                               self.all_triplet_dp)
-                etype = new_pd['r'].values
-                ### relabel nodes to have consecutive node ids
-                uniq_v, edges = np.unique((new_pd['h'].values, new_pd['t'].values), return_inverse=True)
-                src, dst = np.reshape(edges, (2, -1))
-                g = dgl.DGLGraph()
-                g.add_nodes(uniq_v.size)
-                g.add_edges(dst, src)
-                ### map user_ids and items_ids into indicies in the graph
-                node_map = {ele: idx for idx, ele in enumerate(uniq_v)}
-                user_ids = np.array(list(map(node_map.get, user_ids)), dtype=np.int32)
-                item_ids = np.array(list(map(node_map.get, item_ids)), dtype=np.int32)
-                neg_item_ids = self._rng.choice(item_ids, batch_size, replace=True).astype(np.int32)
-                yield user_ids, item_ids, neg_item_ids, g, uniq_v, etype
 
     @property
     def num_train(self):
         return self._n_train
+    @property
+    def num_valid(self):
+        return self._n_valid
     @property
     def num_test(self):
         return self._n_test
