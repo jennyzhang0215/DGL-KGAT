@@ -523,9 +523,9 @@ class DataLoader(object):
             yield heads, pos_r_batch, pos_t_batch, neg_t_batch
 
     def KG_sampler_uniform(self, batch_size):
-        pos_pool = []
-        for i in range(self.num_all_train_triplets):
-            pos_pool.append(self.all_train_triplet_np[i, :].tolist())
+        # pos_pool = []
+        # for i in range(self.num_all_train_triplets):
+        #     pos_pool.append(self.all_train_triplet_np[i, :].tolist())
         if batch_size < 0:
             batch_size = self.num_all_train_triplets
             n_batch = 1
