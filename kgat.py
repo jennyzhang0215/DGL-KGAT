@@ -60,7 +60,7 @@ def train(args):
         th.cuda.set_device(args.gpu)
 
     ### load data
-    dataset = L_DataLoader(args.data_name, num_neighbor_hop=args.gnn_num_layer, seed=args.seed)
+    dataset = DataLoader(args.data_name, seed=args.seed)
 
     ### model
     model = Model(n_entities=dataset.num_all_entities, n_relations=dataset.num_all_relations,
@@ -72,65 +72,47 @@ def train(args):
     logging.info(model)
     ### optimizer
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
-
-    test_metric_logger = MetricLogger(['epoch', 'recall', 'ndcg'], ['%d', '%.5f', '%.5f'],
-                                      os.path.join(args.save_dir, 'test{:d}.csv'.format(args.save_id)))
+    valid_metric_logger = MetricLogger(['epoch', 'recall', 'ndcg', 'is_best'],
+                                       ['%d', '%.5f', '%.5f', '%d'],
+                                       os.path.join(args.save_dir, 'valid{:d}.csv'.format(args.save_id)))
+    test_metric_logger = MetricLogger(['epoch', 'recall', 'ndcg'],
+                                       ['%d', '%.5f', '%.5f'],
+                                       os.path.join(args.save_dir, 'test{:d}.csv'.format(args.save_id)))
     best_epoch = -1
     best_recall = 0.0
     best_ndcg = 0.0
     model_state_file = 'model_state.pth'
 
-    g, all_etype = dataset.generate_whole_g()
-    nid_th = th.arange(dataset.num_all_entities, dtype=th.long)
-    etype_th = th.LongTensor(all_etype)
+    train_g = dataset.train_g
+    nid_th = th.LongTensor(train_g.ndata["id"])
+    etype_th = th.LongTensor(train_g.edata["type"])
     if use_cuda:
         nid_th, etype_th = nid_th.cuda(), etype_th.cuda()
-    g.ndata['id'] = nid_th
-    g.edata['type'] = etype_th
+    train_g.ndata['id'] = nid_th
+    train_g.edata['type'] = etype_th
+
+    test_g = dataset.test_g
+    nid_th = th.LongTensor(test_g.ndata["id"])
+    etype_th = th.LongTensor(test_g.edata["type"])
+    if use_cuda:
+        nid_th, etype_th = nid_th.cuda(), etype_th.cuda()
+    test_g.ndata['id'] = nid_th
+    test_g.edata['type'] = etype_th
     if use_cuda:
         item_id_range = th.arange(dataset.num_items, dtype=th.long).cuda()
     else:
         item_id_range = th.arange(dataset.num_items, dtype=th.long)
-    A_w = th.tensor(dataset.w).view(-1, 1)
-    if use_cuda:
-        A_w = A_w.cuda()
-    print(A_w)
-    g.edata['w'] = A_w
+    """ For initializing the edge weights """
+    # A_w = th.tensor(dataset.w).view(-1, 1)
+    # if use_cuda:
+    #     A_w = A_w.cuda()
+    # print(A_w)
+    # g.edata['w'] = A_w
 
     for epoch in range(1, args.max_epoch+1):
-        ### train GNN
-        time1 = time()
-        model.train()
-        cf_sampler = dataset.CF_pair_sampler(batch_size=args.batch_size)
-        iter = 0
-        total_loss = 0.0
-        # if args.use_attention:
-        #     with th.no_grad():
-        #         A_w = model.compute_attention(g)
-        #     g.edata['w'] = A_w
-        for user_ids, item_pos_ids, item_neg_ids in cf_sampler:
-            iter += 1
-            user_ids_th = th.LongTensor(user_ids)
-            item_pos_ids_th = th.LongTensor(item_pos_ids)
-            item_neg_ids_th = th.LongTensor(item_neg_ids)
-            if use_cuda:
-                user_ids_th, item_pos_ids_th, item_neg_ids_th = \
-                    user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda()
-            embedding = model.gnn(g)
-            loss = model.get_loss(embedding, user_ids_th, item_pos_ids_th, item_neg_ids_th)
-            loss.backward()
-            # th.nn.utils.clip_grad_norm_(model.parameters(), args.grad_norm)  # clip gradients
-            optimizer.step()
-            optimizer.zero_grad()
-            total_loss += loss.item()
-            if (iter % args.print_gnn_every) == 0:
-                logging.info("Epoch {:03d} Iter {:04d} | Loss {:.4f} ".format(epoch, iter, total_loss / iter))
-        logging.info(['Time for GNN: {:.1f}s, loss {:.4f}'.format(time() - time1, total_loss / iter)])
-
-
         ### train kg
         time1 = time()
-        kg_sampler = dataset.KG_sampler(batch_size=args.batch_size_kg)
+        kg_sampler = dataset.KG_sampler_uniform(batch_size=args.batch_size_kg)
         iter = 0
         total_loss = 0.0
         for h, r, pos_t, neg_t in kg_sampler:
@@ -151,18 +133,51 @@ def train(args):
                logging.info("Epoch {:03d} Iter {:04d} | Loss {:.4f} ".format(epoch, iter, total_loss/iter))
         logging.info(['Time for KGE: {:.1f}s, loss {:.4f}'.format(time() - time1, total_loss/iter)])
 
-
+        ### train GNN
+        time1 = time()
+        model.train()
+        cf_sampler = dataset.CF_pair_sampler(batch_size=args.batch_size)
+        iter = 0
+        total_loss = 0.0
 
         if args.use_attention:
             with th.no_grad():
                 A_w = model.compute_attention(g)
-            g.edata['w'] = A_w
+            train_g.edata['w'] = A_w
+
+        for user_ids, item_pos_ids, item_neg_ids in cf_sampler:
+            iter += 1
+            user_ids_th = th.LongTensor(user_ids)
+            item_pos_ids_th = th.LongTensor(item_pos_ids)
+            item_neg_ids_th = th.LongTensor(item_neg_ids)
+            if use_cuda:
+                user_ids_th, item_pos_ids_th, item_neg_ids_th = \
+                    user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda()
+            embedding = model.gnn(train_g)
+            loss = model.get_loss(embedding, user_ids_th, item_pos_ids_th, item_neg_ids_th)
+            loss.backward()
+            # th.nn.utils.clip_grad_norm_(model.parameters(), args.grad_norm)  # clip gradients
+            optimizer.step()
+            optimizer.zero_grad()
+            total_loss += loss.item()
+            if (iter % args.print_gnn_every) == 0:
+                logging.info("Epoch {:03d} Iter {:04d} | Loss {:.4f} ".format(epoch, iter, total_loss / iter))
+        logging.info(['Time for GNN: {:.1f}s, loss {:.4f}'.format(time() - time1, total_loss / iter)])
+
+        if args.use_attention:
+            with th.no_grad():
+                A_w = model.compute_attention(train_g)
+            train_g.edata['w'] = A_w
 
         if epoch % args.evaluate_every == 0:
             time1 = time()
             with th.no_grad():
                 model.eval()
-                all_embedding = model.gnn(g)
+                if args.use_attention:
+                    with th.no_grad():
+                        A_w = model.compute_attention(test_g)
+                    test_g.edata['w'] = A_w
+                all_embedding = model.gnn(test_g)
                 recall, ndcg = metric.calc_recall_ndcg(all_embedding, dataset, item_id_range, K=20, use_cuda=use_cuda)
 
             # save best model
