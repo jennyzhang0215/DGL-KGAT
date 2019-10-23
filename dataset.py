@@ -727,7 +727,7 @@ class DataLoader(object):
         i = 0
         while i < n_batch:
             i += 1
-            sel = rd.random(range(self.num_train), k = batch_size)
+            sel = rd.sample(range(self.num_train), k = batch_size)
             users = self.train_pairs[0][sel]
             pos_items = self.train_pairs[1][sel]
             neg_items = rd.choices(range(self.num_items), k = batch_size)
