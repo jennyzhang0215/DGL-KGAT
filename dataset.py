@@ -541,13 +541,13 @@ class DataLoader(object):
             h = self.all_train_triplet_np[sel][:, 0]
             r = self.all_train_triplet_np[sel][:, 1]
             pos_t = self.all_train_triplet_np[sel][:, 2]
-            neg_t = rd.choices(range(self.num_all_entities), k=batch_size)
+            neg_t = np.array(rd.choices(range(self.num_all_entities), k=batch_size))
 
             ### check whether negative triplets are true negative
             neg_l = [[neg_t[j], r[j], h[j]] for j in range(batch_size)]
             true_neg = list(map(lambda x: x not in pos_pool, neg_l))
             h, r, pos_t, neg_t = h[true_neg], r[true_neg], pos_t[true_neg], neg_t[true_neg]
-
+            print(h.shape, r.shape, pos_t.shape, neg_t.shape)
             yield h, r, pos_t, neg_t
 
     def create_Edge_sampler(self, batch_size, num_workers=8, shuffle=True, exclude_positive=False):
