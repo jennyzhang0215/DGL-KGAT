@@ -106,8 +106,8 @@ def calc_recall_ndcg(embedding, train_user_dict, test_user_dict, all_item_id_ran
     ### the output is the sum
     #recall = recall_at_k(ranks, K, dataset.num_test)
     #ndcg = ndcg_at_k(ranks, K)
-    one_by_one_recall = recall_all / len(dataset.test_user_dict)
-    one_by_one_ndcg = ndcg_all / len(dataset.test_user_dict)
+    one_by_one_recall = recall_all / len(test_user_dict)
+    one_by_one_ndcg = ndcg_all / len(test_user_dict)
     #print("Comparision: recall (all v.s. one by one) {} v.s. {}".format(recall, one_by_one_recall))
     #print("\tndcg (all v.s. one by one) {} v.s. {}".format(ndcg, one_by_one_ndcg))
 
