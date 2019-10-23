@@ -142,7 +142,7 @@ def train(args):
 
         if args.use_attention:
             with th.no_grad():
-                A_w = model.compute_attention(g)
+                A_w = model.compute_attention(train_g)
             train_g.edata['w'] = A_w
 
         for user_ids, item_pos_ids, item_neg_ids in cf_sampler:
