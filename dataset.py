@@ -545,7 +545,7 @@ class DataLoader(object):
 
             ### check whether negative triplets are true negative
             neg_l = [[neg_t[j], r[j], h[j]] for j in range(batch_size)]
-            true_neg = list(map(lambda x: x in pos_pool, neg_l))
+            true_neg = list(map(lambda x: x not in pos_pool, neg_l))
             h, r, pos_t, neg_t = h[true_neg], r[true_neg], pos_t[true_neg], neg_t[true_neg]
 
             yield h, r, pos_t, neg_t
