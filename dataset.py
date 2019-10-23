@@ -581,7 +581,7 @@ class DataLoader(object):
                 r = pos_g.edata['type']
                 pos_t = pos_g.ndata['id'][t_idx]
                 #neg_t = neg_g.ndata['id'][neg_t_idx]
-                neg_t = th.Tensor(rd.choices(range(self.num_all_entities), k=batch_size))
+                neg_t = th.LongTensor(rd.choices(range(self.num_all_entities), k=batch_size))
                 # h, r, pos_t, neg_t
                 yield h, r, pos_t, neg_t
 
