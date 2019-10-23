@@ -537,17 +537,17 @@ class DataLoader(object):
         i = 0
         while i < n_batch:
             i += 1
-            sel = rd.choices(range(self.num_all_train_triplets), k=batch_size)
+            sel = rd.sample(range(self.num_all_train_triplets), k=batch_size)
             h = self.all_train_triplet_np[sel][:, 0]
             r = self.all_train_triplet_np[sel][:, 1]
             pos_t = self.all_train_triplet_np[sel][:, 2]
             neg_t = np.array(rd.choices(range(self.num_all_entities), k=batch_size))
 
-            ### check whether negative triplets are true negative
-            neg_l = [[neg_t[j], r[j], h[j]] for j in range(batch_size)]
-            true_neg = list(map(lambda x: x not in pos_pool, neg_l))
-            h, r, pos_t, neg_t = h[true_neg], r[true_neg], pos_t[true_neg], neg_t[true_neg]
-            print(h.shape, r.shape, pos_t.shape, neg_t.shape)
+            ### check whether negative triplets are true negative TODO too slow
+            # neg_l = [[neg_t[j], r[j], h[j]] for j in range(batch_size)]
+            # true_neg = list(map(lambda x: x not in pos_pool, neg_l))
+            # h, r, pos_t, neg_t = h[true_neg], r[true_neg], pos_t[true_neg], neg_t[true_neg]
+            # print(h.shape, r.shape, pos_t.shape, neg_t.shape)
             yield h, r, pos_t, neg_t
 
     def create_Edge_sampler(self, batch_size, num_workers=8, shuffle=True, exclude_positive=False):
@@ -561,8 +561,6 @@ class DataLoader(object):
                            exclude_positive=exclude_positive,
                            return_false_neg=False)
     def KG_sampler_DGL(self, batch_size):
-
-
         if batch_size < 0:
             batch_size = self.num_all_train_triplets
             n_batch = 1
