@@ -541,7 +541,7 @@ class DataLoader(object):
             h = self.all_train_triplet_np[sel][:, 0]
             r = self.all_train_triplet_np[sel][:, 1]
             pos_t = self.all_train_triplet_np[sel][:, 2]
-            neg_t = np.array(rd.choices(range(self.num_all_entities), k=batch_size))
+            neg_t = rd.choices(range(self.num_all_entities), k=batch_size)
 
             ### check whether negative triplets are true negative TODO too slow
             # neg_l = [[neg_t[j], r[j], h[j]] for j in range(batch_size)]
