@@ -719,10 +719,10 @@ class DataLoader(object):
         i = 0
         while i < n_batch:
             i += 1
-            sel = self._rng.choice(self.num_train, batch_size, replace=False)
+            sel = rd.sample(range(self.num_train), k = batch_size)
             users = self.train_pairs[0][sel]
             pos_items = self.train_pairs[1][sel]
-            neg_items = self._rng.choice(self.num_items, batch_size, replace=True).astype(np.int32)
+            neg_items = rd.choices(range(self.num_items), k = batch_size)
             yield users, pos_items, neg_items
 
     # def CF_batchwise_sampler(self, batch_size):

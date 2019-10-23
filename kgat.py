@@ -23,7 +23,7 @@ def parse_args():
     parser.add_argument('--gnn_num_layer', type=int, default=3, help='the number of layers')
     parser.add_argument('--gnn_hidden_size', type=int, default=64, help='Output sizes of every layer')
     parser.add_argument('--dropout_rate', type=float, default=0.1, help='Keep probability w.r.t. node dropout (i.e., 1-dropout_ratio) for each deep layer. 1: no dropout.')
-    parser.add_argument('--use_attention', type=bool, default=False, help='Whether to use attention to update adj')
+    parser.add_argument('--use_attention', type=bool, default=True, help='Whether to use attention to update adj')
     parser.add_argument('--regs', type=float, default=0.0001, help='Regularization for user and item embeddings.')
 
     ### Training parameters
@@ -136,7 +136,7 @@ def train(args):
         ### train GNN
         time1 = time()
         model.train()
-        cf_sampler = dataset.CF_pair_sampler(batch_size=args.batch_size)
+        cf_sampler = dataset.CF_pair_uniform_sampler(batch_size=args.batch_size)
         iter = 0
         total_loss = 0.0
 
