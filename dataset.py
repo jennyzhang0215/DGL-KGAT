@@ -380,8 +380,8 @@ class DataLoader(object):
         g.add_nodes(self.num_all_entities)
         g.add_edges(self.all_train_triplet_np[:, 2], self.all_train_triplet_np[:, 0])
         g.readonly()
-        g.ndata['id'] = np.arange(self.num_all_entities, dtype=np.int32)
-        g.edata['type'] = self.all_train_triplet_np[:, 1]
+        g.ndata['id'] = th.arange(self.num_all_entities, dtype=th.long)
+        g.edata['type'] = th.LongTensor(self.all_train_triplet_np[:, 1])
         return g
 
     @property
@@ -390,8 +390,8 @@ class DataLoader(object):
         g.add_nodes(self.num_all_entities)
         g.add_edges(self.all_test_triplet_np[:, 2], self.all_test_triplet_np[:, 0])
         g.readonly()
-        g.ndata['id'] = np.arange(self.num_all_entities, dtype=np.int32)
-        g.edata['type'] = self.all_test_triplet_np[:, 1]
+        g.ndata['id'] = th.arange(self.num_all_entities, dtype=th.long)
+        g.edata['type'] = th.LongTensor(self.all_test_triplet_np[:, 1])
         return g
 
     @property
