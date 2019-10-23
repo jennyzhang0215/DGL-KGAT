@@ -498,7 +498,7 @@ class DataLoader(object):
         return r, t
     def _sample_neg_triples_for_h(self, h, r):
         while True:
-            t = np.random.randint(low=0, high=self.num_all_entities, size=1)[0]
+            t = rd.choice(range(self.num_all_entities))
             if (t, r) not in self.all_train_kg_dict[h]:
                 return t
     def KG_sampler(self, batch_size):
@@ -685,7 +685,7 @@ class DataLoader(object):
         return rd.choice(self.train_user_dict[u])
     def _sample_neg_items_for_u(self, u):
         while True:
-            neg_i_id = np.random.randint(low=0, high=self.num_items, size=1)[0]
+            neg_i_id = rd.choice(range(self.num_items))
             if neg_i_id not in self.train_user_dict[u]:
                 return neg_i_id
     def CF_pair_sampler(self, batch_size):
@@ -727,7 +727,7 @@ class DataLoader(object):
         i = 0
         while i < n_batch:
             i += 1
-            sel = rd.choices(range(self.num_train), k = batch_size)
+            sel = rd.random(range(self.num_train), k = batch_size)
             users = self.train_pairs[0][sel]
             pos_items = self.train_pairs[1][sel]
             neg_items = rd.choices(range(self.num_items), k = batch_size)

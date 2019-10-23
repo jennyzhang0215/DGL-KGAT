@@ -33,8 +33,8 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=1024, help='CF batch size.')
     parser.add_argument('--batch_size_kg', type=int, default=2048, help='KG batch size.')
     parser.add_argument('--evaluate_every', type=int, default=1, help='the evaluation duration')
-    parser.add_argument('--print_kg_every', type=int, default=500, help='the print duration of the kg part')
-    parser.add_argument('--print_gnn_every', type=int, default=500, help='the print duration of the gnn part')
+    parser.add_argument('--print_kg_every', type=int, default=100, help='the print duration of the kg part')
+    parser.add_argument('--print_gnn_every', type=int, default=100, help='the print duration of the gnn part')
     #parser.add_argument("--eval_batch_size", type=int, default=-1, help="batch size when evaluating")
     args = parser.parse_args()
     save_dir = "{}_d{}_l{}_dp{}_lr{}_bz{}_kgbz{}_att{}_seed{}".format(args.data_name, args.entity_embed_dim,
@@ -168,27 +168,41 @@ def train(args):
                 A_w = model.compute_attention(train_g)
             train_g.edata['w'] = A_w
 
+        def eval(model, g, train_user_dict, eval_user_dict, item_id_range, use_cuda, use_attention):
+            if use_attention:
+                with th.no_grad():
+                    A_w = model.compute_attention(g)
+                g.edata['w'] = A_w
+            all_embedding = model.gnn(g)
+            recall, ndcg = metric.calc_recall_ndcg(all_embedding, train_user_dict, eval_user_dict,
+                                                   item_id_range, K=20, use_cuda=use_cuda)
+            return recall, ndcg
+
         if epoch % args.evaluate_every == 0:
             time1 = time()
-            with th.no_grad():
-                model.eval()
-                if args.use_attention:
-                    with th.no_grad():
-                        A_w = model.compute_attention(test_g)
-                    test_g.edata['w'] = A_w
-                all_embedding = model.gnn(test_g)
-                recall, ndcg = metric.calc_recall_ndcg(all_embedding, dataset, item_id_range, K=20, use_cuda=use_cuda)
+            val_recall, val_ndcg = eval(model, train_g, dataset.train_user_dict, dataset.valid_user_dict,
+                                        item_id_range, use_cuda, args.use_attention)
 
+            info = "[{:.1f}s]Epoch: {}, val recall:{:.5f}, val ndcg:{:.5f} ".format(
+                    time() - time1, epoch, val_recall, val_ndcg)
             # save best model
-            if recall > best_recall:
-                best_recall = recall
-                best_ndcg = ndcg
+            if val_recall > best_recall:
+                valid_metric_logger.log(epoch=epoch, recall=val_recall, ndcg=val_ndcg, isbest=1)
+                best_recall = val_recall
+                best_ndcg = val_ndcg
                 best_epoch = epoch
+                time1 = time()
+                test_recall, test_ndcg = eval(model, test_g, dataset.train_user_dict, dataset.test_user_dict,
+                                              item_id_range, use_cuda, args.use_attention)
+                test_metric_logger.log(epoch=epoch, recall=test_recall, ndcg=test_ndcg)
+
+                info += "test recall:{:.5f}, test ndcg:{:.5f}\n".format(time() - time1, epoch, test_recall, test_ndcg)
                 #th.save({'state_dict': model.state_dict(), 'epoch': epoch}, model_state_file)
-            logging.info(
-                "[{:.1f}s]Epoch: {}, test recall:{:.5f}, ndcg:{:.5f}, best({}) recall:{:.5f}, ndcg:{:.5f}\n".format(
-                    time() - time1, epoch, recall, ndcg, best_epoch, best_recall, best_ndcg))
-            test_metric_logger.log(epoch=epoch, recall=recall, ndcg=ndcg)
+            else:
+                valid_metric_logger.log(epoch=epoch, recall=val_recall, ndcg=val_ndcg, isbest=0)
+            logging.info(info)
+    
+    logging.info("Final test recall:{:.5f}, test ndcg:{:.5f}, best epoch:{}".format(test_recall, test_ndcg, best_epoch))
 
 if __name__ == '__main__':
     args = parse_args()

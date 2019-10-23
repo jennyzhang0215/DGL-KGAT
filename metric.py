@@ -66,8 +66,7 @@ def one_ndcg_at_k(r, k, method=1):
         return 0.
     return one_dcg_at_k(r, k, method) / dcg_max
 
-
-def calc_recall_ndcg(embedding, dataset, all_item_id_range, K, use_cuda):
+def calc_recall_ndcg(embedding, train_user_dict, test_user_dict, all_item_id_range, K, use_cuda):
     with th.no_grad():
         # perturb subject
         #print("Test size: {}".format(len(dataset.test_user_dict)))
@@ -76,7 +75,7 @@ def calc_recall_ndcg(embedding, dataset, all_item_id_range, K, use_cuda):
         ndcg_all = 0.0
         all_pos_item_num = 0
 
-        for u_id, pos_item_l in dataset.test_user_dict.items():
+        for u_id, pos_item_l in test_user_dict.items():
             all_pos_item_num += len(pos_item_l)
             emb_u = embedding[u_id]
             #print("emb_u", emb_u.shape, emb_u)
@@ -85,7 +84,7 @@ def calc_recall_ndcg(embedding, dataset, all_item_id_range, K, use_cuda):
             score = th.matmul(emb_u, emb_all)
             #print("score", score.shape, score)
             ### mask scores of the training items as 0
-            score[dataset.train_user_dict[u_id]] = 0.0
+            score[train_user_dict[u_id]] = 0.0
             _, rank_indices = th.sort(score, descending=True)
             if use_cuda:
                 rank_indices = rank_indices.cpu().numpy()
@@ -99,7 +98,7 @@ def calc_recall_ndcg(embedding, dataset, all_item_id_range, K, use_cuda):
             if len(pos_item_l) > 0:
                 recall_all += one_recall_at_k(binary_rank_K.tolist(), K, len(pos_item_l))
             else:
-                print("Nan user dict:", u_id, dataset.test_user_dict[u_id])
+                print("Nan user dict:", u_id, test_user_dict[u_id])
             ndcg_all += one_ndcg_at_k(binary_rank_K.tolist(), K)
 
 
