@@ -187,7 +187,7 @@ def train(args):
                     time() - time1, epoch, val_recall, val_ndcg)
             # save best model
             if val_recall > best_recall:
-                valid_metric_logger.log(epoch=epoch, recall=val_recall, ndcg=val_ndcg, isbest=1)
+                valid_metric_logger.log(epoch=epoch, recall=val_recall, ndcg=val_ndcg, is_best=1)
                 best_recall = val_recall
                 best_ndcg = val_ndcg
                 best_epoch = epoch
@@ -199,7 +199,7 @@ def train(args):
                 info += "test recall:{:.5f}, test ndcg:{:.5f}\n".format(time() - time1, epoch, test_recall, test_ndcg)
                 #th.save({'state_dict': model.state_dict(), 'epoch': epoch}, model_state_file)
             else:
-                valid_metric_logger.log(epoch=epoch, recall=val_recall, ndcg=val_ndcg, isbest=0)
+                valid_metric_logger.log(epoch=epoch, recall=val_recall, ndcg=val_ndcg, is_best=0)
             logging.info(info)
 
     logging.info("Final test recall:{:.5f}, test ndcg:{:.5f}, best epoch:{}".format(test_recall, test_ndcg, best_epoch))
