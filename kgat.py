@@ -50,6 +50,16 @@ def parse_args():
     return args
 
 
+def eval(model, g, train_user_dict, eval_user_dict, item_id_range, use_cuda, use_attention):
+    with th.no_grad():
+        if use_attention:
+            A_w = model.compute_attention(g)
+        g.edata['w'] = A_w
+        all_embedding = model.gnn(g)
+        recall, ndcg = metric.calc_recall_ndcg(all_embedding, train_user_dict, eval_user_dict,
+                                               item_id_range, K=20, use_cuda=use_cuda)
+    return recall, ndcg
+
 def train(args):
     print("Use_attention", args.use_attention)
     logging_config(folder=args.save_dir, name='log{:d}'.format(args.save_id), no_console=False)
@@ -163,20 +173,6 @@ def train(args):
                 logging.info("Epoch {:03d} Iter {:04d} | Loss {:.4f} ".format(epoch, iter, total_loss / iter))
         logging.info('Time for GNN: {:.1f}s, loss {:.4f}'.format(time() - time1, total_loss / iter))
 
-        if args.use_attention:
-            with th.no_grad():
-                A_w = model.compute_attention(train_g)
-            train_g.edata['w'] = A_w
-
-        def eval(model, g, train_user_dict, eval_user_dict, item_id_range, use_cuda, use_attention):
-            with th.no_grad():
-                if use_attention:
-                    A_w = model.compute_attention(g)
-                g.edata['w'] = A_w
-                all_embedding = model.gnn(g)
-                recall, ndcg = metric.calc_recall_ndcg(all_embedding, train_user_dict, eval_user_dict,
-                                                   item_id_range, K=20, use_cuda=use_cuda)
-            return recall, ndcg
 
         if epoch % args.evaluate_every == 0:
             time1 = time()
