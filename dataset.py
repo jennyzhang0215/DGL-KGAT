@@ -715,11 +715,10 @@ class DataLoader(object):
         else:
             n_batch = self.num_train // batch_size + 1
         #print("#train_pair", self.num_train, "batch_size", batch_size, "n_batch", n_batch, "#exist_user", len(exist_users))
-
         i = 0
         while i < n_batch:
             i += 1
-            sel = rd.sample(range(self.num_train), k = batch_size)
+            sel = rd.choices(range(self.num_train), k = batch_size)
             users = self.train_pairs[0][sel]
             pos_items = self.train_pairs[1][sel]
             neg_items = rd.choices(range(self.num_items), k = batch_size)

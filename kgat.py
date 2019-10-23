@@ -131,7 +131,7 @@ def train(args):
             total_loss += loss.item()
             if (iter % args.print_kg_every) == 0:
                logging.info("Epoch {:03d} Iter {:04d} | Loss {:.4f} ".format(epoch, iter, total_loss/iter))
-        logging.info(['Time for KGE: {:.1f}s, loss {:.4f}'.format(time() - time1, total_loss/iter)])
+        logging.info('Time for KGE: {:.1f}s, loss {:.4f}'.format(time() - time1, total_loss/iter))
 
         ### train GNN
         time1 = time()
@@ -144,7 +144,6 @@ def train(args):
             with th.no_grad():
                 A_w = model.compute_attention(train_g)
             train_g.edata['w'] = A_w
-
         for user_ids, item_pos_ids, item_neg_ids in cf_sampler:
             iter += 1
             user_ids_th = th.LongTensor(user_ids)
