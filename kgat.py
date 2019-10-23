@@ -162,12 +162,18 @@ def train(args):
             if use_cuda:
                 user_ids_th, item_pos_ids_th, item_neg_ids_th = \
                     user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda()
+            time1 = time()
             embedding = model.gnn(train_g)
+            print("[{:.5f}s] for gnn".format(time()-time1))
+            time1 = time()
             loss = model.get_loss(embedding, user_ids_th, item_pos_ids_th, item_neg_ids_th)
+            print("[{:.5f}s] for get_loss".format(time()-time1))
+            time1 = time()
             loss.backward()
             # th.nn.utils.clip_grad_norm_(model.parameters(), args.grad_norm)  # clip gradients
             optimizer.step()
             optimizer.zero_grad()
+            print("[{:.5f}s] for backward".format(time()-time1))
             total_loss += loss.item()
             if (iter % args.print_gnn_every) == 0:
                 logging.info("Epoch {:03d} Iter {:04d} | Loss {:.4f} ".format(epoch, iter, total_loss / iter))
