@@ -112,7 +112,7 @@ def train(args):
     for epoch in range(1, args.max_epoch+1):
         ### train kg
         time1 = time()
-        kg_sampler = dataset.KG_sampler_DGL(batch_size=args.batch_size_kg)
+        kg_sampler = dataset.KG_sampler_uniform(batch_size=args.batch_size_kg)
         iter = 0
         total_loss = 0.0
         for h, r, pos_t, neg_t in kg_sampler:

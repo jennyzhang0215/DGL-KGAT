@@ -523,6 +523,9 @@ class DataLoader(object):
             yield heads, pos_r_batch, pos_t_batch, neg_t_batch
 
     def KG_sampler_uniform(self, batch_size):
+        pos_pool = []
+        for i in range(self.num_all_train_triplets):
+            pos_pool.append(self.all_train_triplet_np[i, :].tolist())
         if batch_size < 0:
             batch_size = self.num_all_train_triplets
             n_batch = 1
@@ -539,6 +542,12 @@ class DataLoader(object):
             r = self.all_train_triplet_np[sel][:, 1]
             pos_t = self.all_train_triplet_np[sel][:, 2]
             neg_t = rd.choices(range(self.num_all_entities), k=batch_size)
+
+            ### check whether negative triplets are true negative
+            neg_l = [[neg_t[j], r[j], h[j]] for j in range(batch_size)]
+            true_neg = list(map(lambda x: x in pos_pool, neg_l))
+            h, r, pos_t, neg_t = h[true_neg], r[true_neg], pos_t[true_neg], neg_t[true_neg]
+
             yield h, r, pos_t, neg_t
 
     def create_Edge_sampler(self, batch_size, num_workers=8, shuffle=True, exclude_positive=False):
@@ -552,6 +561,8 @@ class DataLoader(object):
                            exclude_positive=exclude_positive,
                            return_false_neg=False)
     def KG_sampler_DGL(self, batch_size):
+
+
         if batch_size < 0:
             batch_size = self.num_all_train_triplets
             n_batch = 1
@@ -582,7 +593,7 @@ class DataLoader(object):
                 pos_t = pos_g.ndata['id'][t_idx]
                 #neg_t = neg_g.ndata['id'][neg_t_idx]
                 neg_t = th.LongTensor(rd.choices(range(self.num_all_entities), k=batch_size))
-                # h, r, pos_t, neg_t
+                #print(h, r, pos_t, neg_t)
                 yield h, r, pos_t, neg_t
 
     @property
