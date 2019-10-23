@@ -161,7 +161,7 @@ def train(args):
             total_loss += loss.item()
             if (iter % args.print_gnn_every) == 0:
                 logging.info("Epoch {:03d} Iter {:04d} | Loss {:.4f} ".format(epoch, iter, total_loss / iter))
-        logging.info(['Time for GNN: {:.1f}s, loss {:.4f}'.format(time() - time1, total_loss / iter)])
+        logging.info('Time for GNN: {:.1f}s, loss {:.4f}'.format(time() - time1, total_loss / iter))
 
         if args.use_attention:
             with th.no_grad():
@@ -169,12 +169,12 @@ def train(args):
             train_g.edata['w'] = A_w
 
         def eval(model, g, train_user_dict, eval_user_dict, item_id_range, use_cuda, use_attention):
-            if use_attention:
-                with th.no_grad():
+            with th.no_grad():
+                if use_attention:
                     A_w = model.compute_attention(g)
                 g.edata['w'] = A_w
-            all_embedding = model.gnn(g)
-            recall, ndcg = metric.calc_recall_ndcg(all_embedding, train_user_dict, eval_user_dict,
+                all_embedding = model.gnn(g)
+                recall, ndcg = metric.calc_recall_ndcg(all_embedding, train_user_dict, eval_user_dict,
                                                    item_id_range, K=20, use_cuda=use_cuda)
             return recall, ndcg
 
@@ -189,7 +189,7 @@ def train(args):
             if val_recall > best_recall:
                 valid_metric_logger.log(epoch=epoch, recall=val_recall, ndcg=val_ndcg, is_best=1)
                 best_recall = val_recall
-                best_ndcg = val_ndcg
+                #best_ndcg = val_ndcg
                 best_epoch = epoch
                 time1 = time()
                 test_recall, test_ndcg = eval(model, test_g, dataset.train_user_dict, dataset.test_user_dict,
