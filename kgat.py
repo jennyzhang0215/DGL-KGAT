@@ -179,8 +179,8 @@ def train(args):
             val_recall, val_ndcg = eval(model, train_g, dataset.train_user_dict, dataset.valid_user_dict,
                                         item_id_range, use_cuda, args.use_attention)
 
-            info = "[{:.1f}s]Epoch: {}, val recall:{:.5f}, val ndcg:{:.5f} ".format(
-                    time() - time1, epoch, val_recall, val_ndcg)
+            info = "Epoch: {}, [{:.1f}s] val recall:{:.5f}, val ndcg:{:.5f} ".format(
+                    epoch, time() - time1, val_recall, val_ndcg)
             # save best model
             if val_recall > best_recall:
                 valid_metric_logger.log(epoch=epoch, recall=val_recall, ndcg=val_ndcg, is_best=1)
@@ -192,7 +192,7 @@ def train(args):
                                               item_id_range, use_cuda, args.use_attention)
                 test_metric_logger.log(epoch=epoch, recall=test_recall, ndcg=test_ndcg)
 
-                info += "test recall:{:.5f}, test ndcg:{:.5f}\n".format(time() - time1, epoch, test_recall, test_ndcg)
+                info += "[{:.1f}s] test recall:{:.5f}, test ndcg:{:.5f}".format(time() - time1, test_recall, test_ndcg)
                 #th.save({'state_dict': model.state_dict(), 'epoch': epoch}, model_state_file)
             else:
                 valid_metric_logger.log(epoch=epoch, recall=val_recall, ndcg=val_ndcg, is_best=0)

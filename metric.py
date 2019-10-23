@@ -101,7 +101,6 @@ def calc_recall_ndcg(embedding, train_user_dict, test_user_dict, all_item_id_ran
                 print("Nan user dict:", u_id, test_user_dict[u_id])
             ndcg_all += one_ndcg_at_k(binary_rank_K.tolist(), K)
 
-
     #ranks = np.vstack(ranks)
     ### the output is the sum
     #recall = recall_at_k(ranks, K, dataset.num_test)
