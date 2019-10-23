@@ -356,7 +356,6 @@ class DataLoader(object):
         ### <item>       |=====================|=======
         ### <att entity> |=====================|+++++++
         ### <user>       |=======|+++++++++++++++++++++
-
         self.all_train_triplet_np = all_train_triplet
         #self.all_train_triplet_dp = pd.DataFrame(all_train_triplet, columns=['h', 'r', 't'], dtype=np.int32)
         assert np.max(all_train_triplet) + 1 == self.num_all_entities
@@ -374,6 +373,7 @@ class DataLoader(object):
             self.num_KG_entities, self.num_KG_relations, self.num_KG_triples))
         print("The user-item pairs: #users {}, #items {}, #train pairs {}, #valid pairs {}, #test pairs {}".format(
             self.num_users, self.num_items, self.num_train, self.num_valid, self.num_test))
+
     @property
     def train_g(self):
         g = dgl.DGLGraph()
@@ -390,8 +390,8 @@ class DataLoader(object):
         g.add_nodes(self.num_all_entities)
         g.add_edges(self.all_test_triplet_np[:, 2], self.all_test_triplet_np[:, 0])
         g.readonly()
-        g.ndata['id'] = th.arange(self.num_all_entities, dtype=th.long)
-        g.edata['type'] = th.LongTensor(self.all_test_triplet_np[:, 1])
+        g.ndata['id'] = np.arange(self.num_all_entities, dtype=np.int32)
+        g.edata['type'] = self.all_test_triplet_np[:, 1]
         return g
 
     @property
@@ -534,25 +534,19 @@ class DataLoader(object):
         i = 0
         while i < n_batch:
             i += 1
-            sel = self._rng.choice(self.num_all_train_triplets, batch_size, replace=False)
+            sel = rd.choices(range(self.num_all_train_triplets), k=batch_size)
             h = self.all_train_triplet_np[sel][:, 0]
             r = self.all_train_triplet_np[sel][:, 1]
             pos_t = self.all_train_triplet_np[sel][:, 2]
-            neg_t = self._rng.choice(self.num_all_entities, batch_size, replace=True).astype(np.int32)
+            neg_t = rd.choice(range(self.num_all_entities), k=batch_size).astype(np.int32)
             yield h, r, pos_t, neg_t
 
-    def create_sampler(self, batch_size, num_workers=16, shuffle=True, exclude_positive=False):
+    def create_Edge_sampler(self, batch_size, num_workers=8, shuffle=True, exclude_positive=False):
         EdgeSampler = getattr(dgl.contrib.sampling, 'EdgeSampler')
-        g = dgl.DGLGraph()
-        g.add_nodes(self.num_all_entities)
-        g.add_edges(self.all_train_triplet_np[:, 2], self.all_train_triplet_np[:, 0])
-        g.readonly()
-        g.ndata['id'] = th.arange(self.num_all_entities, dtype=th.long)
-        g.edata['type'] = th.LongTensor(self.all_train_triplet_np[:, 1])
-        return EdgeSampler(g,
+        return EdgeSampler(self.train_g,
                            batch_size=batch_size,
-                           neg_sample_size=batch_size,
-                           negative_mode="PBG-tail",
+                           neg_sample_size=0,
+                           negative_mode="tail",
                            num_workers=num_workers,
                            shuffle=shuffle,
                            exclude_positive=exclude_positive,
@@ -569,16 +563,27 @@ class DataLoader(object):
         i = 0
         while i < n_batch:
             i += 1
-            for pos_g, neg_g in self.create_sampler(batch_size):
+            for pos_g, _ in self.create_Edge_sampler(batch_size):
                 pos_g.copy_from_parent()
-                neg_g.copy_from_parent()
-                print(pos_g.head_nid, pos_g.tail_nid)
-                print(pos_g.ndata['id'])
-                print(pos_g.edata['type'])
-                print(neg_g.head_nid, neg_g.tail_nid)
+                #neg_g.copy_from_parent()
+                h_idx, t_idx = pos_g.all_edges(order='eid')
+                #neg_h_idx, neg_t_idx = neg_g.all_edges(order='eid')
+                # print("Positive Graph ...")
+                # print("(h_idx, t_idx)", h_idx, t_idx)
+                # print("ndata", pos_g.ndata["id"])
+                # print("(h_id, t_id)", pos_g.ndata['id'][h_idx], pos_g.ndata['id'][t_idx])
+                #
+                # print("Negative Graph ...")
+                # print("(h_idx, t_idx)", neg_h_idx, neg_t_idx)
+                # print("ndata", neg_g.ndata['id'])
+                # print("(h_id, t_id)", neg_g.ndata['id'][neg_h_idx], neg_g.ndata['id'][neg_t_idx])
+                h = pos_g.ndata['id'][h_idx]
+                r = pos_g.edata['type']
+                pos_t = pos_g.ndata['id'][t_idx]
+                #neg_t = neg_g.ndata['id'][neg_t_idx]
+                neg_t = th.Tensor(rd.choices(range(self.num_all_entities), k=batch_size))
                 # h, r, pos_t, neg_t
-                yield pos_g.head_nid, pos_g.edata['type'], pos_g.tail_nid, neg_g.tail_nid
-
+                yield h, r, pos_t, neg_t
 
     @property
     def num_KG_entities(self):
@@ -770,18 +775,21 @@ class DataLoader(object):
 
 
 if __name__ == '__main__':
-    batch_size = 10
+    batch_size = 1024
     d_loader = DataLoader("yelp2018")
     ## convert positive triplets to sets
     pos_pool = []
+
     for i in range(d_loader.num_all_train_triplets):
         pos_pool.append(d_loader.all_train_triplet_np[i, :].tolist())
     #print(pos_pool)
     kg_sampler = d_loader.KG_sampler_DGL(batch_size)
     for h, r, pos_t, neg_t in kg_sampler:
+        print("\n\n")
+        count = 0
         for j in range(batch_size):
-            pos_l = [h[j], r[j], pos_t[j]]
-            neg_l = [h[j], r[j], neg_t[j]]
+            pos_l = [pos_t[j].item(), r[j].item(), h[j].item()]
+            neg_l = [neg_t[j].item(), r[j].item(), h[j].item()]
             try:
                 assert pos_l in pos_pool
             except:
@@ -790,7 +798,9 @@ if __name__ == '__main__':
             try:
                 assert neg_l not in pos_pool
             except:
+                count += 1
                 print("neg_l", neg_l, "not in the true negative triplets!")
+        print(count)
         #print(h, r, pos_t, neg_t)
 
     DataLoader("last-fm")
