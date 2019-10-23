@@ -538,7 +538,7 @@ class DataLoader(object):
             h = self.all_train_triplet_np[sel][:, 0]
             r = self.all_train_triplet_np[sel][:, 1]
             pos_t = self.all_train_triplet_np[sel][:, 2]
-            neg_t = rd.choices(range(self.num_all_entities), k=batch_size).astype(np.int32)
+            neg_t = rd.choices(range(self.num_all_entities), k=batch_size)
             yield h, r, pos_t, neg_t
 
     def create_Edge_sampler(self, batch_size, num_workers=8, shuffle=True, exclude_positive=False):
