@@ -593,6 +593,7 @@ class DataLoader(object):
                 #print(h, r, pos_t, neg_t)
                 yield h, r, pos_t, neg_t
 
+
     @property
     def num_KG_entities(self):
         return self._n_KG_entities
