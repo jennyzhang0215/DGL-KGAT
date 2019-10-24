@@ -533,7 +533,7 @@ class DataLoader(object):
             batch_size = min(batch_size, self.num_all_train_triplets)
             n_batch = 1
         else:
-            n_batch = self.num_train // batch_size + 1
+            n_batch = self.num_all_train_triplets // batch_size + 1
         i = 0
         while i < n_batch:
             i += 1

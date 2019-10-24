@@ -131,7 +131,7 @@ def train(args):
                     A_w = model.compute_attention(train_g)
                 train_g.edata['w'] = A_w
             time1 = time()
-            total_iter = min(dataset.num_train // args.batch_size, dataset.num_KG_entities // args.batch_size_kg)
+            total_iter = min(dataset.num_train // args.batch_size, dataset.num_all_train_triplets // args.batch_size_kg)
             print("Total iter:", total_iter)
             for iter in range(total_iter):
                 h, r, pos_t, neg_t = next(kg_sampler)
