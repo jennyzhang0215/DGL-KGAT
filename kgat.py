@@ -158,7 +158,7 @@ def train(args):
                 optimizer.step()
                 optimizer.zero_grad()
                 total_loss += loss.item()
-                if (iter % args.print_kg_every) == 0:
+                if (iter % args.print_every) == 0:
                     logging.info("Epoch {:04d} Iter {:04d} | Loss {:.4f} ".format(epoch, iter+1, total_loss / (iter+1)))
             logging.info('Time: {:.1f}s, loss {:.4f}'.format(time() - time1, total_loss / total_iter))
 
