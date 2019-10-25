@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 import os
 import argparse
-import json
 
 def load_interaction(file_name):
     src = []
