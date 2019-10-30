@@ -332,7 +332,7 @@ class DataLoader(object):
         if use_KG:
             kg_triples_pd = self.plus_inverse_kg(kg_pd)
             self.num_KG_relations = kg_triples_pd["r"].nunique()
-            self.num_KG_entities = pd.concat(kg_pd['h'], kg_pd['t']).nunique()
+            self.num_KG_entities = pd.concat([kg_pd['h'], kg_pd['t']]).nunique()
             self.num_KG_triples = kg_triples_pd.shape[0]
             kg_triples_np = kg_triples_pd.values
             print("After adding inverse KG triplets ...")
@@ -482,7 +482,7 @@ class DataLoader(object):
         kg_pd = kg_pd.drop_duplicates()
         kg_pd = kg_pd.sort_values(by=['h'])
         unique_rel = kg_pd['r'].nunique()
-        entity_ids = pd.unique(pd.concat(kg_pd['h'], kg_pd['t']))
+        entity_ids = pd.unique(pd.concat([kg_pd['h'], kg_pd['t']]))
         print("entity_ids", entity_ids)
         if kg_pd["r"].nunique() != kg_pd["r"].max()+1:
             relation_mapping = {old_id: idx for idx, old_id in enumerate(pd.unique(kg_pd["r"]))}
