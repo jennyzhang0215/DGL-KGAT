@@ -3,6 +3,63 @@ import pandas as pd
 import os
 import argparse
 
+def read_kg(file_name, data_name, UNIQUE_ITEMs):
+    kg_pd = pd.read_csv(file_name, sep=" ", names=["h", "r", "t"])
+    print("All relations: {}".format(kg_pd['r'].nunique()))
+    try:
+        assert kg_pd['t'].min() > UNIQUE_ITEMs-1
+    except:
+        tail_kg_pd = kg_pd[kg_pd['t'] < UNIQUE_ITEMs]
+        print(tail_kg_pd)
+        print("relation", tail_kg_pd['r'].nunique(), tail_kg_pd['r'].unique())
+    item_kg_pg = kg_pd[kg_pd['h'] < UNIQUE_ITEMs]
+    r_ecount = item_kg_pg.groupby("r")["t"].nunique()
+    r_ecount.to_csv(os.path.join(data_name, "_rel_ecount"), sep=" ", index_label=['r'], header=["count"])
+
+    other_kg_pg = kg_pd[kg_pd['h'] > UNIQUE_ITEMs-1]
+    assert kg_pd.shape[0] == item_kg_pg.shape[0] + other_kg_pg.shape[0]
+
+    r_e_freq = item_kg_pg.groupby(['r'])['t'].value_counts()
+    r_e_freq.to_csv(os.path.join(data_name, "_rel_entity_freq"), sep=" ", index_label=['r', 't'], header=["freq"])
+
+    ## {r_id: [entity_id]}
+    rel_entity_dict = {}
+    for (r_id, entity_id), freq in r_e_freq.items():
+        # print("r_id", r_id,"entity_id", entity_id, "freq", freq)
+        if r_id in rel_entity_dict:
+            rel_entity_dict[r_id].append(entity_id)
+        else:
+            rel_entity_dict[r_id] = []
+            rel_entity_dict[r_id].append(entity_id)
+    #print(rel_entity_dict)
+
+    pos_file = open(os.path.join(data_name, "_fea_bit_record"), "w")
+    pos_file.write("_fea_idx rel_id entity_id\n")
+    fea_pos_dict = {}
+    fea_idx = 0
+    for r_id, e_l in rel_entity_dict.items():
+        fea_pos_dict[r_id] = {}
+        for e in e_l:
+            fea_pos_dict[r_id][e] = fea_idx
+            pos_file.write("{} {} {}\n".format(fea_idx, r_id, e))
+            fea_idx += 1
+    #print(fea_pos_dict)
+    pos_file.close()
+
+    total_fea_bit = fea_idx
+    print("total_fea_bit", total_fea_bit)
+    fea_np = np.zeros((UNIQUE_ITEMs, total_fea_bit))
+    for _, row in item_kg_pg.iterrows():
+        h,r,t = row['h'], row['r'], row['t']
+        fea_np[h][fea_pos_dict[r][t]] = 1.0
+    print(fea_np)
+
+    sparsity = fea_np.sum() / (UNIQUE_ITEMs * total_fea_bit)
+    print("sparsity: {:.2f}%".format(sparsity*100))
+    np.savez(os.path.join(data_name, "fea.npz"),
+             item_fea = fea_np)
+
+
 def load_interaction(file_name):
     src = []
     dst = []
@@ -101,6 +158,11 @@ if __name__ == '__main__':
         UNIQUE_ITEMs = 45538
     else:
         raise NotImplementedError
+    print("#items", UNIQUE_ITEMs)
+    kg_file = os.path.join(args.data_name, "kg_final.txt")
+    read_kg(kg_file, args.data_name, UNIQUE_ITEMs)
+
+    """"
     train_file = os.path.join(args.data_name, "train.txt")
     test_file = os.path.join(args.data_name, "test.txt")
     original_train_pd, _ = load_interaction(train_file)
@@ -144,6 +206,7 @@ if __name__ == '__main__':
     #     json.dump(valid_user_dict, json_file)
     # with open(os.path.join(args.data_name, "test.json"), "w") as json_file:
     #     json.dump(test_user_dict, json_file)
+    """
 
 
 
