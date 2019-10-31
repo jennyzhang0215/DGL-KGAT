@@ -351,7 +351,7 @@ class DataLoader(object):
                 item_fea = fea['item']
             else:
                 item_fea = self.construct_item_fea(kg_pd, data_dir)
-                np.savez(os.path.join(data_dir, item_fea_file), item=item_fea)
+                np.savez_compressed(os.path.join(data_dir, item_fea_file), item=item_fea)
             self.item_dim = item_fea.shape[1]
             self.user_dim = None
             ## stack user ids after items
