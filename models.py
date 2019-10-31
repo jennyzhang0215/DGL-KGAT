@@ -189,7 +189,7 @@ class Model(nn.Module):
             ### else:       u_fea, v_fea
             h = self.entity_embed(g.ndata['id'])
         else:
-            h = th.concate((self.item_proj(x[0]), self.user_proj(x[1])), 0)
+            h = th.concat((self.item_proj(x[0]), self.user_proj(x[1])), 0)
         # if self._use_attention:
         #     g  = self.compute_attention(g, node_ids, rel_ids)
         node_embed_cache = [h]
