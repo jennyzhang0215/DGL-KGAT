@@ -1,5 +1,5 @@
 import argparse
-from dataset import DataLoader, L_DataLoader
+from dataset import DataLoader
 from models import Model
 import torch as th
 import torch.optim as optim
@@ -18,8 +18,8 @@ def parse_args():
     parser.add_argument('--data_name', nargs='?', default='last-fm',  help='Choose a dataset from {yelp2018, last-fm, amazon-book}')
     #parser.add_argument('--adj_type', nargs='?', default='si', help='Specify the type of the adjacency (laplacian) matrix from {bi, si}.')
     ### Model parameters
-    parser.add_argument('--entity_embed_dim', type=int, default=64, help='CF Embedding size.')
-    parser.add_argument('--relation_embed_dim', type=int, default=64, help='CF Embedding size.')
+    parser.add_argument('--entity_embed_dim', type=int, default=64, help='KG entity Embedding size.')
+    parser.add_argument('--relation_embed_dim', type=int, default=64, help='KG relation Embedding size.')
     parser.add_argument('--gnn_num_layer', type=int, default=3, help='the number of layers')
     parser.add_argument('--gnn_hidden_size', type=int, default=64, help='Output sizes of every layer')
     parser.add_argument('--dropout_rate', type=float, default=0.1, help='Keep probability w.r.t. node dropout (i.e., 1-dropout_ratio) for each deep layer. 1: no dropout.')
@@ -56,7 +56,7 @@ def eval(model, g, train_user_dict, eval_user_dict, item_id_range, use_cuda, use
         if use_attention:
             A_w = model.compute_attention(g)
         g.edata['w'] = A_w
-        all_embedding = model.gnn(g)
+        all_embedding = model.gnn(g, g.ndata['id'])
         recall, ndcg = metric.calc_recall_ndcg(all_embedding, train_user_dict, eval_user_dict,
                                                item_id_range, K=20, use_cuda=use_cuda)
     return recall, ndcg
@@ -71,7 +71,7 @@ def train(args):
         th.cuda.set_device(args.gpu)
 
     ### load data
-    dataset = DataLoader(args.data_name, seed=args.seed)
+    dataset = DataLoader(args.data_name, use_KG=False, seed=args.seed)
 
     ### model
     model = Model(n_entities=dataset.num_all_entities, n_relations=dataset.num_all_relations,
@@ -151,7 +151,7 @@ def train(args):
                         user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda()
 
                 loss_kg = model.transR(h_th, r_th, pos_t_th, neg_t_th)
-                embedding = model.gnn(train_g)
+                embedding = model.gnn(train_g, train_g.ndata['id'])
                 loss_gnn = model.get_loss(embedding, user_ids_th, item_pos_ids_th, item_neg_ids_th)
                 loss = loss_kg + loss_gnn
                 loss.backward()
@@ -205,7 +205,7 @@ def train(args):
                 if use_cuda:
                     user_ids_th, item_pos_ids_th, item_neg_ids_th = \
                         user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda()
-                embedding = model.gnn(train_g)
+                embedding = model.gnn(train_g, train_g.ndata['id'])
                 loss = model.get_loss(embedding, user_ids_th, item_pos_ids_th, item_neg_ids_th)
                 loss.backward()
                 # th.nn.utils.clip_grad_norm_(model.parameters(), args.grad_norm)  # clip gradients

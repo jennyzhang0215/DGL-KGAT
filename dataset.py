@@ -347,13 +347,13 @@ class DataLoader(object):
             ## Only leave attributes pointed to items
             item_fea_file = "item_fea.npz"
             if os.path.exists(os.path.join(data_dir, item_fea_file)):
-                fea = np.load(os.path.join(data_dir, item_fea_file))
-                item_fea = fea['item_fea']
+                item_fea = np.load(os.path.join(data_dir, item_fea_file))
             else:
                 item_fea = self.construct_item_fea(kg_pd, data_dir)
-                np.savez(os.path.join(data_name, item_fea_file), item_fea=item_fea)
+                np.save(os.path.join(data_dir, item_fea_file), item_fea)
             ## stack user ids after items
             self.user_mapping = {i: i + self.num_items for i in range(self.num_users)}
+            self.item_fea = item_fea
 
         self.train_pairs = (np.array(list(map(self.user_mapping.get, train_pairs[0]))).astype(np.int32),
                             train_pairs[1].astype(np.int32))
@@ -396,10 +396,10 @@ class DataLoader(object):
             all_train_triplet = np.vstack((kg_triples_np, train_user_item_triplet))
             all_test_triplet = np.vstack((kg_triples_np, train_user_item_triplet, valid_user_item_triplet))
             self.all_train_triplet_np = all_train_triplet
-            assert np.max(all_train_triplet) + 1 == self.num_all_entities
             self.all_test_triplet_np = all_test_triplet
 
             self.num_all_entities = self.num_KG_entities + self.num_users
+            assert np.max(all_train_triplet) + 1 == self.num_all_entities
             self.num_all_relations = self.num_KG_relations + 2
             self.num_all_train_triplets = self.all_train_triplet_np.shape[0]
             self.num_all_test_triplets = self.all_test_triplet_np.shape[0]
@@ -500,7 +500,7 @@ class DataLoader(object):
         rev['r'] += unique_rel
         new_kg_pd = pd.concat([kg_pd, rev], ignore_index=True)
 
-        return new_kg_pd.values
+        return new_kg_pd
 
     def _get_all_train_kg_dict(self):
         ### generate all_kg_dict for sampling

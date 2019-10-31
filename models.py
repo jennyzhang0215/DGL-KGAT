@@ -77,19 +77,31 @@ class KGATConv(nn.Module):
         return self.mess_drop(out)
 
 class Model(nn.Module):
-    def __init__(self, n_entities, n_relations, entity_dim, relation_dim, num_gnn_layers, n_hidden,
-                 dropout, use_attention=True,
+    def __init__(self, use_KG,  num_gnn_layers, n_hidden, dropout, use_attention=True,
+                 n_entities=None, n_relations=None, entity_dim=None, relation_dim=None,
+                 input_item_dim=None, input_user_dim=None, input_dim=None, item_num=None, user_num=None,
                  reg_lambda_kg=0.01, reg_lambda_gnn=0.01, res_type="Bi"):
         super(Model, self).__init__()
+        self._use_KG = use_KG
         self._n_entities = n_entities
         self._n_relations = n_relations
         self._use_attention = use_attention
         self._reg_lambda_kg = reg_lambda_kg
         self._reg_lambda_gnn = reg_lambda_gnn
-        self.entity_embed = nn.Embedding(n_entities, entity_dim) ### e_h, e_t
-        self.relation_embed = nn.Embedding(n_relations, relation_dim)  ### e_r
-        self.W_R = nn.Parameter(th.Tensor(n_relations, entity_dim, relation_dim))  ### W_r
-        nn.init.xavier_uniform_(self.W_R, gain=nn.init.calculate_gain('relu'))
+        if use_KG:
+            self.entity_embed = nn.Embedding(n_entities, entity_dim) ### e_h, e_t
+            self.relation_embed = nn.Embedding(n_relations, relation_dim)  ### e_r
+            self.W_R = nn.Parameter(th.Tensor(n_relations, entity_dim, relation_dim))  ### W_r
+            nn.init.xavier_uniform_(self.W_R, gain=nn.init.calculate_gain('relu'))
+        else:
+            if input_item_dim:
+                self.item_proj = nn.Linear(input_item_dim, input_dim, bias=False)
+            else:
+                self.item_proj = nn.Embedding(item_num, input_dim)
+            if input_user_dim:
+                self.user_proj = nn.Linear(input_user_dim, input_dim, bias=False)
+            else:
+                self.item_proj = nn.Embedding(user_num, input_dim)
         self.layers = nn.ModuleList()
         for i in range(num_gnn_layers):
             r = int(math.pow(2, i))
@@ -150,10 +162,15 @@ class Model(nn.Module):
         g.edata['w'] = edge_softmax(g, g.edata.pop('att_w'))
         return g.edata.pop('w')
 
-    def gnn(self, g):
+    def gnn(self, g, x):
         g = g.local_var()
         #print("In gnn ...", g)
-        h = self.entity_embed(g.ndata['id'])
+        if self._use_KG:
+            ### if use_KG : x = g.ndata['id']
+            ### else:       u_fea, v_fea
+            h = self.entity_embed(g.ndata['id'])
+        else:
+            h = th.concate((self.item_proj(x[0]), self.user_proj(x[1])), 0)
         # if self._use_attention:
         #     g  = self.compute_attention(g, node_ids, rel_ids)
         node_embed_cache = [h]
