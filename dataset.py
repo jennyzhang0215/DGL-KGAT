@@ -351,6 +351,8 @@ class DataLoader(object):
             else:
                 item_fea = self.construct_item_fea(kg_pd, data_dir)
                 np.save(os.path.join(data_dir, item_fea_file), item_fea)
+            self.item_dim = item_fea.shape[1]
+            self.user_dim = None
             ## stack user ids after items
             self.user_mapping = {i: i + self.num_items for i in range(self.num_users)}
             self.item_fea = item_fea
