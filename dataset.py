@@ -456,7 +456,7 @@ class DataLoader(object):
             fea_np[h][fea_pos_dict[r][t]] = 1.0
 
         sparsity = fea_np.sum() / (self.num_items * total_fea_dim)
-        print("feature sparsity: {:.2f%}".format(sparsity))
+        print("feature sparsity: {:.2f}%".format(sparsity*100))
 
         return fea_np
     @property
