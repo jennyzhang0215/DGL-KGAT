@@ -23,7 +23,7 @@ def parse_args():
     parser.add_argument('--regs', type=float, default=0.0001, help='Regularization for user and item embeddings.')
 
     ### Training parameters
-    parser.add_argument('--max_epoch', type=int, default=2000, help='train xx iterations')
+    parser.add_argument('--max_epoch', type=int, default=1000, help='train xx iterations')
     parser.add_argument("--grad_norm", type=float, default=1.0, help="norm to clip gradient to")
     parser.add_argument('--lr', type=float, default=0.001, help='Learning rate.')
     parser.add_argument('--batch_size', type=int, default=1024, help='CF batch size.')
@@ -34,9 +34,9 @@ def parse_args():
     parser.add_argument('--print_every', type=int, default=1000, help='the print duration')
     #parser.add_argument("--eval_batch_size", type=int, default=-1, help="batch size when evaluating")
     args = parser.parse_args()
-    save_dir = "{}_kg{}_d{}_l{}_dp{}_lr{}_bz{}_seed{}".format(args.data_name, 0,
-                args.node_dim, args.gnn_num_layer, args.dropout_rate, args.lr, args.batch_size,
-                args.seed)
+    save_dir = "{}_kg{}_graphsage_d{}_l{}_h{}_dp{}_lr{}_bz{}_seed{}".format(args.data_name, 0,
+                args.node_dim, args.gnn_num_layer, args.gnn_hidden_size,
+                args.dropout_rate, args.lr, args.batch_size, args.seed)
     args.save_dir = os.path.join('log', save_dir)
     if not os.path.isdir('log'):
         os.makedirs('log')
