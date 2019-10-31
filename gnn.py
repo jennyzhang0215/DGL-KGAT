@@ -20,7 +20,6 @@ def parse_args():
     parser.add_argument('--gnn_num_layer', type=int, default=3, help='the number of layers')
     parser.add_argument('--gnn_hidden_size', type=int, default=64, help='Output sizes of every layer')
     parser.add_argument('--dropout_rate', type=float, default=0.1, help='Keep probability w.r.t. node dropout (i.e., 1-dropout_ratio) for each deep layer. 1: no dropout.')
-    parser.add_argument('--use_attention', type=bool, default=True, help='Whether to use attention to update adj')
     parser.add_argument('--regs', type=float, default=0.0001, help='Regularization for user and item embeddings.')
 
     ### Training parameters
@@ -35,9 +34,9 @@ def parse_args():
     parser.add_argument('--print_every', type=int, default=100, help='the print duration')
     #parser.add_argument("--eval_batch_size", type=int, default=-1, help="batch size when evaluating")
     args = parser.parse_args()
-    save_dir = "{}_kg{}_d{}_l{}_dp{}_lr{}_bz{}_att{}_seed{}".format(args.data_name, 0,
+    save_dir = "{}_kg{}_d{}_l{}_dp{}_lr{}_bz{}_seed{}".format(args.data_name, 0,
                 args.node_dim, args.gnn_num_layer, args.dropout_rate, args.lr, args.batch_size,
-                int(args.use_attention), args.seed)
+                args.seed)
     args.save_dir = os.path.join('log', save_dir)
     if not os.path.isdir('log'):
         os.makedirs('log')
@@ -48,11 +47,8 @@ def parse_args():
     return args
 
 
-def eval(model, g, x_input, train_user_dict, eval_user_dict, item_id_range, use_cuda, use_attention):
+def eval(model, g, x_input, train_user_dict, eval_user_dict, item_id_range, use_cuda):
     with th.no_grad():
-        if use_attention:
-            A_w = model.compute_attention(g)
-        g.edata['w'] = A_w
         all_embedding = model.gnn(g, x_input)
         recall, ndcg = metric.calc_recall_ndcg(all_embedding, train_user_dict, eval_user_dict,
                                                item_id_range, K=20, use_cuda=use_cuda)
@@ -69,7 +65,7 @@ def train(args):
     dataset = DataLoader(args.data_name, use_KG=False, seed=args.seed)
 
     ### model
-    model = Model(use_KG=False, input_node_dim=args.node_dim,
+    model = Model(use_KG=False, input_node_dim=args.node_dim, gnn_model="graphsage",
                   num_gnn_layers=args.gnn_num_layer, n_hidden=args.gnn_hidden_size, dropout=args.dropout_rate,
                   input_item_dim=dataset.item_dim, input_user_dim=dataset.user_dim,
                   item_num=dataset.num_items, user_num=dataset.num_users,
@@ -125,10 +121,6 @@ def train(args):
     for epoch in range(1, args.max_epoch+1):
         cf_sampler = dataset.CF_pair_uniform_sampler(batch_size=args.batch_size)
         total_loss = 0.0
-        if args.use_attention:
-            with th.no_grad():
-                A_w = model.compute_attention(train_g)
-            train_g.edata['w'] = A_w
         time1 = time()
         total_iter = dataset.num_train // args.batch_size
         print("Total iter:", total_iter)
@@ -155,7 +147,7 @@ def train(args):
         if epoch % args.evaluate_every == 0:
             time1 = time()
             val_recall, val_ndcg = eval(model, train_g, x_input, dataset.train_user_dict, dataset.valid_user_dict,
-                                        item_id_range, use_cuda, args.use_attention)
+                                        item_id_range, use_cuda)
             info = "Epoch: {}, [{:.1f}s] val recall:{:.5f}, val ndcg:{:.5f}".format(
                 epoch, time() - time1, val_recall, val_ndcg)
             # save best model
@@ -166,7 +158,7 @@ def train(args):
                 best_epoch = epoch
                 time1 = time()
                 test_recall, test_ndcg = eval(model, test_g, x_input, dataset.train_user_dict, dataset.test_user_dict,
-                                              item_id_range, use_cuda, args.use_attention)
+                                              item_id_range, use_cuda)
                 test_metric_logger.log(epoch=epoch, recall=test_recall, ndcg=test_ndcg)
 
                 info += "\t[{:.1f}s] test recall:{:.5f}, test ndcg:{:.5f}".format(time() - time1, test_recall, test_ndcg)

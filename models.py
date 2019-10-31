@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import dgl.function as fn
 from dgl.nn.pytorch.softmax import edge_softmax
+from dgl.nn.pytorch.conv import SAGEConv
 import math
 
 def _L2_loss_mean(x):
@@ -77,7 +78,7 @@ class KGATConv(nn.Module):
         return self.mess_drop(out)
 
 class Model(nn.Module):
-    def __init__(self, use_KG, input_node_dim, num_gnn_layers, n_hidden, dropout, use_attention=True,
+    def __init__(self, use_KG, input_node_dim, gnn_model, num_gnn_layers, n_hidden, dropout, use_attention=True,
                  n_entities=None, n_relations=None, relation_dim=None,
                  input_item_dim=None, input_user_dim=None, item_num=None, user_num=None,
                  reg_lambda_kg=0.01, reg_lambda_gnn=0.01, res_type="Bi"):
@@ -85,6 +86,7 @@ class Model(nn.Module):
         self._use_KG = use_KG
         self._n_entities = n_entities
         self._n_relations = n_relations
+        self._gnn_model = gnn_model
         self._use_attention = use_attention
         self._reg_lambda_kg = reg_lambda_kg
         self._reg_lambda_gnn = reg_lambda_gnn
@@ -105,11 +107,28 @@ class Model(nn.Module):
         self.layers = nn.ModuleList()
         for i in range(num_gnn_layers):
             r = int(math.pow(2, i))
-            if i==0:
-                self.layers.append(KGATConv(input_node_dim, n_hidden//r, dropout))
+            if i+1 == num_gnn_layers:
+                act = None
             else:
-                r2 = int(math.pow(2, i-1))
-                self.layers.append(KGATConv(n_hidden // r2, n_hidden // r, dropout))
+                act = F.relu
+            if i==0:
+                if gnn_model == "kgat":
+                    self.layers.append(KGATConv(input_node_dim, n_hidden // r, dropout))
+                elif gnn_model == "graphsage":
+                    self.layers.append(SAGEConv(input_node_dim, n_hidden // r, aggregator_type="mean",
+                                                feat_drop=dropout, activation=act))
+                else:
+                    raise NotImplementedError
+            else:
+                r2 = int(math.pow(2, i - 1))
+                if gnn_model == "kgat":
+                    self.layers.append(KGATConv(n_hidden // r2, n_hidden // r, dropout))
+                elif gnn_model == "graphsage":
+                    self.layers.append(SAGEConv(n_hidden // r2, n_hidden // r, aggregator_type="mean",
+                                                feat_drop=dropout, activation=act))
+                else:
+                    raise NotImplementedError
+
 
     def transR(self, h, r, pos_t, neg_t):
         h_embed = self.entity_embed(h)  ### Shape(batch_size, dim)
