@@ -35,7 +35,7 @@ def parse_args():
     parser.add_argument('--print_every', type=int, default=100, help='the print duration')
     #parser.add_argument("--eval_batch_size", type=int, default=-1, help="batch size when evaluating")
     args = parser.parse_args()
-    save_dir = "{}_kg{}_d{}_l{}_dp{}_lr{}_bz{}_att{}_seed{}".format(args.data_name, 1,
+    save_dir = "{}_kg{}_d{}_l{}_dp{}_lr{}_bz{}_att{}_seed{}".format(args.data_name, 0,
                 args.node_dim, args.gnn_num_layer, args.dropout_rate, args.lr, args.batch_size,
                 int(args.use_attention), args.seed)
     args.save_dir = os.path.join('log', save_dir)
