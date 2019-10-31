@@ -20,6 +20,7 @@ def parse_args():
     ### Model parameters
     parser.add_argument('--entity_embed_dim', type=int, default=64, help='KG entity Embedding size.')
     parser.add_argument('--relation_embed_dim', type=int, default=64, help='KG relation Embedding size.')
+    parser.add_argument('--gnn_model', type=str, default="kgat", help='the gnn models')
     parser.add_argument('--gnn_num_layer', type=int, default=3, help='the number of layers')
     parser.add_argument('--gnn_hidden_size', type=int, default=64, help='Output sizes of every layer')
     parser.add_argument('--dropout_rate', type=float, default=0.1, help='Keep probability w.r.t. node dropout (i.e., 1-dropout_ratio) for each deep layer. 1: no dropout.')
@@ -56,7 +57,7 @@ def eval(model, g, train_user_dict, eval_user_dict, item_id_range, use_cuda, use
     with th.no_grad():
         if use_attention:
             A_w = model.compute_attention(g)
-        g.edata['w'] = A_w
+            g.edata['w'] = A_w
         all_embedding = model.gnn(g, g.ndata['id'])
         recall, ndcg = metric.calc_recall_ndcg(all_embedding, train_user_dict, eval_user_dict,
                                                item_id_range, K=20, use_cuda=use_cuda)
@@ -75,8 +76,8 @@ def train(args):
     dataset = DataLoader(args.data_name, use_KG=True, seed=args.seed)
 
     ### model
-    model = Model(use_KG=True, input_node_dim=args.entity_embed_dim, num_gnn_layers=args.gnn_num_layer,
-                  n_hidden=args.gnn_hidden_size, dropout=args.dropout_rate,
+    model = Model(use_KG=True, input_node_dim=args.entity_embed_dim, gnn_model=args.gnn_model,
+                  num_gnn_layers=args.gnn_num_layer, n_hidden=args.gnn_hidden_size, dropout=args.dropout_rate,
                   n_entities=dataset.num_all_entities, n_relations=dataset.num_all_relations,
                   relation_dim=args.relation_embed_dim,
                   reg_lambda_kg=args.regs, reg_lambda_gnn=args.regs)

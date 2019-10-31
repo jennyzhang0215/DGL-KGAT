@@ -100,10 +100,11 @@ class Model(nn.Module):
                 self.item_proj = nn.Linear(input_item_dim, input_node_dim, bias=False)
             else:
                 self.item_proj = nn.Embedding(item_num, input_node_dim)
+
             if input_user_dim:
                 self.user_proj = nn.Linear(input_user_dim, input_node_dim, bias=False)
             else:
-                self.item_proj = nn.Embedding(user_num, input_node_dim)
+                self.user_proj = nn.Embedding(user_num, input_node_dim)
         self.layers = nn.ModuleList()
         for i in range(num_gnn_layers):
             r = int(math.pow(2, i))
