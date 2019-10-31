@@ -71,7 +71,7 @@ def train(args):
         th.cuda.set_device(args.gpu)
 
     ### load data
-    dataset = DataLoader(args.data_name, use_KG=False, seed=args.seed)
+    dataset = DataLoader(args.data_name, use_KG=True, seed=args.seed)
 
     ### model
     model = Model(n_entities=dataset.num_all_entities, n_relations=dataset.num_all_relations,
