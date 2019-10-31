@@ -30,8 +30,8 @@ def parse_args():
     parser.add_argument('--batch_size_kg', type=int, default=2048, help='KG batch size.')
     parser.add_argument('--joint_train', type=bool, default=True, help='Whether to jointly-train the mode or '
                                                                         'alternative train the model ')
-    parser.add_argument('--evaluate_every', type=int, default=5, help='the evaluation duration')
-    parser.add_argument('--print_every', type=int, default=100, help='the print duration')
+    parser.add_argument('--evaluate_every', type=int, default=1, help='the evaluation duration')
+    parser.add_argument('--print_every', type=int, default=1000, help='the print duration')
     #parser.add_argument("--eval_batch_size", type=int, default=-1, help="batch size when evaluating")
     args = parser.parse_args()
     save_dir = "{}_kg{}_d{}_l{}_dp{}_lr{}_bz{}_seed{}".format(args.data_name, 0,
@@ -96,18 +96,11 @@ def train(args):
         user_fea = th.Tensor(dataset.user_fea)
     else:
         user_fea = th.arange(dataset.num_users, dtype=th.long)
-
-    etype_th = th.LongTensor(train_g.edata["type"])
     if use_cuda:
-        item_fea, user_fea, etype_th = item_fea.cuda(), user_fea.cuda(), etype_th.cuda()
-    train_g.edata['type'] = etype_th
+        item_fea, user_fea = item_fea.cuda(), user_fea.cuda()
     x_input = [item_fea, user_fea]
 
     test_g = dataset.test_g
-    etype_th = th.LongTensor(test_g.edata["type"])
-    if use_cuda:
-        etype_th = etype_th.cuda()
-    test_g.edata['type'] = etype_th
     if use_cuda:
         item_id_range = th.arange(dataset.num_items, dtype=th.long).cuda()
     else:
@@ -134,7 +127,6 @@ def train(args):
             if use_cuda:
                 user_ids_th, item_pos_ids_th, item_neg_ids_th = \
                     user_ids_th.cuda(), item_pos_ids_th.cuda(), item_neg_ids_th.cuda()
-
             embedding = model.gnn(train_g, x_input)
             loss = model.get_loss(embedding, user_ids_th, item_pos_ids_th, item_neg_ids_th)
             loss.backward()
