@@ -66,10 +66,10 @@ def train(args):
         th.cuda.set_device(args.gpu)
 
     ### load data
-    dataset = DataLoader(args.data_name, use_KG=True, seed=args.seed)
+    dataset = DataLoader(args.data_name, use_KG=False, seed=args.seed)
 
     ### model
-    model = Model(use_KG=True,
+    model = Model(use_KG=False,
                   input_item_dim=dataset.item_dim, input_user_dim=dataset.user_dim,
                   input_dim=args.node_dim, item_num=dataset.num_items, user_num=dataset.num_users,
                   num_gnn_layers=args.gnn_num_layer, n_hidden=args.gnn_hidden_size, dropout=args.dropout_rate,
