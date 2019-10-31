@@ -69,10 +69,10 @@ def train(args):
     dataset = DataLoader(args.data_name, use_KG=False, seed=args.seed)
 
     ### model
-    model = Model(use_KG=False,
-                  input_item_dim=dataset.item_dim, input_user_dim=dataset.user_dim,
-                  input_dim=args.node_dim, item_num=dataset.num_items, user_num=dataset.num_users,
+    model = Model(use_KG=False, input_node_dim=args.node_dim,
                   num_gnn_layers=args.gnn_num_layer, n_hidden=args.gnn_hidden_size, dropout=args.dropout_rate,
+                  input_item_dim=dataset.item_dim, input_user_dim=dataset.user_dim,
+                  item_num=dataset.num_items, user_num=dataset.num_users,
                   reg_lambda_gnn=args.regs)
     if use_cuda:
         model.cuda()

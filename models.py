@@ -77,9 +77,9 @@ class KGATConv(nn.Module):
         return self.mess_drop(out)
 
 class Model(nn.Module):
-    def __init__(self, use_KG,  num_gnn_layers, n_hidden, dropout, use_attention=True,
-                 n_entities=None, n_relations=None, entity_dim=None, relation_dim=None,
-                 input_item_dim=None, input_user_dim=None, input_dim=None, item_num=None, user_num=None,
+    def __init__(self, use_KG, input_node_dim, num_gnn_layers, n_hidden, dropout, use_attention=True,
+                 n_entities=None, n_relations=None, relation_dim=None,
+                 input_item_dim=None, input_user_dim=None, item_num=None, user_num=None,
                  reg_lambda_kg=0.01, reg_lambda_gnn=0.01, res_type="Bi"):
         super(Model, self).__init__()
         self._use_KG = use_KG
@@ -89,24 +89,24 @@ class Model(nn.Module):
         self._reg_lambda_kg = reg_lambda_kg
         self._reg_lambda_gnn = reg_lambda_gnn
         if use_KG:
-            self.entity_embed = nn.Embedding(n_entities, entity_dim) ### e_h, e_t
+            self.entity_embed = nn.Embedding(n_entities, input_node_dim) ### e_h, e_t
             self.relation_embed = nn.Embedding(n_relations, relation_dim)  ### e_r
-            self.W_R = nn.Parameter(th.Tensor(n_relations, entity_dim, relation_dim))  ### W_r
+            self.W_R = nn.Parameter(th.Tensor(n_relations, input_node_dim, relation_dim))  ### W_r
             nn.init.xavier_uniform_(self.W_R, gain=nn.init.calculate_gain('relu'))
         else:
             if input_item_dim:
-                self.item_proj = nn.Linear(input_item_dim, input_dim, bias=False)
+                self.item_proj = nn.Linear(input_item_dim, input_node_dim, bias=False)
             else:
-                self.item_proj = nn.Embedding(item_num, input_dim)
+                self.item_proj = nn.Embedding(item_num, input_node_dim)
             if input_user_dim:
-                self.user_proj = nn.Linear(input_user_dim, input_dim, bias=False)
+                self.user_proj = nn.Linear(input_user_dim, input_node_dim, bias=False)
             else:
-                self.item_proj = nn.Embedding(user_num, input_dim)
+                self.item_proj = nn.Embedding(user_num, input_node_dim)
         self.layers = nn.ModuleList()
         for i in range(num_gnn_layers):
             r = int(math.pow(2, i))
             if i==0:
-                self.layers.append(KGATConv(entity_dim, n_hidden//r, dropout))
+                self.layers.append(KGATConv(input_node_dim, n_hidden//r, dropout))
             else:
                 r2 = int(math.pow(2, i-1))
                 self.layers.append(KGATConv(n_hidden // r2, n_hidden // r, dropout))

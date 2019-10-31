@@ -456,7 +456,7 @@ class DataLoader(object):
             fea_np[h][fea_pos_dict[r][t]] = 1.0
 
         sparsity = fea_np.sum() / (self.num_items * total_fea_dim)
-        print("feature sparsity: {:.2f}%".format(sparsity))
+        print("feature sparsity: {:.2f%}".format(sparsity))
 
         return fea_np
     @property
@@ -485,7 +485,6 @@ class DataLoader(object):
         kg_pd = kg_pd.sort_values(by=['h'])
         unique_rel = kg_pd['r'].nunique()
         entity_ids = pd.unique(pd.concat([kg_pd['h'], kg_pd['t']]))
-        print("entity_ids", entity_ids)
         if kg_pd["r"].nunique() != kg_pd["r"].max()+1:
             relation_mapping = {old_id: idx for idx, old_id in enumerate(pd.unique(kg_pd["r"]))}
             kg_pd['r'] = list(map(relation_mapping.get, kg_pd['r'].values))
