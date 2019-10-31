@@ -74,9 +74,10 @@ def train(args):
     dataset = DataLoader(args.data_name, use_KG=True, seed=args.seed)
 
     ### model
-    model = Model(n_entities=dataset.num_all_entities, n_relations=dataset.num_all_relations,
+    model = Model(use_KG=True, num_gnn_layers=args.gnn_num_layer, n_hidden=args.gnn_hidden_size,
+                  dropout=args.dropout_rate,
+                  n_entities=dataset.num_all_entities, n_relations=dataset.num_all_relations,
                   entity_dim=args.entity_embed_dim, relation_dim=args.relation_embed_dim,
-                  num_gnn_layers=args.gnn_num_layer, n_hidden=args.gnn_hidden_size, dropout=args.dropout_rate,
                   reg_lambda_kg=args.regs, reg_lambda_gnn=args.regs)
     if use_cuda:
         model.cuda()
