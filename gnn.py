@@ -96,11 +96,12 @@ def train(args):
         user_fea = th.Tensor(dataset.user_fea)
     else:
         user_fea = th.arange(dataset.num_users, dtype=th.long)
-    x_input = [item_fea, user_fea]
+
     etype_th = th.LongTensor(train_g.edata["type"])
     if use_cuda:
         item_fea, user_fea, etype_th = item_fea.cuda(), user_fea.cuda(), etype_th.cuda()
     train_g.edata['type'] = etype_th
+    x_input = [item_fea, user_fea]
 
     test_g = dataset.test_g
     etype_th = th.LongTensor(test_g.edata["type"])

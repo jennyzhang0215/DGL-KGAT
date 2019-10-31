@@ -357,6 +357,7 @@ class DataLoader(object):
             ## stack user ids after items
             self.user_mapping = {i: i + self.num_items for i in range(self.num_users)}
             self.item_fea = item_fea
+            print("item_dim", self.item_dim)
 
         self.train_pairs = (np.array(list(map(self.user_mapping.get, train_pairs[0]))).astype(np.int32),
                             train_pairs[1].astype(np.int32))
