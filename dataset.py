@@ -303,7 +303,7 @@ class L_DataLoader(object):
         return all_h_list, all_r_list, all_t_list, all_v_list
 
 class DataLoader(object):
-    def __init__(self, data_name, use_KG=False, seed=1234):
+    def __init__(self, data_name, use_KG, seed=1234):
         print("\n{}->".format(data_name))
         self._data_name = data_name
         self._use_KG = use_KG
