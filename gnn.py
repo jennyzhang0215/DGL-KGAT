@@ -92,11 +92,12 @@ def train(args):
 
     train_g = dataset.train_g
     if dataset.item_dim:
-        item_fea = th.array(dataset.item_fea)
+        item_fea = th.Tensor(dataset.item_fea)
+        print("item_fea", item_fea)
     else:
         item_fea = th.arange(dataset.num_items, dtype=th.long)
     if dataset.user_dim:
-        user_fea = th.array(dataset.user_fea)
+        user_fea = th.Tensor(dataset.user_fea)
     else:
         user_fea = th.arange(dataset.num_users, dtype=th.long)
     x_input = [item_fea, user_fea]
