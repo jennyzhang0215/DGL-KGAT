@@ -1,2 +1,3 @@
-# KGAT
-Reproduce KGAT using DGL
+# DGL-RecSys
+
+A DGL based recommendation repo 
