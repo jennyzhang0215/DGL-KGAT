@@ -303,10 +303,11 @@ class L_DataLoader(object):
         return all_h_list, all_r_list, all_t_list, all_v_list
 
 class DataLoader(object):
-    def __init__(self, data_name, use_KG, seed=1234):
+    def __init__(self, data_name, use_KG, use_pretrain, seed=1234):
         print("\n{}->".format(data_name))
         self._data_name = data_name
         self._use_KG = use_KG
+        self._use_pretrain = use_pretrain
         self._rng = np.random.RandomState(seed=seed)
         data_dir = os.path.realpath(os.path.join(os.path.abspath(__file__), '..', "datasets", data_name))
 
@@ -420,6 +421,17 @@ class DataLoader(object):
             self.num_all_nodes = self.num_users + self.num_items
             self.all_train_triplet_np = train_user_item_triplet
             self.all_test_triplet_np = np.vstack((train_user_item_triplet, valid_user_item_triplet))
+
+        if use_pretrain:
+            pre_model = 'mf'
+            file_name = os.path.realpath(os.path.join(os.path.abspath(__file__), '..', "datasets",
+                                                      "pretrain", data_name, "{}.npz".format(pre_model)))
+            pretrain_data = np.load(file_name)
+            self.user_pre_embed = pretrain_data['user_embed']
+            self.item_pre_embed = pretrain_data['item_embed']
+            assert self.user_pre_embed.shape[0] == self.num_users
+            assert self.item_pre_embed.shape[0] == self.num_items
+
 
     def construct_item_fea(self, kg_pd, data_dir):
         item_kg_pg = kg_pd[kg_pd['h'] < self.num_items]
@@ -848,11 +860,11 @@ if __name__ == '__main__':
         print(count)
         #print(h, r, pos_t, neg_t)
     """
-    DataLoader("yelp2018", use_KG=True)
-    DataLoader("yelp2018", use_KG=False)
-    DataLoader("last-fm", use_KG=True)
-    DataLoader("last-fm", use_KG=False)
-    DataLoader("amazon-book", use_KG=True)
-    DataLoader("amazon-book", use_KG=False)
+    DataLoader("yelp2018", use_KG=True, use_pretrain=True)
+    DataLoader("yelp2018", use_KG=False, use_pretrain=True)
+    DataLoader("last-fm", use_KG=True, use_pretrain=True)
+    DataLoader("last-fm", use_KG=False, use_pretrain=True)
+    DataLoader("amazon-book", use_KG=True, use_pretrain=True)
+    DataLoader("amazon-book", use_KG=False, use_pretrain=True)
 
 
