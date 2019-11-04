@@ -12,8 +12,9 @@ def parse_args():
     parser.add_argument('--gpu', type=int, default=0, help='use GPU')
     parser.add_argument('--data_name', nargs='?', default='last-fm',  help='Choose a dataset from {yelp2018, last-fm, amazon-book}')
     parser.add_argument('--use_pretrain', type=bool, default=True, help='whether to use pretrain embeddings or not')
-
+    parser.add_argument('--seed', type=int, default=1234, help='the random seed')
     args = parser.parse_args()
+
     save_dir = "{}_bprmf_test".format(args.data_name)
     args.save_dir = os.path.join('log', save_dir)
     if not os.path.isdir('log'):
