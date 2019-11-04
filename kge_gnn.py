@@ -51,7 +51,6 @@ def parse_args():
     if not os.path.isdir(args.save_dir):
         os.makedirs(args.save_dir)
     args.save_id = creat_log_id(args.save_dir)
-    logging.info(args)
     return args
 
 
@@ -66,8 +65,8 @@ def eval(model, g, train_user_dict, eval_user_dict, item_id_range, use_cuda, use
     return recall, ndcg
 
 def train(args):
-    print("Use_attention", args.use_attention)
     logging_config(folder=args.save_dir, name='log{:d}'.format(args.save_id), no_console=False)
+    logging.info(args)
 
     ### check context
     use_cuda = args.gpu >= 0 and th.cuda.is_available()
