@@ -45,7 +45,9 @@ if __name__ == '__main__':
     embeds = th.tensor(np.vstack((dataset.item_pre_embed, dataset.user_pre_embed)))
     if use_cuda:
         item_id_range, embeds = item_id_range.cuda(), embeds.cuda()
+    print("Start validation ...")
     val_recall, val_ndcg = eval(embeds, dataset.train_user_dict, dataset.valid_user_dict, item_id_range, use_cuda)
+    print("Start testing ...")
     test_recall, test_ndcg = eval(embeds, dataset.train_user_dict, dataset.test_user_dict, item_id_range, use_cuda)
 
     logging.info("Test recall: {:.5f}, ndcg:{:.5f}\t\tvalid recall: {:.5f}, ndcg:{:.5f}".format(
