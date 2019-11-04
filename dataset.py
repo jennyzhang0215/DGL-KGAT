@@ -311,7 +311,7 @@ class DataLoader(object):
         self._rng = np.random.RandomState(seed=seed)
         data_dir = os.path.realpath(os.path.join(os.path.abspath(__file__), '..', "datasets", data_name))
 
-        train_file = os.path.join(data_dir, "train.txt")
+        train_file = os.path.join(data_dir, "train1.txt")
         train_pairs, train_user_dict = self.load_train_interaction(train_file)
         self.train_user_ids = np.unique(train_pairs[0])  ### requires to remap later
         self.item_ids = np.unique(train_pairs[1])
