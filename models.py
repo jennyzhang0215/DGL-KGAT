@@ -81,6 +81,7 @@ class Model(nn.Module):
     def __init__(self, use_KG, input_node_dim, gnn_model, num_gnn_layers, n_hidden, dropout, use_attention=True,
                  n_entities=None, n_relations=None, relation_dim=None,
                  input_item_dim=None, input_user_dim=None, item_num=None, user_num=None,
+                 use_pretrain=False, user_pre_embed=None, item_pre_embed=None,
                  reg_lambda_kg=0.01, reg_lambda_gnn=0.01, res_type="Bi"):
         super(Model, self).__init__()
         self._use_KG = use_KG
@@ -90,8 +91,16 @@ class Model(nn.Module):
         self._use_attention = use_attention
         self._reg_lambda_kg = reg_lambda_kg
         self._reg_lambda_gnn = reg_lambda_gnn
+        if use_pretrain:
+            assert user_pre_embed is not None
+            assert item_pre_embed is not None
         if use_KG:
             self.entity_embed = nn.Embedding(n_entities, input_node_dim) ### e_h, e_t
+            if use_pretrain:
+                other_embed = nn.Parameter(th.Tensor(n_entities-user_pre_embed.shape[0]-item_pre_embed.shape[0],
+                                                     input_node_dim))
+                nn.init.xavier_uniform_(other_embed, gain=nn.init.calculate_gain('relu'))
+                self.entity_embed.weight = nn.Parameter(th.cat((item_pre_embed, other_embed, user_pre_embed), dim=0))
             self.relation_embed = nn.Embedding(n_relations, relation_dim)  ### e_r
             self.W_R = nn.Parameter(th.Tensor(n_relations, input_node_dim, relation_dim))  ### W_r
             nn.init.xavier_uniform_(self.W_R, gain=nn.init.calculate_gain('relu'))

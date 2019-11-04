@@ -18,6 +18,7 @@ def parse_args():
     parser.add_argument('--data_name', nargs='?', default='last-fm',  help='Choose a dataset from {yelp2018, last-fm, amazon-book}')
     #parser.add_argument('--adj_type', nargs='?', default='si', help='Specify the type of the adjacency (laplacian) matrix from {bi, si}.')
     ### Model parameters
+    parser.add_argument('--use_pretrain', type=bool, default=True, help='whether to use pretrain embeddings or not')
     parser.add_argument('--entity_embed_dim', type=int, default=64, help='KG entity Embedding size.')
     parser.add_argument('--relation_embed_dim', type=int, default=64, help='KG relation Embedding size.')
     parser.add_argument('--gnn_model', type=str, default="kgat", help='the gnn models')
@@ -39,7 +40,8 @@ def parse_args():
     parser.add_argument('--print_every', type=int, default=100, help='the print duration')
     #parser.add_argument("--eval_batch_size", type=int, default=-1, help="batch size when evaluating")
     args = parser.parse_args()
-    save_dir = "{}_kg{}_d{}_l{}_dp{}_lr{}_bz{}_kgbz{}_att{}_jt{}_seed{}".format(args.data_name, 1,
+    save_dir = "{}_kg{}_pre{}_d{}_l{}_dp{}_lr{}_bz{}_kgbz{}_att{}_jt{}_seed{}".format(args.data_name, 1,
+                args.use_pretrain,
                 args.entity_embed_dim, args.gnn_num_layer, args.dropout_rate, args.lr,
                 args.batch_size, args.batch_size_kg,
                 int(args.use_attention), int(args.joint_train), args.seed)
@@ -76,10 +78,18 @@ def train(args):
     dataset = DataLoader(args.data_name, use_KG=True, seed=args.seed)
 
     ### model
+    if args.use_pretrain:
+        assert dataset.user_pre_embed.shape[1] == args.entity_embed_dim
+        assert dataset.item_pre_embed.shape[1] == args.entity_embed_dim
+        user_pre_embed = th.tensor(dataset.user_pre_embed)
+        item_pre_embed = th.tensor(dataset.item_pre_embed)
+        if use_cuda:
+            user_pre_embed, item_pre_embed = user_pre_embed.cuda(), item_pre_embed.cuda()
     model = Model(use_KG=True, input_node_dim=args.entity_embed_dim, gnn_model=args.gnn_model,
                   num_gnn_layers=args.gnn_num_layer, n_hidden=args.gnn_hidden_size, dropout=args.dropout_rate,
                   n_entities=dataset.num_all_entities, n_relations=dataset.num_all_relations,
                   relation_dim=args.relation_embed_dim,
+                  use_pretrain=args.use_pretrain, user_pre_embed=user_pre_embed, item_pre_embed=item_pre_embed,
                   reg_lambda_kg=args.regs, reg_lambda_gnn=args.regs)
     if use_cuda:
         model.cuda()
