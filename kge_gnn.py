@@ -85,6 +85,7 @@ def train(args):
         item_pre_embed = th.tensor(dataset.item_pre_embed)
         if use_cuda:
             user_pre_embed, item_pre_embed = user_pre_embed.cuda(), item_pre_embed.cuda()
+        print(user_pre_embed, "\n", item_pre_embed)
     model = Model(use_KG=True, input_node_dim=args.entity_embed_dim, gnn_model=args.gnn_model,
                   num_gnn_layers=args.gnn_num_layer, n_hidden=args.gnn_hidden_size, dropout=args.dropout_rate,
                   n_entities=dataset.num_all_entities, n_relations=dataset.num_all_relations,
