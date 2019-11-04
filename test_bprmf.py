@@ -48,7 +48,7 @@ if __name__ == '__main__':
     print("Start validation ...")
     val_recall, val_ndcg = eval(embeds, dataset.train_user_dict, dataset.valid_user_dict, item_id_range, use_cuda)
     print("Start testing ...")
-    test_recall, test_ndcg = eval(embeds, dataset.train_user_dict, dataset.test_user_dict, item_id_range, use_cuda)
+    test_recall, test_ndcg = eval(embeds, dataset.train_val_user_dict, dataset.test_user_dict, item_id_range, use_cuda)
 
     logging.info("Test recall: {:.5f}, ndcg:{:.5f}\t\tvalid recall: {:.5f}, ndcg:{:.5f}".format(
         test_recall, test_ndcg, val_recall, val_ndcg))
