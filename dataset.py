@@ -394,9 +394,7 @@ class DataLoader(object):
             ### <user>       |=======|+++++++++++++++++++++
 
             ### the first two relation ids are for user->item and item->user
-            print(kg_triples_np[:, 1])
             kg_triples_np[:, 1] = kg_triples_np[:, 1] + 2
-            print(kg_triples_np[:, 1])
 
             all_train_triplet = np.vstack((kg_triples_np, train_user_item_triplet))
             all_test_triplet = np.vstack((kg_triples_np, train_user_item_triplet, valid_user_item_triplet))

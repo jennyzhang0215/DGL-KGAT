@@ -36,7 +36,7 @@ def parse_args():
     parser.add_argument('--batch_size_kg', type=int, default=10000, help='KG batch size.')
     parser.add_argument('--joint_train', type=bool, default=True, help='Whether to jointly-train the mode or '
                                                                         'alternative train the model ')
-    parser.add_argument('--evaluate_every', type=int, default=5, help='the evaluation duration')
+    parser.add_argument('--evaluate_every', type=int, default=1, help='the evaluation duration')
     parser.add_argument('--print_every', type=int, default=100, help='the print duration')
     #parser.add_argument("--eval_batch_size", type=int, default=-1, help="batch size when evaluating")
     args = parser.parse_args()
