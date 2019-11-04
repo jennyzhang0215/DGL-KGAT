@@ -122,7 +122,7 @@ class Model(nn.Module):
 
             if use_pretrain:
                 self.item_user_embed = nn.Embedding(item_num+user_num, user_pre_embed.shape[1])
-                self.user_embed.weight = nn.Parameter(th.cat((item_pre_embed, user_pre_embed), dim=0))
+                self.item_user_embed.weight = nn.Parameter(th.cat((item_pre_embed, user_pre_embed), dim=0))
 
         self.layers = nn.ModuleList()
         for i in range(num_gnn_layers):
