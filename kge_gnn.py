@@ -75,7 +75,7 @@ def train(args):
         th.cuda.set_device(args.gpu)
 
     ### load data
-    dataset = DataLoader(args.data_name, use_KG=True, seed=args.seed)
+    dataset = DataLoader(args.data_name, use_KG=True, use_pretrain=args.use_pretrain, seed=args.seed)
 
     ### model
     if args.use_pretrain:
