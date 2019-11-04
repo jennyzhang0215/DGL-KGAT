@@ -135,7 +135,6 @@ def train(args):
             total_loss = 0.0
             time1 = time()
             total_iter = min(dataset.num_train // args.batch_size, dataset.num_all_train_triplets // args.batch_size_kg)
-            print("Total iter:", total_iter)
             for iter in range(total_iter):
                 h, r, pos_t, neg_t = next(kg_sampler)
                 user_ids, item_pos_ids, item_neg_ids =next(cf_sampler)

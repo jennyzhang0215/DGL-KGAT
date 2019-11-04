@@ -66,7 +66,7 @@ def one_ndcg_at_k(r, k, method=1):
         return 0.
     return one_dcg_at_k(r, k, method) / dcg_max
 
-def calc_recall_ndcg(embedding, train_user_dict, test_user_dict, all_item_id_range, K, use_cuda):
+def calc_recall_ndcg(embedding, train_user_dict, test_user_dict, all_item_id_range, K, use_cuda=False):
     with th.no_grad():
         # perturb subject
         #print("Test size: {}".format(len(dataset.test_user_dict)))
