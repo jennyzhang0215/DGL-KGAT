@@ -42,7 +42,6 @@ def parse_args():
     if not os.path.isdir(args.save_dir):
         os.makedirs(args.save_dir)
     args.save_id = creat_log_id(args.save_dir)
-    logging.info(args)
     return args
 
 
@@ -55,13 +54,14 @@ def eval(model, g, x_input, train_user_dict, eval_user_dict, item_id_range, use_
 
 def train(args):
     logging_config(folder=args.save_dir, name='log{:d}'.format(args.save_id), no_console=False)
+    logging.info(args)
     ### check context
     use_cuda = args.gpu >= 0 and th.cuda.is_available()
     if use_cuda:
         th.cuda.set_device(args.gpu)
 
     ### load data
-    dataset = DataLoader(args.data_name, use_KG=False, seed=args.seed)
+    dataset = DataLoader(args.data_name, use_KG=False, use_pretrain=args.use_pretrain, seed=args.seed)
 
     ### model
     if args.use_pretrain:
