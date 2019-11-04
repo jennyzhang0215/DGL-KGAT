@@ -362,10 +362,14 @@ class DataLoader(object):
 
         self.train_pairs = (np.array(list(map(self.user_mapping.get, train_pairs[0]))).astype(np.int32),
                             train_pairs[1].astype(np.int32))
-        self.train_user_dict= {self.user_mapping[k]: np.unique(v).astype(np.int32) for k,v in train_user_dict.items()}
+        self.train_user_dict = {self.user_mapping[k]: np.unique(v).astype(np.int32) for k,v in train_user_dict.items()}
         self.valid_pairs = (np.array(list(map(self.user_mapping.get, valid_pairs[0]))).astype(np.int32),
                            valid_pairs[1].astype(np.int32))
         self.valid_user_dict = {self.user_mapping[k]: np.unique(v).astype(np.int32) for k, v in valid_user_dict.items()}
+        train_val_user_dict = self.train_user_dict.copy()
+        for k, v in self.valid_user_dict.items():
+            train_val_user_dict[k] = np.concatenate(v, train_val_user_dict[k])
+        self.train_val_user_dict = train_val_user_dict
         self.test_pairs = (np.array(list(map(self.user_mapping.get, test_pairs[0]))).astype(np.int32),
                            test_pairs[1].astype(np.int32))
         self.test_user_dict= {self.user_mapping[k]: np.unique(v).astype(np.int32) for k,v in test_user_dict.items()}

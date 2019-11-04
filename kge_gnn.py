@@ -239,7 +239,7 @@ def train(args):
                 #best_ndcg = val_ndcg
                 best_epoch = epoch
                 time1 = time()
-                test_recall, test_ndcg = eval(model, test_g, dataset.train_user_dict, dataset.test_user_dict,
+                test_recall, test_ndcg = eval(model, test_g, dataset.train_val_user_dict, dataset.test_user_dict,
                                               item_id_range, use_cuda, args.use_attention)
                 test_metric_logger.log(epoch=epoch, recall=test_recall, ndcg=test_ndcg)
 
