@@ -89,11 +89,15 @@ class Model(nn.Module):
         self._n_relations = n_relations
         self._gnn_model = gnn_model
         self._use_attention = use_attention
+        self._use_pretrain = use_pretrain
         self._reg_lambda_kg = reg_lambda_kg
         self._reg_lambda_gnn = reg_lambda_gnn
         if use_pretrain:
             assert user_pre_embed is not None
             assert item_pre_embed is not None
+            assert user_pre_embed.shape[1] == item_pre_embed.shape[1]
+
+        ### for input node embedding
         if use_KG:
             self.entity_embed = nn.Embedding(n_entities, input_node_dim) ### e_h, e_t
             if use_pretrain:
@@ -105,6 +109,7 @@ class Model(nn.Module):
             self.W_R = nn.Parameter(th.Tensor(n_relations, input_node_dim, relation_dim))  ### W_r
             nn.init.xavier_uniform_(self.W_R, gain=nn.init.calculate_gain('relu'))
         else:
+
             if input_item_dim:
                 self.item_proj = nn.Linear(input_item_dim, input_node_dim, bias=False)
             else:
@@ -114,18 +119,24 @@ class Model(nn.Module):
                 self.user_proj = nn.Linear(input_user_dim, input_node_dim, bias=False)
             else:
                 self.user_proj = nn.Embedding(user_num, input_node_dim)
+
+            if use_pretrain:
+                self.item_user_embed = nn.Embedding(item_num+user_num, user_pre_embed.shape[1])
+                self.user_embed.weight = nn.Parameter(th.cat((item_pre_embed, user_pre_embed), dim=0))
+
         self.layers = nn.ModuleList()
         for i in range(num_gnn_layers):
             r = int(math.pow(2, i))
-            if i+1 == num_gnn_layers:
-                act = None
-            else:
-                act = F.relu
+            act = None if i+1 == num_gnn_layers else F.relu
             if i==0:
+                if (not use_KG) and use_pretrain:
+                    in_dim = input_node_dim + item_pre_embed.shape[1]
+                else:
+                    in_dim = input_node_dim
                 if gnn_model == "kgat":
-                    self.layers.append(KGATConv(input_node_dim, n_hidden // r, dropout))
+                    self.layers.append(KGATConv(in_dim, n_hidden // r, dropout))
                 elif gnn_model == "graphsage":
-                    self.layers.append(SAGEConv(input_node_dim, n_hidden // r, aggregator_type="mean",
+                    self.layers.append(SAGEConv(in_dim, n_hidden // r, aggregator_type="mean",
                                                 feat_drop=dropout, activation=act))
                 else:
                     raise NotImplementedError
@@ -200,6 +211,9 @@ class Model(nn.Module):
             h = self.entity_embed(g.ndata['id'])
         else:
             h = th.cat((self.item_proj(x[0]), self.user_proj(x[1])), dim=0)
+            if self._use_pretrain:
+                h2 = th.cat((self.user_item_embed[g.ndata['id']]))
+                h = th.cat((h, h2), dim=1)
         # if self._use_attention:
         #     g  = self.compute_attention(g, node_ids, rel_ids)
         node_embed_cache = [h]

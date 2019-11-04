@@ -16,6 +16,7 @@ def parse_args():
     parser.add_argument('--seed', type=int, default=1234, help='the random seed')
     parser.add_argument('--data_name', nargs='?', default='last-fm',  help='Choose a dataset from {yelp2018, last-fm, amazon-book}')
     ### Model parameters
+    parser.add_argument('--use_pretrain', type=bool, default=True, help='whether to use pretrain embeddings or not')
     parser.add_argument('--node_dim', type=int, default=64, help='the input node dimension')
     parser.add_argument('--gnn_num_layer', type=int, default=3, help='the number of layers')
     parser.add_argument('--gnn_hidden_size', type=int, default=64, help='Output sizes of every layer')
@@ -31,7 +32,8 @@ def parse_args():
     parser.add_argument('--print_every', type=int, default=1000, help='the print duration')
     #parser.add_argument("--eval_batch_size", type=int, default=-1, help="batch size when evaluating")
     args = parser.parse_args()
-    save_dir = "{}_kg{}_graphsage_d{}_l{}_h{}_dp{}_lr{}_bz{}_seed{}".format(args.data_name, 0,
+    save_dir = "{}_kg{}_pre{}_graphsage_d{}_l{}_h{}_dp{}_lr{}_bz{}_seed{}".format(args.data_name,
+                0, int(args.use_pretrain),
                 args.node_dim, args.gnn_num_layer, args.gnn_hidden_size,
                 args.dropout_rate, args.lr, args.batch_size, args.seed)
     args.save_dir = os.path.join('log', save_dir)
@@ -62,10 +64,16 @@ def train(args):
     dataset = DataLoader(args.data_name, use_KG=False, seed=args.seed)
 
     ### model
+    if args.use_pretrain:
+        assert dataset.user_pre_embed.shape[1] == args.entity_embed_dim
+        assert dataset.item_pre_embed.shape[1] == args.entity_embed_dim
+        user_pre_embed = th.tensor(dataset.user_pre_embed)
+        item_pre_embed = th.tensor(dataset.item_pre_embed)
     model = Model(use_KG=False, input_node_dim=args.node_dim, gnn_model="graphsage",
                   num_gnn_layers=args.gnn_num_layer, n_hidden=args.gnn_hidden_size, dropout=args.dropout_rate,
                   input_item_dim=dataset.item_dim, input_user_dim=dataset.user_dim,
                   item_num=dataset.num_items, user_num=dataset.num_users,
+                  use_pretrain=args.use_pretrain, user_pre_embed=user_pre_embed, item_pre_embed=item_pre_embed,
                   reg_lambda_gnn=args.regs)
     if use_cuda:
         model.cuda()
@@ -84,24 +92,23 @@ def train(args):
     model_state_file = 'model_state.pth'
 
     train_g = dataset.train_g
-    if dataset.item_dim:
-        item_fea = th.Tensor(dataset.item_fea)
-        print("item_fea", item_fea)
-    else:
-        item_fea = th.arange(dataset.num_items, dtype=th.long)
-    if dataset.user_dim:
-        user_fea = th.Tensor(dataset.user_fea)
-    else:
-        user_fea = th.arange(dataset.num_users, dtype=th.long)
-    if use_cuda:
-        item_fea, user_fea = item_fea.cuda(), user_fea.cuda()
-    x_input = [item_fea, user_fea]
+    nid_th = th.LongTensor(train_g.ndata["id"])
+    if use_cuda: nid_th = nid_th.cuda()
+    train_g.ndata['id'] = nid_th
 
     test_g = dataset.test_g
-    if use_cuda:
-        item_id_range = th.arange(dataset.num_items, dtype=th.long).cuda()
-    else:
-        item_id_range = th.arange(dataset.num_items, dtype=th.long)
+    nid_th = th.LongTensor(test_g.ndata["id"])
+    if use_cuda: nid_th = nid_th.cuda()
+    test_g.ndata['id'] = nid_th
+
+    item_fea = th.Tensor(dataset.item_fea) if dataset.item_dim else th.arange(dataset.num_items, dtype=th.long)
+    user_fea = th.Tensor(dataset.user_fea) if dataset.user_dim else th.arange(dataset.num_users, dtype=th.long)
+    if use_cuda: item_fea, user_fea = item_fea.cuda(), user_fea.cuda()
+    x_input = [item_fea, user_fea]
+
+    item_id_range = th.arange(dataset.num_items, dtype=th.long).cuda() if use_cuda else \
+        th.arange(dataset.num_items, dtype=th.long)
+
     """ For initializing the edge weights """
     # A_w = th.tensor(dataset.w).view(-1, 1)
     # if use_cuda:
@@ -147,7 +154,7 @@ def train(args):
                 #best_ndcg = val_ndcg
                 best_epoch = epoch
                 time1 = time()
-                test_recall, test_ndcg = eval(model, test_g, x_input, dataset.train_user_dict, dataset.test_user_dict,
+                test_recall, test_ndcg = eval(model, test_g, x_input, dataset.train_val_user_dict, dataset.test_user_dict,
                                               item_id_range, use_cuda)
                 test_metric_logger.log(epoch=epoch, recall=test_recall, ndcg=test_ndcg)
 
