@@ -100,6 +100,7 @@ class Model(nn.Module):
                 other_embed = nn.Parameter(th.Tensor(n_entities-user_pre_embed.shape[0]-item_pre_embed.shape[0],
                                                      input_node_dim))
                 nn.init.xavier_uniform_(other_embed, gain=nn.init.calculate_gain('relu'))
+                print("other_embed", other_embed)
                 self.entity_embed.weight = nn.Parameter(th.cat((item_pre_embed, other_embed, user_pre_embed), dim=0))
             self.relation_embed = nn.Embedding(n_relations, relation_dim)  ### e_r
             self.W_R = nn.Parameter(th.Tensor(n_relations, input_node_dim, relation_dim))  ### W_r
