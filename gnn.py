@@ -65,10 +65,11 @@ def train(args):
 
     ### model
     if args.use_pretrain:
-        assert dataset.user_pre_embed.shape[1] == args.entity_embed_dim
-        assert dataset.item_pre_embed.shape[1] == args.entity_embed_dim
+        assert dataset.user_pre_embed.shape[1] == dataset.item_pre_embed.shape[1]
         user_pre_embed = th.tensor(dataset.user_pre_embed)
         item_pre_embed = th.tensor(dataset.item_pre_embed)
+    else:
+        user_pre_embed, item_pre_embed = None, None
     model = Model(use_KG=False, input_node_dim=args.node_dim, gnn_model="graphsage",
                   num_gnn_layers=args.gnn_num_layer, n_hidden=args.gnn_hidden_size, dropout=args.dropout_rate,
                   input_item_dim=dataset.item_dim, input_user_dim=dataset.user_dim,

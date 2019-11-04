@@ -76,6 +76,8 @@ def train(args):
         assert dataset.item_pre_embed.shape[1] == args.entity_embed_dim
         user_pre_embed = th.tensor(dataset.user_pre_embed)
         item_pre_embed = th.tensor(dataset.item_pre_embed)
+    else:
+        user_pre_embed, item_pre_embed = None, None
     model = Model(use_KG=True, input_node_dim=args.entity_embed_dim, gnn_model=args.gnn_model,
                   num_gnn_layers=args.gnn_num_layer, n_hidden=args.gnn_hidden_size, dropout=args.dropout_rate,
                   n_entities=dataset.num_all_entities, n_relations=dataset.num_all_relations,
