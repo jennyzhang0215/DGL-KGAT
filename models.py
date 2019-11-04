@@ -212,7 +212,7 @@ class Model(nn.Module):
         else:
             h = th.cat((self.item_proj(x[0]), self.user_proj(x[1])), dim=0)
             if self._use_pretrain:
-                h2 = self.item_user_embed[g.ndata['id']]
+                h2 = self.item_user_embed(g.ndata['id'])
                 h = th.cat((h, h2), dim=1)
         # if self._use_attention:
         #     g  = self.compute_attention(g, node_ids, rel_ids)
