@@ -14,7 +14,8 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Reproduce KGAT using DGL")
     parser.add_argument('--gpu', type=int, default=0, help='use GPU')
     parser.add_argument('--seed', type=int, default=1234, help='the random seed')
-    parser.add_argument('--data_name', nargs='?', default='last-fm',  help='Choose a dataset from {yelp2018, last-fm, amazon-book}')
+    parser.add_argument('--data_name', nargs='?', default='amazon-book',
+                        help='Choose a dataset from {yelp2018, last-fm, amazon-book}')
     ### Model parameters
     parser.add_argument('--use_pretrain', type=bool, default=True, help='whether to use pretrain embeddings or not')
     parser.add_argument('--node_dim', type=int, default=64, help='the input node dimension')
