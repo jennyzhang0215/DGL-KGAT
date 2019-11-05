@@ -38,7 +38,7 @@ def parse_args():
     parser.add_argument('--joint_train', type=bool, default=False, help='Whether to jointly-train the mode or '
                                                                         'alternative train the model ')
     parser.add_argument('--evaluate_every', type=int, default=1, help='the evaluation duration')
-    parser.add_argument('--print_every', type=int, default=100, help='the print duration')
+    parser.add_argument('--print_every', type=int, default=1000, help='the print duration')
     #parser.add_argument("--eval_batch_size", type=int, default=-1, help="batch size when evaluating")
     args = parser.parse_args()
     save_dir = "{}_kg{}_pre{}_d{}_l{}_dp{}_lr{}_bz{}_kgbz{}_att{}_jt{}_seed{}".format(args.data_name,
