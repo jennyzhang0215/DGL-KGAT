@@ -56,6 +56,7 @@ def parse_args():
 def eval(model, g, train_user_dict, eval_user_dict, item_id_range, use_cuda, use_attention):
     with th.no_grad():
         if use_attention:
+            print("Compute attention weight in eval func ...")
             A_w = model.compute_attention(g)
             g.edata['w'] = A_w
         all_embedding = model.gnn(g, g.ndata['id'])
@@ -121,10 +122,10 @@ def train(args):
         nid_th, etype_th = nid_th.cuda(), etype_th.cuda()
     test_g.ndata['id'] = nid_th
     test_g.edata['type'] = etype_th
-    if use_cuda:
-        item_id_range = th.arange(dataset.num_items, dtype=th.long).cuda()
-    else:
-        item_id_range = th.arange(dataset.num_items, dtype=th.long)
+
+    item_id_range = th.arange(dataset.num_items, dtype=th.long).cuda() if use_cuda \
+        else th.arange(dataset.num_items, dtype=th.long)
+
     """ For initializing the edge weights """
     # A_w = th.tensor(dataset.w).view(-1, 1)
     # if use_cuda:
@@ -172,11 +173,10 @@ def train(args):
                 if (iter % args.print_every) == 0:
                     logging.info("Epoch {:04d} Iter {:04d} | Loss {:.4f} ".format(epoch, iter+1, total_loss / (iter+1)))
             logging.info('Time: {:.1f}s, loss {:.4f}'.format(time() - time1, total_loss / total_iter))
-
         else:
             ### train kg
             time1 = time()
-            kg_sampler = dataset.KG_sampler_uniform(batch_size=args.batch_size_kg)
+            kg_sampler = dataset.KG_sampler(batch_size=args.batch_size_kg)
             iter = 0
             total_loss = 0.0
             for h, r, pos_t, neg_t in kg_sampler:
@@ -200,11 +200,12 @@ def train(args):
             ### train GNN
             time1 = time()
             model.train()
-            cf_sampler = dataset.CF_pair_uniform_sampler(batch_size=args.batch_size)
+            cf_sampler = dataset.CF_pair_sampler(batch_size=args.batch_size)
             iter = 0
             total_loss = 0.0
 
             if args.use_attention:
+                print("Compute attention weight in train ...")
                 with th.no_grad():
                     A_w = model.compute_attention(train_g)
                 train_g.edata['w'] = A_w
@@ -234,7 +235,7 @@ def train(args):
                                         item_id_range, use_cuda, args.use_attention)
 
             info = "Epoch: {}, [{:.1f}s] val recall:{:.5f}, val ndcg:{:.5f}".format(
-                    epoch, time() - time1, val_recall, val_ndcg)
+                    epoch, time()-time1, val_recall, val_ndcg)
             # save best model
             if val_recall > best_recall:
                 valid_metric_logger.log(epoch=epoch, recall=val_recall, ndcg=val_ndcg, is_best=1)
@@ -250,6 +251,9 @@ def train(args):
                 #th.save({'state_dict': model.state_dict(), 'epoch': epoch}, model_state_file)
             else:
                 valid_metric_logger.log(epoch=epoch, recall=val_recall, ndcg=val_ndcg, is_best=0)
+                test_recall, test_ndcg = eval(model, test_g, dataset.train_val_user_dict, dataset.test_user_dict,
+                                              item_id_range, use_cuda, args.use_attention)
+                print("test recall:{}, test_ndcg: {}".format(test_recall, test_ndcg))
             logging.info(info)
 
     logging.info("Final test recall:{:.5f}, test ndcg:{:.5f}, best epoch:{}".format(test_recall, test_ndcg, best_epoch))
