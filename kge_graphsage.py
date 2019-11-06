@@ -62,12 +62,10 @@ def eval(model, g, train_user_dict, eval_user_dict, item_id_range, use_cuda):
 def train(args):
     logging_config(folder=args.save_dir, name='log{:d}'.format(args.save_id), no_console=False)
     logging.info(args)
-
     ### check context
     use_cuda = args.gpu >= 0 and th.cuda.is_available()
     if use_cuda:
         th.cuda.set_device(args.gpu)
-
     ### load data
     dataset = DataLoader(args.data_name, use_KG=True, use_pretrain=args.use_pretrain, seed=args.seed)
 

@@ -252,9 +252,9 @@ def train(args):
                 #th.save({'state_dict': model.state_dict(), 'epoch': epoch}, model_state_file)
             else:
                 valid_metric_logger.log(epoch=epoch, recall=val_recall, ndcg=val_ndcg, is_best=0)
-                test_recall, test_ndcg = eval(model, test_g, dataset.train_val_user_dict, dataset.test_user_dict,
+                recall, ndcg = eval(model, test_g, dataset.train_val_user_dict, dataset.test_user_dict,
                                               item_id_range, use_cuda, args.use_attention)
-                print("test recall:{}, test_ndcg: {}".format(test_recall, test_ndcg))
+                print("test recall:{}, test_ndcg: {}".format(recall, ndcg))
             logging.info(info)
 
     logging.info("Final test recall:{:.5f}, test ndcg:{:.5f}, best epoch:{}".format(test_recall, test_ndcg, best_epoch))
