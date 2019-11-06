@@ -30,6 +30,7 @@ def parse_args():
     parser.add_argument('--regs', type=float, default=0.0001, help='Regularization for user and item embeddings.')
 
     ### Training parameters
+    parser.add_argument('--uniform_sample', type=bool, default=True, help='train xx iterations')
     parser.add_argument('--max_epoch', type=int, default=5000, help='train xx iterations')
     parser.add_argument("--grad_norm", type=float, default=1.0, help="norm to clip gradient to")
     parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate.')
@@ -176,10 +177,17 @@ def train(args):
             logging.info('Time: {:.1f}s, loss {:.4f}'.format(time() - time1, total_loss / total_iter))
         else:
             ### train kg
-            time1 = time()
-            kg_sampler = dataset.KG_sampler(batch_size=args.batch_size_kg)
+            if args.uniform_sample:
+                kg_sampler = dataset.KG_sampler_uniform(batch_size=args.batch_size_kg)
+                cf_sampler = dataset.CF_pair_uniform_sampler(batch_size=args.batch_size)
+            else:
+                kg_sampler = dataset.KG_sampler(batch_size=args.batch_size_kg)
+                cf_sampler = dataset.CF_pair_sampler(batch_size=args.batch_size)
+
             iter = 0
             total_loss = 0.0
+            time1 = time()
+
             for h, r, pos_t, neg_t in kg_sampler:
                 iter += 1
                 model.train()
@@ -201,7 +209,6 @@ def train(args):
             ### train GNN
             time1 = time()
             model.train()
-            cf_sampler = dataset.CF_pair_sampler(batch_size=args.batch_size)
             iter = 0
             total_loss = 0.0
 
