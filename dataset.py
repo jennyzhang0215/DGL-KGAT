@@ -4,8 +4,6 @@ import dgl
 import pandas as pd
 import collections
 import random as rd
-from time import time
-import scipy.sparse as sp
 import torch as th
 
 class DataLoader(object):
@@ -482,43 +480,3 @@ class DataLoader(object):
     #         neg_item_ids = np.array(list(map(node_map.get, neg_item_ids)), dtype=np.int32)
     #
     #         yield user_ids, item_ids, neg_item_ids, g, uniq_v, etype
-
-if __name__ == '__main__':
-    """
-    batch_size = 1024
-    d_loader = DataLoader("yelp2018", use_KG=True)
-    
-    ## convert positive triplets to sets
-    pos_pool = []
-
-    for i in range(d_loader.num_all_train_triplets):
-        pos_pool.append(d_loader.all_train_triplet_np[i, :].tolist())
-    #print(pos_pool)
-    kg_sampler = d_loader.KG_sampler_DGL(batch_size)
-    for h, r, pos_t, neg_t in kg_sampler:
-        print("\n\n")
-        count = 0
-        for j in range(batch_size):
-            pos_l = [pos_t[j].item(), r[j].item(), h[j].item()]
-            neg_l = [neg_t[j].item(), r[j].item(), h[j].item()]
-            try:
-                assert pos_l in pos_pool
-            except:
-                print("pos_l", pos_l, "not in the true positive triplets!!!!~~~~")
-
-            try:
-                assert neg_l not in pos_pool
-            except:
-                count += 1
-                print("neg_l", neg_l, "not in the true negative triplets!")
-        print(count)
-        #print(h, r, pos_t, neg_t)
-    """
-    DataLoader("yelp2018", use_KG=True, use_pretrain=True)
-    DataLoader("yelp2018", use_KG=False, use_pretrain=True)
-    DataLoader("last-fm", use_KG=True, use_pretrain=True)
-    DataLoader("last-fm", use_KG=False, use_pretrain=True)
-    DataLoader("amazon-book", use_KG=True, use_pretrain=True)
-    DataLoader("amazon-book", use_KG=False, use_pretrain=True)
-
-
