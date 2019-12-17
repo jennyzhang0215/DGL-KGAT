@@ -73,7 +73,7 @@ def train_eval(args):
         th.cuda.set_device(args.gpu)
 
     ### load data
-    dataset = DataLoader(args.data_name, use_pretrain=args.use_pretrain, seed=args.seed)
+    dataset = DataLoader(data_name=args.data_name, use_pretrain=args.use_pretrain, seed=args.seed)
 
     ### model
     if args.use_pretrain:
