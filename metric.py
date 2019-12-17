@@ -2,39 +2,6 @@ import numpy as np
 import torch as th
 import heapq
 
-
-
-def recall_at_k(r, k, all_pos_num):
-    ### here r is as two dim
-    r = np.asfarray(r)
-    if r.ndim == 1:
-        r = r[:k]
-        return np.sum(r) / all_pos_num
-    elif r.ndim == 2:
-        r = r[:, :k]
-        return np.sum(r) / all_pos_num
-def dcg_at_k(r, k):
-    """Score is discounted cumulative gain (dcg)
-    Relevance is positive real values.  Can use binary
-    as the previous methods.
-    Returns:
-        Discounted cumulative gain
-    """
-    r = np.asfarray(r)[:k]
-    assert r.size > 0
-    return np.sum(r / np.log2(np.arange(2, k + 2)), axis=1)
-def ndcg_at_k(r, k):
-    """Score is normalized discounted cumulative gain (ndcg)
-    Relevance is positive real values.  Can use binary
-    as the previous methods.
-    Returns:
-        Normalized discounted cumulative gain
-    """
-    dcg_max = dcg_at_k(np.flip(np.sort(r), axis=1), k)
-    dcg = dcg_at_k(r, k)
-    dcg_max[dcg_max==0] = np.inf
-    return np.mean(dcg / dcg_max)
-
 def one_recall_at_k(r, k, all_pos_num):
     r = np.asfarray(r)[:k]
     return np.sum(r) / all_pos_num
@@ -70,7 +37,6 @@ def calc_recall_ndcg(embedding, train_user_dict, test_user_dict, all_item_id_ran
     with th.no_grad():
         # perturb subject
         #print("Test size: {}".format(len(dataset.test_user_dict)))
-        #ranks = []
         recall_all = 0.0
         ndcg_all = 0.0
         all_pos_item_num = 0
@@ -78,11 +44,8 @@ def calc_recall_ndcg(embedding, train_user_dict, test_user_dict, all_item_id_ran
         for u_id, pos_item_l in test_user_dict.items():
             all_pos_item_num += len(pos_item_l)
             emb_u = embedding[u_id]
-            #print("emb_u", emb_u.shape, emb_u)
             emb_all = embedding[all_item_id_range].transpose(0, 1)
-            #print("emb_all", emb_all.shape, emb_all)
             score = th.matmul(emb_u, emb_all)
-            #print("score", score.shape, score)
             ### mask scores of the training items as 0
             score[train_user_dict[u_id]] = 0.0
             _, rank_indices = th.sort(score, descending=True)
@@ -94,20 +57,13 @@ def calc_recall_ndcg(embedding, train_user_dict, test_user_dict, all_item_id_ran
             for i in range(K):
                 if rank_indices[i] in pos_item_l:
                     binary_rank_K[i] = 1.0
-            #ranks.append(binary_rank_K)
             if len(pos_item_l) > 0:
                 recall_all += one_recall_at_k(binary_rank_K.tolist(), K, len(pos_item_l))
             else:
                 print("Nan user dict:", u_id, test_user_dict[u_id])
             ndcg_all += one_ndcg_at_k(binary_rank_K.tolist(), K)
 
-    #ranks = np.vstack(ranks)
-    ### the output is the sum
-    #recall = recall_at_k(ranks, K, dataset.num_test)
-    #ndcg = ndcg_at_k(ranks, K)
-    one_by_one_recall = recall_all / len(test_user_dict)
-    one_by_one_ndcg = ndcg_all / len(test_user_dict)
-    #print("Comparision: recall (all v.s. one by one) {} v.s. {}".format(recall, one_by_one_recall))
-    #print("\tndcg (all v.s. one by one) {} v.s. {}".format(ndcg, one_by_one_ndcg))
+    recall = recall_all / len(test_user_dict)
+    ndcg = ndcg_all / len(test_user_dict)
 
-    return one_by_one_recall, one_by_one_ndcg
+    return recall, ndcg

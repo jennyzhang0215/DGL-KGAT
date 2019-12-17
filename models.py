@@ -46,7 +46,6 @@ def bmm_maybe_select(A, B, index):
         BB = B.index_select(0, index)
         return th.bmm(A.unsqueeze(1), BB).squeeze()
 
-
 class KGATConv(nn.Module):
     def __init__(self, entity_in_feats, out_feats, dropout, res_type="Bi"):
         super(KGATConv, self).__init__()
@@ -61,16 +60,9 @@ class KGATConv(nn.Module):
     def forward(self, g, nfeat):
         g = g.local_var()
         g.ndata['h'] = nfeat
-        #g.ndata['h'] = th.matmul(nfeat, self.W_r).squeeze() ### (#node, #rel, entity_dim)
-        #print("relation_W", self.relation_W.shape,  self.relation_W)
-        ### compute attention weight using edge_softmax
-        #print("attention_score:", graph.edata['att_w'])
-        #print("att_w", att_w)
         g.update_all(fn.u_mul_e('h', 'w', 'm'), fn.sum('m', 'h_neighbor'))
         h_neighbor = g.ndata['h_neighbor']
         if self._res_type == "Bi":
-            # out = F.leaky_relu(self.res_fc(g.ndata['h']+h_neighbor))+\
-            #       F.leaky_relu(self.res_fc_2(th.mul(g.ndata['h'], h_neighbor)))
             out = F.leaky_relu(self.res_fc_2(th.mul(g.ndata['h'], h_neighbor)))
         else:
             raise NotImplementedError
@@ -167,13 +159,8 @@ class Model(nn.Module):
         ### pairwise ranking loss
         l = (-1.0) * F.logsigmoid(neg_score-pos_score)
         l = th.mean(l)
-        ## tf.reduce_sum(tf.square((h_e + r_e - t_e)), 1, keepdims=True)
-        ### TODO to check whether to use raw embeddings or entities embeddings
-        # reg_loss =_L2_loss_mean(self.relation_embed.weight) + _L2_loss_mean(self.entity_embed.weight) + \
-        #           _L2_loss_mean(self.W_R)
         reg_loss = _L2_loss_mean(h_vec) + _L2_loss_mean(r_vec) + \
                    _L2_loss_mean(pos_t_vec) + _L2_loss_mean(neg_t_vec)
-        #print("\tkg loss:", l, "reg loss:", reg_loss, "*", self._reg_lambda_kg)
         loss = l + self._reg_lambda_kg * reg_loss
         return loss
 
@@ -183,18 +170,14 @@ class Model(nn.Module):
 
         """
         t_r = th.matmul(self.entity_embed(edges.src['id']), self.W_r) ### (edge_num, hidden_dim)
-        #print("t_r", t_r.shape, t_r)
         h_r = th.matmul(self.entity_embed(edges.dst['id']), self.W_r) ### (edge_num, hidden_dim)
-        #print("h_r", h_r.shape, h_r)
         att_w = th.bmm(t_r.unsqueeze(1),
                        th.tanh(h_r + self.relation_embed(edges.data['type'])).unsqueeze(2)).squeeze(-1)
-        #print("att_w", att_w.shape, att_w)
         return {'att_w': att_w}
 
     def compute_attention(self, g):
         ## compute attention weight and store it on edges
         g = g.local_var()
-        #print("In compute_attention ...", g)
         for i in range(self._n_relations):
             e_idxs = g.filter_edges(lambda edges: edges.data['type'] == i)
             self.W_r = self.W_R[i]
@@ -204,27 +187,19 @@ class Model(nn.Module):
 
     def gnn(self, g, x):
         g = g.local_var()
-        #print("In gnn ...", g)
         if self._use_KG:
-            ### if use_KG : x = g.ndata['id']
-            ### else:       u_fea, v_fea
             h = self.entity_embed(g.ndata['id'])
         else:
             h = th.cat((self.item_proj(x[0]), self.user_proj(x[1])), dim=0)
             if self._use_pretrain:
                 h2 = self.item_user_embed(g.ndata['id'])
                 h = th.cat((h, h2), dim=1)
-        # if self._use_attention:
-        #     g  = self.compute_attention(g, node_ids, rel_ids)
         node_embed_cache = [h]
         for i, layer in enumerate(self.layers):
             h = layer(g, h)
-            # print(i, "h", h.shape, h)
             out = F.normalize(h, p=2, dim=1)
-            #print(i, "norm_h", out.shape, out)
             node_embed_cache.append(out)
         final_h = th.cat(node_embed_cache, 1)
-        #print("final_h", final_h.shape, final_h)
         return final_h
 
     def get_loss(self, embedding, src_ids, pos_dst_ids, neg_dst_ids):
@@ -233,14 +208,8 @@ class Model(nn.Module):
         neg_dst_vec = embedding[neg_dst_ids]
         pos_score = th.bmm(src_vec.unsqueeze(1), pos_dst_vec.unsqueeze(2)).squeeze()  ### (batch_size, )
         neg_score = th.bmm(src_vec.unsqueeze(1), neg_dst_vec.unsqueeze(2)).squeeze()  ### (batch_size, )
-        #print("pos_score", pos_score)
-        #print("neg_score", neg_score)
         cf_loss = th.mean(F.logsigmoid(pos_score - neg_score) ) * (-1.0)
-        ### TODO to check whether to use the raw embeddings or entity embeddings
-        # reg_loss = _L2_loss_mean(self.relation_embed.weight) + _L2_loss_mean(self.entity_embed.weight) +\
-        #            _L2_loss_mean(self.W_R)
         reg_loss = _L2_loss_mean(src_vec) + _L2_loss_mean(pos_dst_vec) + _L2_loss_mean(neg_dst_vec)
-        #print("\tcf loss:", cf_loss, "reg loss:", reg_loss, "*", self._reg_lambda_gnn)
         return cf_loss + self._reg_lambda_gnn * reg_loss
 
 
