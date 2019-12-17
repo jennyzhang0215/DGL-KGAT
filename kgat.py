@@ -86,7 +86,7 @@ def train_eval(args):
         user_pre_embed, item_pre_embed = None, None
     model = Model(use_KG=True, input_node_dim=args.entity_embed_dim, gnn_model=args.gnn_model,
                   num_gnn_layers=args.gnn_num_layer, n_hidden=args.gnn_hidden_size, dropout=args.dropout_rate,
-                  n_entities=dataset.num_all_entities, n_relations=dataset.num_all_relations,
+                  n_entities=dataset.n_KG_entity, n_relations=dataset.n_KG_relation,
                   relation_dim=args.relation_embed_dim,
                   use_pretrain=args.use_pretrain, user_pre_embed=user_pre_embed, item_pre_embed=item_pre_embed,
                   reg_lambda_kg=args.regs, reg_lambda_gnn=args.regs)
@@ -120,9 +120,8 @@ def train_eval(args):
     test_g.ndata['id'] = nid_th
     test_g.edata['type'] = etype_th
 
-    item_id_range = th.arange(dataset.num_items, dtype=th.long).cuda() if use_cuda \
-        else th.arange(dataset.num_items, dtype=th.long)
-
+    item_id_range = th.LongTensor(dataset.item_id_range).cuda() if use_cuda \
+        else th.LongTensor(dataset.item_id_range)
 
     for epoch in range(1, args.max_epoch+1):
         ### train kg
@@ -150,18 +149,19 @@ def train_eval(args):
 
         ### train GNN
         time1 = time()
-        model.train()
-        cf_sampler = dataset.CF_pair_sampler(batch_size=args.batch_size)
-        iter = 0
-        total_loss = 0.0
 
         if args.use_attention:
             print("Compute attention weight in train ...")
             with th.no_grad():
                 A_w = model.compute_attention(train_g)
             train_g.edata['w'] = A_w
-        for user_ids, item_pos_ids, item_neg_ids in cf_sampler:
+
+        cf_sampler = dataset.CF_pair_sampler(batch_size=args.batch_size)
+        iter = 0
+        total_loss = 0.0
+        for user_ids, item_pos_ids, item_neg_ids, _ in cf_sampler:
             iter += 1
+            model.train()
             user_ids_th = th.LongTensor(user_ids)
             item_pos_ids_th = th.LongTensor(item_pos_ids)
             item_neg_ids_th = th.LongTensor(item_neg_ids)

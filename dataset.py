@@ -4,107 +4,110 @@ import dgl
 import pandas as pd
 import collections
 import random as rd
+from time import time
+import scipy.sparse as sp
 import torch as th
+import pickle
+import time
+from scipy import sparse as sp
+
+_UV_FILES = ["uv_train.pd", "uv_val.pd", "uv_test.pd"]
+### in KGAT it assums that user has no kg data, thus we set the file name to be None
+_KG_FILES = [None, "kg_item.pd"]
+
+_SEP = "\t"
 
 class DataLoader(object):
-    def __init__(self, data_name, use_pretrain, seed=1234):
-        print("\n{}->".format(data_name))
+    def __init__(self, data_name, use_pretrain=False, symmetric=True, as_continuous_ids=True, add_uv2KG=True, seed=1234):
         self._data_name = data_name
-        self._use_pretrain = use_pretrain
-        self._rng = np.random.RandomState(seed=seed)
-        data_dir = os.path.realpath(os.path.join(os.path.abspath(__file__), '..', "datasets", data_name))
+        rd.seed(seed)
+        _DATA_DIR = os.path.realpath(os.path.join(os.path.abspath(__file__), '..', '..', "datasets", data_name))
 
-        train_file = os.path.join(data_dir, "train1.txt")
-        train_pairs, train_user_dict = self.load_train_interaction(train_file)
-        self.train_user_ids = np.unique(train_pairs[0])  ### requires to remap later
-        self.item_ids = np.unique(train_pairs[1])
-        self.num_users = self.train_user_ids.size
-        self.num_items = self.item_ids.size
-        self.num_train = train_pairs[0].size
-        valid_file = os.path.join(data_dir, "valid1.txt")
-        valid_pairs, valid_user_dict = self.load_test_interaction(valid_file)
-        self.num_valid = valid_pairs[0].size
-        test_file = os.path.join(data_dir, "test.txt")
-        test_pairs, test_user_dict = self.load_test_interaction(test_file)
-        self.num_test = test_pairs[0].size
-        print("Train data: #user:{}, #item:{}, #pairs:{}".format(self.num_users, self.num_items, self.num_train))
-        print("Valid data: #pairs:{}".format(self.num_valid))
-        print("Test data: #pairs:{}".format(self.num_test))
+        train_pd = self._load_pd(os.path.join(_DATA_DIR, _UV_FILES[0])).sort_values(by=["u"])
+        valid_pd = self._load_pd(os.path.join(_DATA_DIR, _UV_FILES[1])).sort_values(by=["u"])
+        test_pd = self._load_pd(os.path.join(_DATA_DIR, _UV_FILES[2])).sort_values(by=["u"])
+        self.n_users = train_pd["u"].nunique()
+        self.n_items = train_pd["v"].nunique()
+        self.n_train = train_pd.shape[0]
+        self.n_valid = valid_pd.shape[0]
+        self.n_test = test_pd.shape[0]
+        ### test_user_ids, test_item_ids, test_uv_sp, pruned_train_uv_pairs,
+        ###TODO assum all the items and users are seen in the training set
+        self.eval_val_user_ids = np.unique(valid_pd["u"].unique())
+        self.eval_val_uv_pair = valid_pd.copy()
+        self.eval_train_uv_pairv4val = train_pd[train_pd["u"].isin(self.eval_val_user_ids)]
 
-        kg_file = os.path.join(data_dir, "kg_final.txt")
-        kg_pd = self.load_kg(kg_file)
+        self.eval_test_user_ids = np.unique(test_pd["u"].unique())
+        self.eval_test_uv_pair = test_pd.copy()
+        train_val_pd = train_pd.append(valid_pd, ignore_index=True).sort_values(by=["u"])
+        self.eval_train_uv_pairv4test = train_val_pd[train_val_pd["u"].isin(self.eval_test_user_ids)]
 
-        kg_triples_pd = self.plus_inverse_kg(kg_pd)
-        self.num_KG_relations = kg_triples_pd["r"].nunique()
-        self.num_KG_entities = pd.concat([kg_pd['h'], kg_pd['t']]).nunique()
-        self.num_KG_triples = kg_triples_pd.shape[0]
-        kg_triples_np = kg_triples_pd.values
-        print("After adding inverse KG triplets ...")
-        print("#KG entities:{}, relations:{}, triplet:{}, #head:{}, #tail:{}".format(
-                self.num_KG_entities, self.num_KG_relations, self.num_KG_triples,
-                kg_triples_pd['h'].nunique(), kg_triples_pd['t'].nunique()))
-        ## Keep item and entity ids unchanged and remap user ids
-        ## stack user ids after entities
-        self.user_mapping = {i: i + self.num_KG_entities for i in range(self.num_users)}
+        if len(train_pd.columns) == 2:
+            ### just use implicit feedback
+            self.train_user_dict = self._convert_uv_pair2dict(train_pd)
+            # self.valid_user_dict = self._convert_uv_pair2dict(valid_pd)
+            # self.test_user_dict = self._convert_uv_pair2dict(test_pd)
+            # self.train_valid_user_dict = self._convert_uv_pair2dict(train_pd.append(valid_pd, ignore_index=True))
+            n_uv_rel = 1
+        elif len(train_pd.columns) > 2:
+            n_uv_rel = train_pd["r"].nunique()
+        else:
+            raise NotImplementedError
 
+        item_kg_pd = self._load_pd(os.path.join(_DATA_DIR, _KG_FILES[1]))
 
-        self.train_pairs = (np.array(list(map(self.user_mapping.get, train_pairs[0]))).astype(np.int32),
-                            train_pairs[1].astype(np.int32))
-        self.train_user_dict = {self.user_mapping[k]: np.unique(v).astype(np.int32) for k,v in train_user_dict.items()}
-        self.valid_pairs = (np.array(list(map(self.user_mapping.get, valid_pairs[0]))).astype(np.int32),
-                           valid_pairs[1].astype(np.int32))
-        self.valid_user_dict = {self.user_mapping[k]: np.unique(v).astype(np.int32) for k, v in valid_user_dict.items()}
-        train_val_user_dict = self.train_user_dict.copy()
-        for k, v in self.valid_user_dict.items():
-            train_val_user_dict[k] = np.concatenate((v, train_val_user_dict[k]))
-        self.train_val_user_dict = train_val_user_dict
-        self.test_pairs = (np.array(list(map(self.user_mapping.get, test_pairs[0]))).astype(np.int32),
-                           test_pairs[1].astype(np.int32))
-        self.test_user_dict= {self.user_mapping[k]: np.unique(v).astype(np.int32) for k,v in test_user_dict.items()}
+        ### ids will be remapping
+        if as_continuous_ids:
+            ## process the entities ids to be consecutive
+            ## by stacking item/entity after user ids
+            ## <user> | <item>  <att entity>
+            item_entity_offset = self.n_users
+            self.item_id_range = np.arange(item_entity_offset, item_entity_offset + self.n_items)
+            ## process the uv data first
+            train_pd["v"] = train_pd["v"] + item_entity_offset
+            valid_pd["v"] = valid_pd["v"] + item_entity_offset
+            test_pd["v"] = test_pd["v"] + item_entity_offset
+            ## then process the item kg
+            if item_kg_pd is not None:
+                item_kg_pd["h"] = item_kg_pd["h"] + item_entity_offset
+                item_kg_pd["t"] = item_kg_pd["t"] + item_entity_offset
+        self.eval_item_ids = np.unique(train_pd["v"].unique())
 
-        print("The user-item pairs: #users {}, #items {}, #train pairs {}, #valid pairs {}, #test pairs {}".format(
-            self.num_users, self.num_items, self.num_train, self.num_valid, self.num_test))
+        kg_pd = item_kg_pd
+        n_KG_relations = kg_pd["r"].nunique()
+        train_uv_triplet = self._convert_uv2triplet_np(train_pd, offset_rel=n_KG_relations,
+                                                       n_uv_rel=n_uv_rel, symmetric=symmetric)
+        train_valid_uv_triplet = self._convert_uv2triplet_np(train_pd.append(valid_pd, ignore_index=True),
+                                                             offset_rel=n_KG_relations,
+                                                             n_uv_rel=n_uv_rel, symmetric=symmetric)
 
-        ### the relation id for user->item == 0 and item->user == 1
-        train_user_item_triplet = np.zeros((self.num_train*2, 3), dtype=np.int32)
-        train_user_item_triplet[:, 0] = np.concatenate((self.train_pairs[0], self.train_pairs[1]))
-        train_user_item_triplet[:, 1] = np.concatenate((np.zeros(self.num_train, dtype=np.int32),
-                                                        np.ones(self.num_train, dtype=np.int32)))
-        train_user_item_triplet[:, 2] = np.concatenate((self.train_pairs[1], self.train_pairs[0]))
-        train_user_item_triplet = train_user_item_triplet.astype(np.int32)
-        valid_user_item_triplet = np.zeros((self.num_valid*2, 3), dtype=np.int32)
-        valid_user_item_triplet[:, 0] = np.concatenate((self.valid_pairs[0], self.valid_pairs[1]))
-        valid_user_item_triplet[:, 1] = np.concatenate((np.zeros(self.num_valid, dtype=np.int32),
-                                                        np.ones(self.num_valid, dtype=np.int32)))
-        valid_user_item_triplet[:, 2] = np.concatenate((self.valid_pairs[1], self.valid_pairs[0]))
-        valid_user_item_triplet = valid_user_item_triplet.astype(np.int32)
+        if add_uv2KG:
+            ###               <user> | <item>  <att entity>
+            ### <user>       |+++++++|========|++++++++++++
+            ### <item>       |=======|++++++++|============
+            ### <att entity> |+++++++|========|============
+            self.train_KG_triplet = np.vstack((kg_pd.values, train_uv_triplet))
+            self.test_KG_triplet = np.vstack((kg_pd.values, train_valid_uv_triplet))
+        else:
+            self.train_KG_triplet = kg_pd.values
+            self.test_KG_triplet = kg_pd.values
 
-        ###              |<item>  <att entity> | <user>
-        ### <item>       |=====================|=======
-        ### <att entity> |=====================|+++++++
-        ### <user>       |=======|+++++++++++++++++++++
+        self.n_KG_relation = np.unique(self.train_KG_triplet[:, 1]).size
+        self.n_KG_entity = np.unique(np.concatenate((self.train_KG_triplet[:, 0], self.train_KG_triplet[:, 2]))).size
+        self.n_train_KG_triplet = self.train_KG_triplet.shape[0]
+        self.n_test_KG_triplet = self.test_KG_triplet.shape[0]
 
-        ### the first two relation ids are for user->item and item->user
-        kg_triples_np[:, 1] = kg_triples_np[:, 1] + 2
+        self.train_KG = self._generate_KG(self.n_KG_entity, self.train_KG_triplet, add_etype=True)
+        #self.test_KG = self._generate_KG(self.n_KG_entity, self.test_KG_triplet, add_etype=True)
 
-        all_train_triplet = np.vstack((kg_triples_np, train_user_item_triplet))
-        all_test_triplet = np.vstack((kg_triples_np, train_user_item_triplet, valid_user_item_triplet))
-        self.all_train_triplet_np = all_train_triplet
-        self.all_test_triplet_np = all_test_triplet
+        self.train_uv_graph = self._generate_KG(n_entity=self.n_users + self.n_items,
+                                                KG_triplet=train_uv_triplet,  add_etype=False)
+        #self.train_val_uv_graph = self._generate_KG(n_entity=n_user_entities+self.n_items,
+        #                                            KG_triplet=train_valid_uv_triplet, add_etype=False)
 
-        self.num_all_entities = self.num_KG_entities + self.num_users
-        assert np.max(all_train_triplet) + 1 == self.num_all_entities
-        self.num_all_relations = self.num_KG_relations + 2
-        self.num_all_train_triplets = self.all_train_triplet_np.shape[0]
-        self.num_all_test_triplets = self.all_test_triplet_np.shape[0]
-        self.num_all_nodes = self.num_all_entities
-        print("The KG: #entities {}, #relations {}, #triplets {}".format(
-                self.num_KG_entities, self.num_KG_relations, self.num_KG_triples))
-        print("The train graph: #nodes {}, #relations {}, #edges {}".format(
-                self.num_all_nodes, self.num_all_relations, self.num_all_train_triplets))
-        print("The test graph: #nodes {}, #relations {}, #triplets {}".format(
-                self.num_all_nodes, self.num_all_relations, self.num_all_test_triplets))
-        self.all_train_kg_dict = self._get_all_train_kg_dict()
+        self.train_pairs = train_pd.values ##[[u_id, v_id], ...]
+        self.valid_pairs = valid_pd.values
+        self.test_pairs = test_pd.values
 
         if use_pretrain:
             pre_model = 'mf'
@@ -113,99 +116,111 @@ class DataLoader(object):
             pretrain_data = np.load(file_name)
             self.user_pre_embed = pretrain_data['user_embed']
             self.item_pre_embed = pretrain_data['item_embed']
-            assert self.user_pre_embed.shape[0] == self.num_users
-            assert self.item_pre_embed.shape[0] == self.num_items
-
-
-    def construct_item_fea(self, kg_pd, data_dir):
-        item_kg_pg = kg_pd[kg_pd['h'] < self.num_items]
-        r_ecount = item_kg_pg.groupby("r")["t"].nunique()
-        r_e_freq = item_kg_pg.groupby(['r'])['t'].value_counts()
-        r_ecount.to_csv(os.path.join(data_dir, "_rel_ecount"), sep=" ", index_label=['r'], header=["count"])
-        r_e_freq.to_csv(os.path.join(data_dir, "_rel_entity_freq"), sep=" ", index_label=['r', 't'], header=["freq"])
-
-        rel_entity_dict = {}  ## {r_id: [entity_id]}
-        for (r_id, entity_id), freq in r_e_freq.items():
-            # print("r_id", r_id,"entity_id", entity_id, "freq", freq)
-            if r_id in rel_entity_dict:
-                rel_entity_dict[r_id].append(entity_id)
-            else:
-                rel_entity_dict[r_id] = []
-                rel_entity_dict[r_id].append(entity_id)
-
-        pos_file = open(os.path.join(data_dir, "_itemFea_Record"), "w")
-        pos_file.write("fea_idx rel_id entity_id\n")
-        fea_pos_dict = {}
-        fea_idx = 0
-        for r_id, e_l in rel_entity_dict.items():
-            fea_pos_dict[r_id] = {}
-            for e in e_l:
-                fea_pos_dict[r_id][e] = fea_idx
-                pos_file.write("{} {} {}\n".format(fea_idx, r_id, e))
-                fea_idx += 1
-        # print(fea_pos_dict)
-        pos_file.close()
-
-        total_fea_dim = fea_idx
-        print("total_fea_dim", total_fea_dim)
-        fea_np = np.zeros((self.num_items, total_fea_dim))
-        for _, row in item_kg_pg.iterrows():
-            h, r, t = row['h'], row['r'], row['t']
-            fea_np[h][fea_pos_dict[r][t]] = 1.0
-
-        sparsity = fea_np.sum() / (self.num_items * total_fea_dim)
-        print("feature sparsity: {:.2f}%".format(sparsity*100))
-
-        return fea_np
 
     @property
     def train_g(self):
         g = dgl.DGLGraph()
-        g.add_nodes(self.num_all_nodes)
-        g.add_edges(self.all_train_triplet_np[:, 2], self.all_train_triplet_np[:, 0])
-        g.readonly()
-        g.ndata['id'] = th.arange(self.num_all_nodes, dtype=th.long)
-        g.edata['type'] = th.LongTensor(self.all_train_triplet_np[:, 1])
+        g.add_nodes(self.n_KG_entity)
+        g.add_edges(self.train_KG_triplet[:, 2], self.train_KG_triplet[:, 0])
+        g.ndata['id'] = th.arange(self.n_KG_entity, dtype=th.long)
+        g.edata['type'] = th.LongTensor(self.train_KG_triplet[:, 1])
         return g
 
     @property
     def test_g(self):
         g = dgl.DGLGraph()
-        g.add_nodes(self.num_all_nodes)
-        g.add_edges(self.all_test_triplet_np[:, 2], self.all_test_triplet_np[:, 0])
-        g.readonly()
-        g.ndata['id'] = th.arange(self.num_all_nodes, dtype=th.long)
-        g.edata['type'] = th.LongTensor(self.all_test_triplet_np[:, 1])
+        g.add_nodes(self.n_KG_entity)
+        g.add_edges(self.test_KG_triplet[:, 2], self.test_KG_triplet[:, 0])
+        g.ndata['id'] = th.arange(self.n_KG_entity, dtype=th.long)
+        g.edata['type'] = th.LongTensor(self.test_KG_triplet[:, 1])
         return g
 
-    def load_kg(self, file_name):
-        kg_pd = pd.read_csv(file_name, sep=" ", names=['h', "r", "t"], engine='python')
-        kg_pd = kg_pd.drop_duplicates()
-        kg_pd = kg_pd.sort_values(by=['h'])
+
+    def __repr__(self):
+        info = "{}:\n".format(self._data_name)
+        info += "\t#user {}, #item {}\n".format(self.n_users, self.n_items)
+        info += "\t#train {}, #valid {}, #test {}\n".format(self.n_train, self.n_valid, self.n_test)
+
+        info += "In the knowledge graph: {}\n"
+        info += "\tKG: #entity {}, #relation {}, #train triplet {}, #test triplet {}\n".format(
+                self.n_KG_entity, self.n_KG_relation, self.n_train_KG_triplet, self.n_test_KG_triplet)
+        return info
+
+
+    def _load_np(self, file_name):
+        if os.path.isfile(file_name):
+            return np.load(file_name)
+        else:
+            print("{} does not exit.".format(file_name))
+            return None
+    def _load_pd(self, file_name):
+        if os.path.isfile(file_name):
+            return pd.read_csv(file_name, sep=_SEP, header=0, engine="python", dtype=np.int32)
+        else:
+            print("{} does not exit.".format(file_name))
+            return None
+    def _load_pkl(self, file_name):
+        if os.path.isfile(file_name):
+            f = open(file_name, "rb")
+            data_dict = pickle.load(f)
+            f.close()
+            return data_dict
+        else:
+            print("{} does not exit.".format(file_name))
+            return None
+    def _convert_uv2triplet_np(self, uv_pd, offset_rel, n_uv_rel=1, symmetric=True):
+        num_pair = uv_pd.shape[0]
+        uv_triplet = np.zeros((num_pair, 3), dtype=np.int32)
+        uv_triplet[:, 0] = uv_pd["u"].values
+        uv_triplet[:, 2] = uv_pd["v"].values
+        if len(uv_pd.columns) == 2:
+            uv_triplet[:, 1] = np.ones(num_pair, dtype=np.int32) * offset_rel
+        else:
+            uv_triplet[:, 1] = uv_pd["r"].values + offset_rel
+        if symmetric:
+            vu_triplet = np.zeros((num_pair, 3), dtype=np.int32)
+            vu_triplet[:, 0] = uv_pd["v"].values
+            vu_triplet[:, 2] = uv_pd["u"].values
+            if len(uv_pd.columns) == 2:
+                vu_triplet[:, 1] = np.ones(num_pair, dtype=np.int32) * (offset_rel + n_uv_rel)
+            else:
+                vu_triplet[:, 1] = uv_pd["r"].values + (offset_rel + n_uv_rel)
+
+            return np.vstack((uv_triplet, vu_triplet))
+        else:
+            return uv_triplet
+
+    def _convert_uv_pair2dict(self, uv_pd):
+        start = time.time()
+        #uv_pd = uv_pd.sort_values(by=['u'])
+        u_v_dict = {}
+        groups = uv_pd.groupby("u")
+        for _, g in groups:
+            assert g["u"].nunique() == 1
+            u_v_dict[g["u"].iloc[0]] = g["v"].values
+        print("{:.1f}s for convert_uv_pair2dict() ...".format(time.time() - start))
+        return u_v_dict
+    def _symmetrize_kg(self, kg_pd):
         unique_rel = kg_pd['r'].nunique()
-        entity_ids = pd.unique(pd.concat([kg_pd['h'], kg_pd['t']]))
-        if kg_pd["r"].nunique() != kg_pd["r"].max()+1:
-            relation_mapping = {old_id: idx for idx, old_id in enumerate(pd.unique(kg_pd["r"]))}
-            kg_pd['r'] = list(map(relation_mapping.get, kg_pd['r'].values))
+        rev_kg = kg_pd.copy()
+        rev_kg = rev_kg.rename({'h':'t', 't':'h'})
+        rev_kg['r'] += unique_rel
+        return pd.concat([kg_pd, rev_kg], ignore_index=True)
+    def _generate_KG(self, n_entity, KG_triplet, add_etype=True):
+        g = dgl.DGLGraph()
+        g.add_nodes(n_entity)
+        g.add_edges(KG_triplet[:, 2], KG_triplet[:, 0])
+        g.readonly()
+        g.ndata['id'] = th.arange(n_entity, dtype=th.long)
+        if add_etype:
+            g.edata['type'] = th.LongTensor(KG_triplet[:, 1])
+        return g
 
-        print("#KG entities:{}, relations:{}, triplet:{}, #head:{}, #tail:{}".format(
-            entity_ids.size, unique_rel, kg_pd.shape[0], kg_pd['h'].nunique(), kg_pd['t'].nunique()))
-
-        return kg_pd
-
-    def plus_inverse_kg(self, kg_pd):
-        unique_rel = kg_pd['r'].nunique()
-        rev = kg_pd.copy()
-        rev = rev.rename({'h':'t', 't':'h'})
-        rev['r'] += unique_rel
-        new_kg_pd = pd.concat([kg_pd, rev], ignore_index=True)
-
-        return new_kg_pd
 
     def _get_all_train_kg_dict(self):
         ### generate all_kg_dict for sampling
         all_kg_dict = collections.defaultdict(list)
-        for h, r, t in self.all_train_triplet_np:
+        for h, r, t in self.train_KG_triplet:
             if h in all_kg_dict.keys():
                 all_kg_dict[h].append((r, t))
             else:
@@ -225,13 +240,13 @@ class DataLoader(object):
     def KG_sampler(self, batch_size, pos_mode="uniform", neg_mode="tail",
                    num_workers=8, exclude_positive=False):
         if batch_size < 0:
-            batch_size = self.num_all_train_triplets
+            batch_size = self.n_train_KG_triplet
             n_batch = 1
-        elif batch_size > self.num_all_train_triplets:
-            batch_size = min(batch_size, self.num_all_train_triplets)
+        elif batch_size > self.n_train_KG_triplet:
+            batch_size = min(batch_size, self.n_train_KG_triplet)
             n_batch = 1
         else:
-            n_batch = self.num_all_train_triplets // batch_size + 1
+            n_batch = self.n_train_KG_triplet // batch_size + 1
 
         print("n_batch", n_batch)
         ### start sampling
@@ -250,7 +265,7 @@ class DataLoader(object):
                 for h in hs:
                     pos_r, pos_t = rd.choice(train_kg_h_dict[h])
                     while True:
-                        neg_t = rd.choice(range(self.num_all_entities))
+                        neg_t = rd.choice(range(self.n_KG_entity))
                         if (pos_r, neg_t) not in train_kg_h_dict[h]: break
                     rs.append(pos_r)
                     pos_ts.append(pos_t)
@@ -263,7 +278,7 @@ class DataLoader(object):
             # r = self.train_KG_triplet[sel][:, 1]
             # pos_t = self.train_KG_triplet[sel][:, 2]
             # neg_t = rd.choices(range(self.n_KG_entity), k=batch_size)
-            for pos_g, neg_g in self.create_Edge_sampler(self.train_g, batch_size, neg_sample_size=1,
+            for pos_g, neg_g in self.create_Edge_sampler(self.train_KG, batch_size, neg_sample_size=1,
                                                          num_workers=num_workers, shuffle=True,
                                                          exclude_positive=exclude_positive, return_false_neg=True):
                 false_neg = neg_g.edata["false_neg"]
@@ -271,6 +286,14 @@ class DataLoader(object):
                 neg_g.copy_from_parent()
                 h_idx, t_idx = pos_g.all_edges(order='eid')
                 neg_h_idx, neg_t_idx = neg_g.all_edges(order='eid')
+                # print("Positive Graph ...")
+                # print("h_id", pos_g.ndata['id'][h_idx])
+                # print("r_id", pos_g.edata['type'])
+                # print("t_id", pos_g.ndata['id'][t_idx])
+                # print("Negative Graph ...")
+                # print("h_id", neg_g.ndata['id'][neg_h_idx])
+                # print("r_id", neg_g.edata['type'])
+                # print("t_id", neg_g.ndata['id'][neg_t_idx])
                 hs = pos_g.ndata['id'][h_idx]
                 rs = pos_g.edata['type']
                 pos_ts = pos_g.ndata['id'][t_idx]
@@ -278,124 +301,46 @@ class DataLoader(object):
                 yield hs, rs, pos_ts, neg_ts, false_neg
         else:
             raise NotImplementedError
-
-
-    # reading train & test interaction data
-    def _load_interaction(self, file_name):
-        src = []
-        dst = []
-        user_dict = {}
-        lines = open(file_name, 'r').readlines()
-        for l in lines:
-            tmps = l.strip()
-            inters = [int(i) for i in tmps.split(' ')]
-            if len(inters) > 1:
-                user_id, item_ids = inters[0], inters[1:]
-                item_ids = list(set(item_ids))
-                for i_id in item_ids:
-                    src.append(user_id)
-                    dst.append(i_id)
-                user_dict[user_id] = item_ids
-        return np.array(src, dtype=np.int32), np.array(dst, dtype=np.int32), user_dict
-
-    def load_train_interaction(self, file_name):
-        src, dst, train_user_dict = self._load_interaction(file_name)
-        ### check whether the user id / item id are continuous and starting from 0
-        assert np.unique(src).size == max(src) + 1
-        assert np.unique(dst).size == max(dst) + 1
-
-        return (src, dst), train_user_dict
-
-    def load_test_interaction(self, file_name):
-        src, dst, test_user_dict = self._load_interaction(file_name)
-        unique_users = np.unique(src)
-        unique_items = np.unique(dst)
-        for ele in unique_users:
-            assert ele in self.train_user_ids
-        for ele in unique_items:
-            assert ele in self.item_ids
-
-        return (src, dst), test_user_dict
-
-    def _sample_pos_items_for_u(self, u):
-        return rd.choice(self.train_user_dict[u])
-    def _sample_neg_items_for_u(self, u):
-        while True:
-            neg_i_id = rd.choice(range(self.num_items))
-            if neg_i_id not in self.train_user_dict[u]:
-                return neg_i_id
-    def CF_pair_sampler(self, batch_size):
-        exist_users = list(self.train_user_dict.keys())
+    def CF_pair_sampler(self, batch_size, pos_mode="uniform", neg_mode="random",
+                        num_workers=8, exclude_positive=False):
         if batch_size < 0:
-            batch_size = self.num_train
+            batch_size = self.n_train
             n_batch = 1
-        elif batch_size > self.num_train:
-            batch_size = min(batch_size, self.num_train)
+        elif batch_size > self.n_train:
+            batch_size = min(batch_size, self.n_train)
             n_batch = 1
         else:
-            n_batch = self.num_train // batch_size + 1
-        #print("#train_pair", self.num_train, "batch_size", batch_size, "n_batch", n_batch, "#exist_user", len(exist_users))
-        i = 0
-        while i < n_batch:
-            i += 1
-            if batch_size <= self.num_users:
-                ## test1
-                users = rd.sample(exist_users, batch_size)
-            else:
-                users = [rd.choice(exist_users) for _ in range(batch_size)]
+            n_batch = self.n_train // batch_size + 1
 
-            pos_items, neg_items = [], []
-            for u in users:
-                pos_items.append(self._sample_pos_items_for_u(u))
-                neg_items.append(self._sample_neg_items_for_u(u))
-            yield users, pos_items, neg_items
-
-    def CF_pair_uniform_sampler(self, batch_size):
-        if batch_size < 0:
-            batch_size = self.num_train
-            n_batch = 1
-        elif batch_size > self.num_train:
-            batch_size = min(batch_size, self.num_train)
-            n_batch = 1
+        if pos_mode == "unique" and neg_mode == "exclude_pos":
+            exist_users = list(self.train_user_dict.keys())
+            i = 0
+            while i < n_batch:
+                i += 1
+                if batch_size <= self.n_users:
+                    users = rd.sample(exist_users, batch_size)
+                else:
+                    users = [rd.choice(exist_users) for _ in range(batch_size)]
+                pos_items, neg_items = [], []
+                for u in users:
+                    pos_items.append(rd.choice(self.train_user_dict[u]))
+                    while True:
+                        neg_i_id = rd.choice(range(self.n_items))
+                        if neg_i_id not in self.train_user_dict[u]: break
+                    neg_items.append(neg_i_id)
+                yield users, pos_items, neg_items, None
+        elif pos_mode == "uniform" and neg_mode == "random":
+            for pos_g, neg_g in self.create_Edge_sampler(self.train_uv_graph, batch_size, neg_sample_size=1,
+                                                         num_workers=num_workers, shuffle=True, negative_mode="head",
+                                                         exclude_positive=exclude_positive, return_false_neg=True):
+                false_neg = neg_g.edata["false_neg"]
+                pos_g.copy_from_parent()
+                neg_g.copy_from_parent()
+                i_idx, u_idx = pos_g.all_edges(order='eid')
+                neg_i_idx, neg_u_idx = neg_g.all_edges(order='eid')
+                users = pos_g.ndata['id'][u_idx]
+                pos_items = pos_g.ndata['id'][i_idx]
+                neg_items = neg_g.ndata['id'][neg_i_idx]
+                yield users, pos_items, neg_items, false_neg
         else:
-            n_batch = self.num_train // batch_size + 1
-        #print("#train_pair", self.num_train, "batch_size", batch_size, "n_batch", n_batch, "#exist_user", len(exist_users))
-        i = 0
-        while i < n_batch:
-            i += 1
-            sel = rd.sample(range(self.num_train), k = batch_size)
-            users = self.train_pairs[0][sel]
-            pos_items = self.train_pairs[1][sel]
-            neg_items = rd.choices(range(self.num_items), k = batch_size)
-            yield users, pos_items, neg_items
-
-    # def CF_batchwise_sampler(self, batch_size):
-    #     self.exist_users = self.train_user_dict.keys()
-    #     if batch_size < 0:
-    #         batch_size = self.num_train-1
-    #         n_batch = 1
-    #     else:
-    #         batch_size = min(batch_size, self.num_train)
-    #         n_batch = self.num_train // batch_size + 1
-    #
-    #     i = 0
-    #     #print("Batch_size:{}, #batches:{}".format(batch_size, n_batch))
-    #     while i < n_batch:
-    #         i += 1
-    #         user_ids, item_ids, neg_item_ids = self._generate_user_pos_neg_items(batch_size)
-    #         new_entity_ids, new_pd = self._filter_neighbor(np.concatenate((user_ids, item_ids, neg_item_ids)),
-    #                                                        self.all_triplet_dp)
-    #         etype = new_pd['r'].values
-    #         ### relabel nodes to have consecutive node ids
-    #         uniq_v, edges = np.unique((new_pd['h'].values, new_pd['t'].values), return_inverse=True)
-    #         src, dst = np.reshape(edges, (2, -1))
-    #         g = dgl.DGLGraph()
-    #         g.add_nodes(uniq_v.size)
-    #         g.add_edges(dst, src)
-    #         ### map user_ids and items_ids into indicies in the graph
-    #         node_map = {ele: idx for idx, ele in enumerate(uniq_v)}
-    #         user_ids = np.array(list(map(node_map.get, user_ids)), dtype=np.int32)
-    #         item_ids = np.array(list(map(node_map.get, item_ids)), dtype=np.int32)
-    #         neg_item_ids = np.array(list(map(node_map.get, neg_item_ids)), dtype=np.int32)
-    #
-    #         yield user_ids, item_ids, neg_item_ids, g, uniq_v, etype
+            raise NotImplementedError
