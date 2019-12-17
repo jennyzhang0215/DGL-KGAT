@@ -30,8 +30,8 @@ def parse_args():
     ### Training parameters
     parser.add_argument('--max_epoch', type=int, default=5000, help='train xx iterations')
     parser.add_argument("--grad_norm", type=float, default=1.0, help="norm to clip gradient to")
-    parser.add_argument('--lr', type=float, default=0.01, help='Learning rate.')
-    parser.add_argument('--batch_size', type=int, default=1024, help='CF batch size.')
+    parser.add_argument('--lr', type=float, default=0.001, help='Learning rate.')
+    parser.add_argument('--batch_size', type=int, default=10240, help='CF batch size.')
     parser.add_argument('--batch_size_kg', type=int, default=2048, help='KG batch size.')
     parser.add_argument('--joint_train', type=bool, default=False, help='Whether to jointly-train the mode or '
                                                                         'alternative train the model ')
