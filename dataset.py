@@ -21,7 +21,7 @@ class DataLoader(object):
     def __init__(self, data_name, use_pretrain=False, symmetric=True, as_continuous_ids=True, add_uv2KG=True, seed=1234):
         self._data_name = data_name
         rd.seed(seed)
-        _DATA_DIR = os.path.realpath(os.path.join(os.path.abspath(__file__), '..', '..', "datasets", data_name))
+        _DATA_DIR = os.path.realpath(os.path.join(os.path.abspath(__file__), '..', '..', "datasets", data_name, "data"))
 
         train_pd = self._load_pd(os.path.join(_DATA_DIR, _UV_FILES[0])).sort_values(by=["u"])
         valid_pd = self._load_pd(os.path.join(_DATA_DIR, _UV_FILES[1])).sort_values(by=["u"])
