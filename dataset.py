@@ -18,7 +18,7 @@ _KG_FILES = [None, "kg_item.pd"]
 _SEP = "\t"
 
 class DataLoader(object):
-    def __init__(self, data_name, use_pretrain=False, symmetric=True, as_continuous_ids=True, add_uv2KG=True, seed=1234):
+    def __init__(self, data_name, symmetric=True, as_continuous_ids=True, add_uv2KG=True, seed=1234):
         self._data_name = data_name
         rd.seed(seed)
         print("DataLoader ...")
@@ -108,14 +108,6 @@ class DataLoader(object):
         self.train_pairs = train_pd.values ##[[u_id, v_id], ...]
         self.valid_pairs = valid_pd.values
         self.test_pairs = test_pd.values
-
-        if use_pretrain:
-            pre_model = 'mf'
-            file_name = os.path.realpath(os.path.join(os.path.abspath(__file__), '..', "datasets",
-                                                      "pretrain", data_name, "{}.npz".format(pre_model)))
-            pretrain_data = np.load(file_name)
-            self.user_pre_embed = pretrain_data['user_embed']
-            self.item_pre_embed = pretrain_data['item_embed']
 
     @property
     def train_g(self):
