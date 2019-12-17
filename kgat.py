@@ -36,7 +36,7 @@ def parse_args():
     parser.add_argument('--joint_train', type=bool, default=False, help='Whether to jointly-train the mode or '
                                                                         'alternative train the model ')
     parser.add_argument('--evaluate_every', type=int, default=1, help='the evaluation duration')
-    parser.add_argument('--print_every', type=int, default=1000, help='the print duration')
+    parser.add_argument('--print_every', type=int, default=200, help='the print duration')
     #parser.add_argument("--eval_batch_size", type=int, default=-1, help="batch size when evaluating")
     args = parser.parse_args()
     save_dir = "{}_d{}_l{}_dp{}_lr{}_bz{}_kgbz{}_att{}_jt{}_seed{}".format(args.data_name,
@@ -131,19 +131,19 @@ def train_eval(args):
             optimizer.step()
             optimizer.zero_grad()
             total_loss += loss.item()
-            if (iter % args.print_every) == 0:
+            if (iter % args.print_every) == 0 or iter == 1:
                 logging.info("Epoch {:04d} Iter {:04d} | Loss {:.4f} ".format(epoch, iter, total_loss/iter))
         logging.info('Time for KGE: {:.1f}s, loss {:.4f}'.format(time() - time1, total_loss/iter))
 
         ### train GNN
-        time1 = time()
-
         if args.use_attention:
+            time1 = time()
             print("Compute attention weight in train ...")
             with th.no_grad():
                 A_w = model.compute_attention(train_g)
             train_g.edata['w'] = A_w
-
+            print("Time: {:.2f}s".format(time() - time1))
+        time1 = time()
         cf_sampler = dataset.CF_pair_sampler(batch_size=args.batch_size)
         iter = 0
         total_loss = 0.0
@@ -163,7 +163,7 @@ def train_eval(args):
             optimizer.step()
             optimizer.zero_grad()
             total_loss += loss.item()
-            if (iter % args.print_every) == 0:
+            if (iter % args.print_every) == 0 or iter == 1:
                 logging.info("Epoch {:04d} Iter {:04d} | Loss {:.4f} ".format(epoch, iter, total_loss / iter))
         logging.info('Time for GNN: {:.1f}s, loss {:.4f}'.format(time() - time1, total_loss / iter))
 
@@ -182,7 +182,7 @@ def train_eval(args):
                 #best_ndcg = val_ndcg
                 best_epoch = epoch
                 time1 = time()
-                test_recall, test_ndcg = eval(model, test_g, dataset.train_val_user_dict, dataset.test_user_dict,
+                test_recall, test_ndcg = eval(model, test_g, dataset.train_valid_user_dict, dataset.test_user_dict,
                                               item_id_range, use_cuda, args.use_attention)
                 test_metric_logger.log(epoch=epoch, recall=test_recall, ndcg=test_ndcg)
 
@@ -190,7 +190,7 @@ def train_eval(args):
                 #th.save({'state_dict': model.state_dict(), 'epoch': epoch}, model_state_file)
             else:
                 valid_metric_logger.log(epoch=epoch, recall=val_recall, ndcg=val_ndcg, is_best=0)
-                recall, ndcg = eval(model, test_g, dataset.train_val_user_dict, dataset.test_user_dict,
+                recall, ndcg = eval(model, test_g, dataset.train_valid_user_dict, dataset.test_user_dict,
                                               item_id_range, use_cuda, args.use_attention)
                 print("test recall:{}, test_ndcg: {}".format(recall, ndcg))
             logging.info(info)

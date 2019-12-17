@@ -45,9 +45,9 @@ class DataLoader(object):
         if len(train_pd.columns) == 2:
             ### just use implicit feedback
             self.train_user_dict = self._convert_uv_pair2dict(train_pd)
-            # self.valid_user_dict = self._convert_uv_pair2dict(valid_pd)
-            # self.test_user_dict = self._convert_uv_pair2dict(test_pd)
-            # self.train_valid_user_dict = self._convert_uv_pair2dict(train_pd.append(valid_pd, ignore_index=True))
+            self.valid_user_dict = self._convert_uv_pair2dict(valid_pd)
+            self.test_user_dict = self._convert_uv_pair2dict(test_pd)
+            self.train_valid_user_dict = self._convert_uv_pair2dict(train_pd.append(valid_pd, ignore_index=True))
             n_uv_rel = 1
         elif len(train_pd.columns) > 2:
             n_uv_rel = train_pd["r"].nunique()
