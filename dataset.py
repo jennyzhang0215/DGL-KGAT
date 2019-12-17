@@ -22,7 +22,7 @@ class DataLoader(object):
         self._data_name = data_name
         rd.seed(seed)
         _DATA_DIR = os.path.realpath(os.path.join(os.path.abspath(__file__), '..', '..', "datasets", data_name, "data"))
-
+        print(os.path.join(_DATA_DIR, _UV_FILES[0]))
         train_pd = self._load_pd(os.path.join(_DATA_DIR, _UV_FILES[0])).sort_values(by=["u"])
         valid_pd = self._load_pd(os.path.join(_DATA_DIR, _UV_FILES[1])).sort_values(by=["u"])
         test_pd = self._load_pd(os.path.join(_DATA_DIR, _UV_FILES[2])).sort_values(by=["u"])
