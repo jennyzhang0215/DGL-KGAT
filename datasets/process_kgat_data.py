@@ -272,5 +272,5 @@ if __name__ == '__main__':
 
     Dataset(dir=DATA_PATH, data_name=args.data_name,
             uv_files=["train.txt", "test.txt"],
-            user_file=None, item_file=["kg_final.txt"],
+            user_file=None, item_file="kg_final.txt",
             val_ratio=0.1, url=URL)
