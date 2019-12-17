@@ -72,7 +72,7 @@ def train_eval(args):
 
     ### load data
     dataset = DataLoader(data_name=args.data_name, seed=args.seed)
-
+    print(dataset)
     model = Model(use_KG=True, input_node_dim=args.entity_embed_dim, gnn_model=args.gnn_model,
                   num_gnn_layers=args.gnn_num_layer, n_hidden=args.gnn_hidden_size, dropout=args.dropout_rate,
                   n_entities=dataset.n_KG_entity, n_relations=dataset.n_KG_relation,
