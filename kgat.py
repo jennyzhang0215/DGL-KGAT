@@ -14,8 +14,8 @@ def parse_args():
     parser.add_argument('--gpu', type=int, default=0, help='use GPU')
     parser.add_argument('--seed', type=int, default=1234, help='the random seed')
     ### Data parameters
-    parser.add_argument('--data_name', nargs='?', default='last-fm',
-                        help='Choose a dataset from {yelp2018, last-fm, amazon-book}')
+    parser.add_argument('--data_name', nargs='?', default='yelp2018',
+                        help='Choose a dataset from {yelp2018, amazon-book}')
     #parser.add_argument('--adj_type', nargs='?', default='si', help='Specify the type of the adjacency (laplacian) matrix from {bi, si}.')
     ### Model parameters
     parser.add_argument('--use_pretrain', type=bool, default=True, help='whether to use pretrain embeddings or not')
