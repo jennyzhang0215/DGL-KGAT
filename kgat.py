@@ -173,7 +173,7 @@ def train_eval(args):
             val_recall, val_ndcg = eval(model, train_g, dataset.train_user_dict, dataset.valid_user_dict,
                                         item_id_range, use_cuda, args.use_attention)
 
-            info = "Epoch: {}, [{:.1f}s] val recall:{:.5f}, val ndcg:{:.5f}".format(
+            info = "Epoch{}, [{:.1f}s] val recall:{:.5f}, val ndcg:{:.5f}".format(
                     epoch, time()-time1, val_recall, val_ndcg)
             # save best model
             if val_recall > best_recall:
