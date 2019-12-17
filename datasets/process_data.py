@@ -59,7 +59,6 @@ def read_kg(file_name, data_name, UNIQUE_ITEMs):
     np.savez(os.path.join(data_name, "fea.npz"),
              item_fea = fea_np)
 
-
 def load_interaction(file_name):
     src = []
     dst = []
