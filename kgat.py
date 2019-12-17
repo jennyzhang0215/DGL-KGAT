@@ -73,7 +73,7 @@ def train_eval(args):
         th.cuda.set_device(args.gpu)
 
     ### load data
-    dataset = DataLoader(args.data_name, use_KG=True, use_pretrain=args.use_pretrain, seed=args.seed)
+    dataset = DataLoader(args.data_name, use_pretrain=args.use_pretrain, seed=args.seed)
 
     ### model
     if args.use_pretrain:
@@ -130,7 +130,7 @@ def train_eval(args):
         kg_sampler = dataset.KG_sampler(batch_size=args.batch_size_kg)
         iter = 0
         total_loss = 0.0
-        for h, r, pos_t, neg_t in kg_sampler:
+        for h, r, pos_t, neg_t, _ in kg_sampler:
             iter += 1
             model.train()
             h_th = th.LongTensor(h)

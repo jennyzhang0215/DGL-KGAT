@@ -7,10 +7,9 @@ import random as rd
 import torch as th
 
 class DataLoader(object):
-    def __init__(self, data_name, use_KG, use_pretrain, seed=1234):
+    def __init__(self, data_name, use_pretrain, seed=1234):
         print("\n{}->".format(data_name))
         self._data_name = data_name
-        self._use_KG = use_KG
         self._use_pretrain = use_pretrain
         self._rng = np.random.RandomState(seed=seed)
         data_dir = os.path.realpath(os.path.join(os.path.abspath(__file__), '..', "datasets", data_name))
@@ -34,35 +33,20 @@ class DataLoader(object):
 
         kg_file = os.path.join(data_dir, "kg_final.txt")
         kg_pd = self.load_kg(kg_file)
-        if use_KG:
-            kg_triples_pd = self.plus_inverse_kg(kg_pd)
-            self.num_KG_relations = kg_triples_pd["r"].nunique()
-            self.num_KG_entities = pd.concat([kg_pd['h'], kg_pd['t']]).nunique()
-            self.num_KG_triples = kg_triples_pd.shape[0]
-            kg_triples_np = kg_triples_pd.values
-            print("After adding inverse KG triplets ...")
-            print("#KG entities:{}, relations:{}, triplet:{}, #head:{}, #tail:{}".format(
+
+        kg_triples_pd = self.plus_inverse_kg(kg_pd)
+        self.num_KG_relations = kg_triples_pd["r"].nunique()
+        self.num_KG_entities = pd.concat([kg_pd['h'], kg_pd['t']]).nunique()
+        self.num_KG_triples = kg_triples_pd.shape[0]
+        kg_triples_np = kg_triples_pd.values
+        print("After adding inverse KG triplets ...")
+        print("#KG entities:{}, relations:{}, triplet:{}, #head:{}, #tail:{}".format(
                 self.num_KG_entities, self.num_KG_relations, self.num_KG_triples,
                 kg_triples_pd['h'].nunique(), kg_triples_pd['t'].nunique()))
-            ## Keep item and entity ids unchanged and remap user ids
-            ## stack user ids after entities
-            self.user_mapping = {i: i + self.num_KG_entities for i in range(self.num_users)}
-        else:
-            ### convert KG to feature vectors
-            ## Only leave attributes pointed to items
-            item_fea_file = "item_fea.npz"
-            if os.path.exists(os.path.join(data_dir, item_fea_file)):
-                fea = np.load(os.path.join(data_dir, item_fea_file))
-                item_fea = fea['item']
-            else:
-                item_fea = self.construct_item_fea(kg_pd, data_dir)
-                np.savez_compressed(os.path.join(data_dir, item_fea_file), item=item_fea)
-            self.item_dim = item_fea.shape[1]
-            self.user_dim = None
-            ## stack user ids after items
-            self.user_mapping = {i: i + self.num_items for i in range(self.num_users)}
-            self.item_fea = item_fea
-            print("item_dim", self.item_dim)
+        ## Keep item and entity ids unchanged and remap user ids
+        ## stack user ids after entities
+        self.user_mapping = {i: i + self.num_KG_entities for i in range(self.num_users)}
+
 
         self.train_pairs = (np.array(list(map(self.user_mapping.get, train_pairs[0]))).astype(np.int32),
                             train_pairs[1].astype(np.int32))
@@ -95,38 +79,32 @@ class DataLoader(object):
         valid_user_item_triplet[:, 2] = np.concatenate((self.valid_pairs[1], self.valid_pairs[0]))
         valid_user_item_triplet = valid_user_item_triplet.astype(np.int32)
 
-        if use_KG:
-            ###              |<item>  <att entity> | <user>
-            ### <item>       |=====================|=======
-            ### <att entity> |=====================|+++++++
-            ### <user>       |=======|+++++++++++++++++++++
+        ###              |<item>  <att entity> | <user>
+        ### <item>       |=====================|=======
+        ### <att entity> |=====================|+++++++
+        ### <user>       |=======|+++++++++++++++++++++
 
-            ### the first two relation ids are for user->item and item->user
-            kg_triples_np[:, 1] = kg_triples_np[:, 1] + 2
+        ### the first two relation ids are for user->item and item->user
+        kg_triples_np[:, 1] = kg_triples_np[:, 1] + 2
 
-            all_train_triplet = np.vstack((kg_triples_np, train_user_item_triplet))
-            all_test_triplet = np.vstack((kg_triples_np, train_user_item_triplet, valid_user_item_triplet))
-            self.all_train_triplet_np = all_train_triplet
-            self.all_test_triplet_np = all_test_triplet
+        all_train_triplet = np.vstack((kg_triples_np, train_user_item_triplet))
+        all_test_triplet = np.vstack((kg_triples_np, train_user_item_triplet, valid_user_item_triplet))
+        self.all_train_triplet_np = all_train_triplet
+        self.all_test_triplet_np = all_test_triplet
 
-            self.num_all_entities = self.num_KG_entities + self.num_users
-            assert np.max(all_train_triplet) + 1 == self.num_all_entities
-            self.num_all_relations = self.num_KG_relations + 2
-            self.num_all_train_triplets = self.all_train_triplet_np.shape[0]
-            self.num_all_test_triplets = self.all_test_triplet_np.shape[0]
-            self.num_all_nodes = self.num_all_entities
-            print("The KG: #entities {}, #relations {}, #triplets {}".format(
+        self.num_all_entities = self.num_KG_entities + self.num_users
+        assert np.max(all_train_triplet) + 1 == self.num_all_entities
+        self.num_all_relations = self.num_KG_relations + 2
+        self.num_all_train_triplets = self.all_train_triplet_np.shape[0]
+        self.num_all_test_triplets = self.all_test_triplet_np.shape[0]
+        self.num_all_nodes = self.num_all_entities
+        print("The KG: #entities {}, #relations {}, #triplets {}".format(
                 self.num_KG_entities, self.num_KG_relations, self.num_KG_triples))
-            print("The train graph: #nodes {}, #relations {}, #edges {}".format(
+        print("The train graph: #nodes {}, #relations {}, #edges {}".format(
                 self.num_all_nodes, self.num_all_relations, self.num_all_train_triplets))
-            print("The test graph: #nodes {}, #relations {}, #triplets {}".format(
+        print("The test graph: #nodes {}, #relations {}, #triplets {}".format(
                 self.num_all_nodes, self.num_all_relations, self.num_all_test_triplets))
-            self.all_train_kg_dict = self._get_all_train_kg_dict()
-
-        else:
-            self.num_all_nodes = self.num_users + self.num_items
-            self.all_train_triplet_np = train_user_item_triplet
-            self.all_test_triplet_np = np.vstack((train_user_item_triplet, valid_user_item_triplet))
+        self.all_train_kg_dict = self._get_all_train_kg_dict()
 
         if use_pretrain:
             pre_model = 'mf'
@@ -229,90 +207,23 @@ class DataLoader(object):
         all_kg_dict = collections.defaultdict(list)
         for h, r, t in self.all_train_triplet_np:
             if h in all_kg_dict.keys():
-                all_kg_dict[h].append((t, r))
+                all_kg_dict[h].append((r, t))
             else:
-                all_kg_dict[h] = [(t, r)]
+                all_kg_dict[h] = [(r, t)]
         return all_kg_dict
-
-    # def _sample_pos_triples_for_h(self, h, num):
-    #     pos_triples = self.all_kg_dict[h]
-    #     n_pos_triples = len(pos_triples)
-    #     pos_rs, pos_ts = [], []
-    #     while True:
-    #         if len(pos_rs) == num: break
-    #         pos_id = np.random.randint(low=0, high=n_pos_triples, size=1)[0]
-    #         t = pos_triples[pos_id][0]
-    #         r = pos_triples[pos_id][1]
-    #         if r not in pos_rs and t not in pos_ts:
-    #             pos_rs.append(r)
-    #             pos_ts.append(t)
-    #     return pos_rs, pos_ts
-    #
-    #
-    # def _sample_neg_triples_for_h(self, h, r, num):
-    #     neg_ts = []
-    #     while True:
-    #         if len(neg_ts) == num: break
-    #         t = np.random.randint(low=0, high=self.num_all_entities, size=1)[0]
-    #         if (t, r) not in self.all_kg_dict[h] and t not in neg_ts:
-    #             neg_ts.append(t)
-    #     return neg_ts
-    #
-    # def KG_sampler(self, batch_size):
-    #     ### generate negative triplets
-    #     self._get_all_kg_dict()
-    #     exist_heads = list(self.all_kg_dict.keys())
-    #     print("len(exist_heads)", len(exist_heads))
-    #     n_batch = self.num_all_triplets // batch_size + 1
-    #     print("num_all_triplets", self.num_all_triplets, "batch_size", batch_size, "n_batch", n_batch)
-    #     i = 0
-    #     #print("Batch_size:{}, #batches:{}".format(batch_size, n_batch))
-    #     while i < n_batch:
-    #         i += 1
-    #         if batch_size <= len(exist_heads):
-    #             heads = rd.sample(exist_heads, batch_size)
-    #         else:
-    #             heads = [rd.choice(exist_heads) for _ in range(batch_size)]
-    #         pos_r_batch, pos_t_batch, neg_t_batch = [], [], []
-    #         for h in heads:
-    #             pos_rs, pos_ts = self._sample_pos_triples_for_h(h, 1)
-    #             pos_r_batch += pos_rs
-    #             pos_t_batch += pos_ts
-    #             neg_ts = self._sample_neg_triples_for_h(h, pos_rs[0], 1)
-    #             neg_t_batch += neg_ts
-    #         yield heads, pos_r_batch, pos_t_batch, neg_t_batch
-
-    def _sample_pos_triples_for_h(self, h):
-        t, r = rd.choice(self.all_train_kg_dict[h])
-        return r, t
-    def _sample_neg_triples_for_h(self, h, r):
-        while True:
-            t = rd.choice(range(self.num_all_entities))
-            if (t, r) not in self.all_train_kg_dict[h]:
-                return t
-    def KG_sampler(self, batch_size):
-        assert self._use_KG
-        exist_heads = list(self.all_train_kg_dict.keys())
-        n_batch = self.num_all_train_triplets // batch_size + 1
-        #print("#num_all_triplets", self.num_all_triplets, "batch_size", batch_size, "n_batch", n_batch,
-        #      "#exist_heads", len(exist_heads))
-        i = 0
-        while i < n_batch:
-            i += 1
-            if batch_size <= len(exist_heads):
-                heads = rd.sample(exist_heads, batch_size)
-            else:
-                heads = [rd.choice(exist_heads) for _ in range(batch_size)]
-            pos_r_batch, pos_t_batch, neg_t_batch = [], [], []
-            for h in heads:
-                pos_rs, pos_ts = self._sample_pos_triples_for_h(h)
-                pos_r_batch.append(pos_rs)
-                pos_t_batch.append(pos_ts)
-                neg_ts = self._sample_neg_triples_for_h(h, pos_rs)
-                neg_t_batch.append(neg_ts)
-            yield heads, pos_r_batch, pos_t_batch, neg_t_batch
-    def KG_sampler_uniform(self, batch_size):
-        assert self._use_KG
+    def create_Edge_sampler(self, graph, batch_size, neg_sample_size=1, negative_mode="tail", num_workers=8, shuffle=True,
+                            exclude_positive=False, return_false_neg=True):
+        EdgeSampler = getattr(dgl.contrib.sampling, 'EdgeSampler')
+        return EdgeSampler(graph,
+                           batch_size=batch_size,
+                           neg_sample_size=neg_sample_size,
+                           negative_mode=negative_mode,
+                           num_workers=num_workers,
+                           shuffle=shuffle,
+                           exclude_positive=exclude_positive,
+                           return_false_neg=return_false_neg)
+    def KG_sampler(self, batch_size, pos_mode="uniform", neg_mode="tail",
+                   num_workers=8, exclude_positive=False):
         if batch_size < 0:
             batch_size = self.num_all_train_triplets
             n_batch = 1
@@ -321,45 +232,53 @@ class DataLoader(object):
             n_batch = 1
         else:
             n_batch = self.num_all_train_triplets // batch_size + 1
-        i = 0
-        while i < n_batch:
-            i += 1
-            sel = rd.sample(range(self.num_all_train_triplets), k=batch_size)
-            h = self.all_train_triplet_np[sel][:, 0]
-            r = self.all_train_triplet_np[sel][:, 1]
-            pos_t = self.all_train_triplet_np[sel][:, 2]
-            neg_t = rd.choices(range(self.num_all_entities), k=batch_size)
-            yield h, r, pos_t, neg_t
-    def create_Edge_sampler(self, batch_size, num_workers=8, shuffle=True, exclude_positive=False):
-        EdgeSampler = getattr(dgl.contrib.sampling, 'EdgeSampler')
-        return EdgeSampler(self.train_g,
-                           batch_size=batch_size,
-                           neg_sample_size=0,
-                           negative_mode="tail",
-                           num_workers=num_workers,
-                           shuffle=shuffle,
-                           exclude_positive=exclude_positive,
-                           return_false_neg=False)
-    def KG_sampler_DGL(self, batch_size):
-        if batch_size < 0:
-            batch_size = self.num_all_train_triplets
-            n_batch = 1
-        elif batch_size > self.num_all_train_triplets:
-            batch_size = min(batch_size, self.num_all_train_triplets)
-            n_batch = 1
-        else:
-            n_batch = self.num_train // batch_size + 1
-        i = 0
-        while i < n_batch:
-            i += 1
-            for pos_g, _ in self.create_Edge_sampler(batch_size):
+
+        print("n_batch", n_batch)
+        ### start sampling
+        if pos_mode == "unique" and neg_mode == "tail":
+            train_kg_h_dict = self._get_all_train_kg_dict()
+            exist_heads = list(train_kg_h_dict.keys())
+            i = 0
+            while i < n_batch:
+                i += 1
+                ### this sampler is for KGAT
+                if batch_size <= len(exist_heads):
+                    hs = rd.sample(exist_heads, batch_size)
+                else:
+                    hs = [rd.choice(exist_heads) for _ in range(batch_size)]
+                rs, pos_ts, neg_ts = [], [], []
+                for h in hs:
+                    pos_r, pos_t = rd.choice(train_kg_h_dict[h])
+                    while True:
+                        neg_t = rd.choice(range(self.num_all_entities))
+                        if (pos_r, neg_t) not in train_kg_h_dict[h]: break
+                    rs.append(pos_r)
+                    pos_ts.append(pos_t)
+                    neg_ts.append(neg_t)
+                yield hs, rs, pos_ts, neg_ts, None
+        elif pos_mode == "uniform" and neg_mode == "tail":
+            ### python code for uniform sampling
+            # sel = rd.sample(range(self.n_train_KG_triplet), k=batch_size)
+            # h = self.train_KG_triplet[sel][:, 0]
+            # r = self.train_KG_triplet[sel][:, 1]
+            # pos_t = self.train_KG_triplet[sel][:, 2]
+            # neg_t = rd.choices(range(self.n_KG_entity), k=batch_size)
+            for pos_g, neg_g in self.create_Edge_sampler(self.train_g, batch_size, neg_sample_size=1,
+                                                         num_workers=num_workers, shuffle=True,
+                                                         exclude_positive=exclude_positive, return_false_neg=True):
+                false_neg = neg_g.edata["false_neg"]
                 pos_g.copy_from_parent()
+                neg_g.copy_from_parent()
                 h_idx, t_idx = pos_g.all_edges(order='eid')
-                h = pos_g.ndata['id'][h_idx]
-                r = pos_g.edata['type']
-                pos_t = pos_g.ndata['id'][t_idx]
-                neg_t = th.LongTensor(rd.choices(range(self.num_all_entities), k=batch_size))
-                yield h, r, pos_t, neg_t
+                neg_h_idx, neg_t_idx = neg_g.all_edges(order='eid')
+                hs = pos_g.ndata['id'][h_idx]
+                rs = pos_g.edata['type']
+                pos_ts = pos_g.ndata['id'][t_idx]
+                neg_ts = neg_g.ndata['id'][neg_t_idx]
+                yield hs, rs, pos_ts, neg_ts, false_neg
+        else:
+            raise NotImplementedError
+
 
     # reading train & test interaction data
     def _load_interaction(self, file_name):
