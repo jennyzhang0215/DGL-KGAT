@@ -242,7 +242,6 @@ class DataLoader(object):
         else:
             n_batch = self.n_train_KG_triplet // batch_size + 1
 
-        print("n_batch", n_batch)
         ### start sampling
         if pos_mode == "unique" and neg_mode == "tail":
             train_kg_h_dict = self._get_all_train_kg_dict()
@@ -266,12 +265,6 @@ class DataLoader(object):
                     neg_ts.append(neg_t)
                 yield hs, rs, pos_ts, neg_ts, None
         elif pos_mode == "uniform" and neg_mode == "tail":
-            ### python code for uniform sampling
-            # sel = rd.sample(range(self.n_train_KG_triplet), k=batch_size)
-            # h = self.train_KG_triplet[sel][:, 0]
-            # r = self.train_KG_triplet[sel][:, 1]
-            # pos_t = self.train_KG_triplet[sel][:, 2]
-            # neg_t = rd.choices(range(self.n_KG_entity), k=batch_size)
             for pos_g, neg_g in self.create_Edge_sampler(self.train_KG, batch_size, neg_sample_size=1,
                                                          num_workers=num_workers, shuffle=True,
                                                          exclude_positive=exclude_positive, return_false_neg=True):
@@ -280,14 +273,6 @@ class DataLoader(object):
                 neg_g.copy_from_parent()
                 h_idx, t_idx = pos_g.all_edges(order='eid')
                 neg_h_idx, neg_t_idx = neg_g.all_edges(order='eid')
-                # print("Positive Graph ...")
-                # print("h_id", pos_g.ndata['id'][h_idx])
-                # print("r_id", pos_g.edata['type'])
-                # print("t_id", pos_g.ndata['id'][t_idx])
-                # print("Negative Graph ...")
-                # print("h_id", neg_g.ndata['id'][neg_h_idx])
-                # print("r_id", neg_g.edata['type'])
-                # print("t_id", neg_g.ndata['id'][neg_t_idx])
                 hs = pos_g.ndata['id'][h_idx]
                 rs = pos_g.edata['type']
                 pos_ts = pos_g.ndata['id'][t_idx]
